@@ -34,6 +34,7 @@
     let countRows = []
     let savedKeys = new Set()
     let html5QrScanner = null
+    let zxingReader = null
     let currentUser = localStorage.getItem('stock_user') || ''
 
     const $ = (id) => document.getElementById(id)
@@ -388,78 +389,16 @@
     }
 
     /* =====================
-       5) Scanner กล้องหลังแบบ AppSheet
-       - เปิดกล้องหลัง
-       - อ่าน QR / Barcode ทุกฟอร์แมตที่กล้องเจอ
-       - สแกนได้แล้วใส่ช่องค้นหา + ค้นหาออฟไลน์ทันที
+       5) Scanner (ZXing - กล้องหลังเร็ว / อ่านเจออะไรเอาค่านั้น)
        ===================== */
-    let zxingReader = null
-    let scanStream = null
     let lastScanValue = ''
     let lastScanTime = 0
-
-    function stopAllVideoTracks(videoEl) {
-      try {
-        const stream = videoEl?.srcObject || scanStream
-        if (stream) stream.getTracks().forEach(track => track.stop())
-      } catch (err) {}
-      scanStream = null
-      if (videoEl) videoEl.srcObject = null
-    }
-
-    async function getBackCameraDeviceId() {
-      try {
-        // ขอ permission ก่อน เพื่อให้ browser แสดง label ของกล้อง
-        const tempStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-          audio: false
-        })
-        tempStream.getTracks().forEach(track => track.stop())
-
-        const devices = await navigator.mediaDevices.enumerateDevices()
-        const cameras = devices.filter(d => d.kind === 'videoinput')
-        if (!cameras.length) return null
-
-        const scoreCamera = (cam, index) => {
-          const label = String(cam.label || '').toLowerCase()
-          let score = 0
-
-          if (/(back|rear|environment|หลัง)/i.test(label)) score += 100
-          if (/(main|wide|camera)/i.test(label)) score += 20
-
-          // เลี่ยงเลนส์ที่ไม่ใช่กล้องหลัก
-          if (/(front|user|หน้า)/i.test(label)) score -= 200
-          if (/(ultra|tele|telephoto|macro|depth)/i.test(label)) score -= 50
-
-          // fallback มือถือหลายเครื่องกล้องหลังมักอยู่ท้ายรายการ
-          score += index
-          return score
-        }
-
-        cameras.sort((a, b) => scoreCamera(b, cameras.indexOf(b)) - scoreCamera(a, cameras.indexOf(a)))
-        return cameras[0]?.deviceId || null
-      } catch (err) {
-        console.warn('หา deviceId กล้องหลังไม่สำเร็จ', err)
-        return null
-      }
-    }
 
     async function handleScanValue(value, targetId) {
       value = String(value || '').trim()
       if (!value) return
 
-      const now = Date.now()
-      if (value === lastScanValue && now - lastScanTime < 700) return
-
-      lastScanValue = value
-      lastScanTime = now
-
-      const target = $(targetId)
-      if (target) {
-        target.value = value
-        target.dispatchEvent(new Event('input', { bubbles: true }))
-      }
-
+      $(targetId).value = value
       await closeScanner()
 
       if (targetId === 'countSearch') {
@@ -472,11 +411,10 @@
         }
 
         renderCountResult(result)
-        showToast('พบข้อมูล: ' + result.length + ' รายการ')
-        return
+        showToast('พบข้อมูล ' + result.length + ' รายการ')
+      } else {
+        showToast('สแกนสำเร็จ: ' + value)
       }
-
-      showToast('สแกนสำเร็จ: ' + value)
     }
 
     window.openScanner = async function (targetId = 'countSearch') {
@@ -485,133 +423,75 @@
       const reader = $('scannerReader')
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('เบราว์เซอร์ไม่รองรับกล้อง หรือไม่ได้เปิดผ่าน https')
-        return
+        return alert('เบราว์เซอร์ไม่รองรับกล้อง หรือไม่ได้เปิดผ่าน https')
       }
 
       if (!window.ZXing) {
-        alert('โหลดระบบสแกนไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วเปิดใหม่')
-        return
+        return alert('โหลดระบบสแกนไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วเปิดใหม่')
       }
 
       try {
         modal.classList.add('show')
         text.textContent = 'กำลังเปิดกล้องหลัง...'
-        reader.innerHTML = `
-          <video id="scannerVideo" autoplay playsinline muted
-            style="width:100%;max-height:360px;border-radius:18px;background:#020617;object-fit:cover;">
-          </video>
-        `
-
+        reader.innerHTML = `<video id="scannerVideo" autoplay playsinline muted style="width:100%;max-height:360px;object-fit:cover;border-radius:18px;background:#020617;"></video>`
         const video = $('scannerVideo')
 
         if (zxingReader) {
-          try { zxingReader.reset() } catch (err) {}
+          try { zxingReader.reset() } catch (e) {}
           zxingReader = null
         }
 
-        const hints = new Map()
-        hints.set(ZXing.DecodeHintType.TRY_HARDER, true)
-        hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
-          ZXing.BarcodeFormat.QR_CODE,
-          ZXing.BarcodeFormat.CODE_128,
-          ZXing.BarcodeFormat.CODE_39,
-          ZXing.BarcodeFormat.CODE_93,
-          ZXing.BarcodeFormat.EAN_13,
-          ZXing.BarcodeFormat.EAN_8,
-          ZXing.BarcodeFormat.UPC_A,
-          ZXing.BarcodeFormat.UPC_E,
-          ZXing.BarcodeFormat.ITF,
-          ZXing.BarcodeFormat.CODABAR,
-          ZXing.BarcodeFormat.DATA_MATRIX,
-          ZXing.BarcodeFormat.PDF_417,
-          ZXing.BarcodeFormat.AZTEC
-        ].filter(Boolean))
+        zxingReader = new ZXing.BrowserMultiFormatReader()
 
-        zxingReader = new ZXing.BrowserMultiFormatReader(hints, 250)
-
-        const deviceId = await getBackCameraDeviceId()
-
-        const constraints = deviceId
-          ? {
-              video: {
-                deviceId: { exact: deviceId },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                focusMode: 'continuous'
-              },
-              audio: false
-            }
-          : {
-              video: {
-                facingMode: 'environment',
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                focusMode: 'continuous'
-              },
-              audio: false
-            }
-
-        scanStream = await navigator.mediaDevices.getUserMedia(constraints)
-        video.srcObject = scanStream
-        await video.play()
-
-        text.textContent = 'ใช้กล้องหลังแล้ว เล็งไปที่ Barcode / QR Code'
-
-        zxingReader.decodeFromVideoElement(video, async (result, err) => {
-          if (result) {
-            await handleScanValue(result.getText(), targetId)
+        const constraints = {
+          audio: false,
+          video: {
+            facingMode: 'environment',
+            width: { ideal: 640 },
+            height: { ideal: 480 }
           }
+        }
+
+        await zxingReader.decodeFromConstraints(constraints, video, async (result, err) => {
+          if (!result) return
+
+          const code = String(result.getText() || '').trim()
+          const now = Date.now()
+
+          if (!code) return
+          if (code === lastScanValue && now - lastScanTime < 700) return
+
+          lastScanValue = code
+          lastScanTime = now
+
+          try { zxingReader.reset() } catch (e) {}
+          await handleScanValue(code, targetId)
         })
 
+        text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
       } catch (err) {
         console.error(err)
-
-        // fallback สำหรับเครื่องที่ไม่ยอมเปิด deviceId exact
-        try {
-          const video = $('scannerVideo')
-          if (video) stopAllVideoTracks(video)
-
-          scanStream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            },
-            audio: false
-          })
-
-          video.srcObject = scanStream
-          await video.play()
-
-          text.textContent = 'ใช้กล้องหลังแล้ว เล็งไปที่ Barcode / QR Code'
-
-          if (!zxingReader) zxingReader = new ZXing.BrowserMultiFormatReader()
-          zxingReader.decodeFromVideoElement(video, async (result) => {
-            if (result) {
-              await handleScanValue(result.getText(), targetId)
-            }
-          })
-        } catch (err2) {
-          await closeScanner()
-          alert('เปิดกล้องหลังไม่ได้: ' + (err2?.message || err?.message || err2 || err))
-        }
+        await closeScanner()
+        alert('เปิดกล้องไม่ได้: ' + (err?.message || err))
       }
     }
 
     window.closeScanner = async function () {
-      const modal = $('scannerModal')
-      const reader = $('scannerReader')
-      const video = $('scannerVideo')
-
       if (zxingReader) {
-        try { zxingReader.reset() } catch (err) {}
+        try { zxingReader.reset() } catch (e) {}
         zxingReader = null
       }
 
-      stopAllVideoTracks(video)
+      const video = $('scannerVideo')
+      if (video && video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop())
+        video.srcObject = null
+      }
 
+      const reader = $('scannerReader')
       if (reader) reader.innerHTML = ''
+
+      const modal = $('scannerModal')
       if (modal) modal.classList.remove('show')
     }
 
@@ -1240,7 +1120,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=main-camera-v5').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=zxing-fast-camera-v1').catch(() => {});
       });
     }
   </script>
