@@ -29,6 +29,7 @@
     const PAGE_SIZE = 1000
 
     let masterRows = []
+    let offlineIndex = new Map()
     let countRows = []
     let savedKeys = new Set()
     let html5QrScanner = null
@@ -119,6 +120,7 @@
       setLoading(true, 'กำลังโหลด Master Data...')
       try {
         masterRows = await fetchAll(MASTER_TABLE)
+        buildOfflineIndex(masterRows)
         await loadCountHistory()
         renderMasterTable(masterRows)
       } catch (err) {
@@ -130,6 +132,43 @@
 
     function normalize(v) {
       return String(v ?? '').toLowerCase().replace(/\s+/g, '').replace(/-/g, '')
+    }
+
+    function addToOfflineIndex(key, row) {
+      const k = normalize(key)
+      if (!k) return
+      if (!offlineIndex.has(k)) offlineIndex.set(k, [])
+      offlineIndex.get(k).push(row)
+    }
+
+    function buildOfflineIndex(rows) {
+      offlineIndex = new Map()
+      rows.forEach(r => {
+        addToOfflineIndex(r.item_key, r)
+        addToOfflineIndex(r.CODE ?? r.code, r)
+        addToOfflineIndex(r.Item ?? r.item, r)
+        addToOfflineIndex(r.Location ?? r.location, r)
+        addToOfflineIndex(r.Assort ?? r.assort, r)
+      })
+    }
+
+    function searchOfflineRows(keyword) {
+      const q = normalize(keyword)
+      if (!q) return []
+      const exact = offlineIndex.get(q)
+      if (exact && exact.length) return exact
+
+      // fallback สำหรับกรณีสแกนแล้วมีข้อความยาว/มีช่องว่าง/มี prefix-suffix
+      return masterRows.filter(r => {
+        const fields = [
+          r.item_key,
+          r.CODE ?? r.code,
+          r.Item ?? r.item,
+          r.Location ?? r.location,
+          r.Assort ?? r.assort
+        ].map(normalize)
+        return fields.some(v => v && (v.includes(q) || q.includes(v)))
+      })
     }
 
     function searchRows(rows, keyword) {
@@ -237,22 +276,9 @@
     /* =====================
        4) Stock Count
        ===================== */
-    window.searchForCount = function () {
-      const keyword = $('countSearch').value
-      const result = searchRows(masterRows, keyword)
+    function renderCountResult(result) {
       const box = $('countResult')
       box.innerHTML = ''
-
-      if (!keyword.trim()) {
-        box.innerHTML = `<div class="empty">กรุณากรอกข้อมูลเพื่อค้นหา</div>`
-        return
-      }
-
-      if (result.length === 0) {
-        alert('ไม่มีข้อมูล')
-        box.innerHTML = `<div class="empty">ไม่มีข้อมูล</div>`
-        return
-      }
 
       result.forEach(r => {
         const item = r.Item ?? r.item ?? ''
@@ -285,6 +311,25 @@
           </div>
         `)
       })
+    }
+
+    window.searchForCount = function () {
+      const keyword = $('countSearch').value
+      const box = $('countResult')
+
+      if (!keyword.trim()) {
+        box.innerHTML = `<div class="empty">กรุณากรอกข้อมูลเพื่อค้นหา</div>`
+        return
+      }
+
+      const result = searchOfflineRows(keyword)
+
+      if (result.length === 0) {
+        box.innerHTML = `<div class="empty">ไม่มีข้อมูลที่ตรงกับ: ${safe(keyword)}</div>`
+        return
+      }
+
+      renderCountResult(result)
     }
 
     window.saveCount = async function (r) {
@@ -425,12 +470,21 @@
             lastScanTime = now
 
             $(targetId).value = value
-            showToast('สแกนสำเร็จ: ' + value)
 
             await closeScanner()
 
             if (targetId === 'countSearch') {
-              searchForCount()
+              const result = searchOfflineRows(value)
+              if (result.length === 0) {
+                $('countResult').innerHTML = `<div class="empty">ไม่พบข้อมูลที่ตรงกับ: ${safe(value)}</div>`
+                showToast('ไม่พบข้อมูล')
+                return
+              }
+
+              renderCountResult(result)
+              showToast('พบข้อมูล: ' + result.length + ' รายการ')
+            } else {
+              showToast('สแกนสำเร็จ: ' + value)
             }
           },
           () => {}
@@ -1080,7 +1134,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=scan-v3').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=offline-scan-v4').catch(() => {});
       });
     }
   </script>
