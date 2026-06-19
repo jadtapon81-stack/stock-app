@@ -41,18 +41,23 @@
     let currentFgRow = null
 
     const $ = (id) => document.getElementById(id)
+    const showEl = (id, show) => { const el = $(id); if (el) el.style.display = show ? 'block' : 'none' }
+    const setText = (id, text) => { const el = $(id); if (el) el.textContent = text }
+    const setVal = (id, value) => { const el = $(id); if (el) el.value = value }
+    const setActive = (id, active) => { const el = $(id); if (el) el.classList.toggle('active', active) }
 
     window.addEventListener('DOMContentLoaded', () => {
       if (currentUser) {
-        $('loginPage').style.display = 'none'
-        $('appPage').style.display = 'block'
-        $('userNameText').textContent = currentUser
-        $('countedBy').value = currentUser
+        showEl('loginPage', false)
+        showEl('appPage', true)
+        setText('userNameText', currentUser)
+        setVal('countedBy', currentUser)
         showPage('home')
         loadMasterData()
       } else {
-        $('loginPage').style.display = 'flex'
-        $('appPage').style.display = 'none'
+        const loginPage = $('loginPage')
+        if (loginPage) loginPage.style.display = 'flex'
+        showEl('appPage', false)
       }
     })
 
@@ -64,10 +69,10 @@
       if (!name) return alert('กรุณาใส่ชื่อผู้ใช้งาน')
       localStorage.setItem('stock_user', name)
       currentUser = name
-      $('userNameText').textContent = name
-      $('countedBy').value = name
-      $('loginPage').style.display = 'none'
-      $('appPage').style.display = 'block'
+      setText('userNameText', name)
+      setVal('countedBy', name)
+      showEl('loginPage', false)
+      showEl('appPage', true)
       showPage('home')
       loadMasterData()
     }
@@ -83,22 +88,24 @@
     }
 
     window.closeMenu = function () {
-      $('sideMenu').classList.remove('open')
-      $('overlay').classList.remove('show')
+      const sideMenu = $('sideMenu')
+      const overlay = $('overlay')
+      if (sideMenu) sideMenu.classList.remove('open')
+      if (overlay) overlay.classList.remove('show')
     }
 
     window.showPage = function (page) {
-      $('homePage').style.display = page === 'home' ? 'block' : 'none'
-      $('masterPage').style.display = page === 'master' ? 'block' : 'none'
-      $('countPage').style.display = page === 'count' ? 'block' : 'none'
-      $('fgPage').style.display = page === 'fg' ? 'block' : 'none'
+      showEl('homePage', page === 'home')
+      showEl('masterPage', page === 'master')
+      showEl('countPage', page === 'count')
+      showEl('fgPage', page === 'fg')
 
-      $('btnHome').classList.toggle('active', page === 'home')
-      $('btnMaster').classList.toggle('active', page === 'master')
-      $('btnCountBigC').classList.toggle('active', page === 'count' && currentCountCustomer === 'BIG C')
-      $('btnCountLotus').classList.toggle('active', page === 'count' && currentCountCustomer === 'LOTUS')
-      $('btnFgIn').classList.toggle('active', page === 'fg' && currentFgMode === 'IN')
-      $('btnFgOut').classList.toggle('active', page === 'fg' && currentFgMode === 'OUT')
+      setActive('btnHome', page === 'home')
+      setActive('btnMaster', page === 'master')
+      setActive('btnCountBigC', page === 'count' && currentCountCustomer === 'BIG C')
+      setActive('btnCountLotus', page === 'count' && currentCountCustomer === 'LOTUS')
+      setActive('btnFgIn', page === 'fg' && currentFgMode === 'IN')
+      setActive('btnFgOut', page === 'fg' && currentFgMode === 'OUT')
 
       closeMenu()
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -117,9 +124,8 @@
       $('fgTitle').textContent = mode === 'IN' ? 'FG IN' : 'FG OUT'
       $('fgModeText').textContent = mode === 'IN' ? 'เพิ่มสินค้าเข้าคลัง' : 'ตัดสินค้าออกจากคลัง'
       $('fgSaveBtn').textContent = mode === 'IN' ? 'บันทึก FG IN' : 'บันทึก FG OUT'
-      showPage('fg')
       clearFgForm(false)
-      updateFgDatalists()
+      showPage('fg')
     }
 
     /* =====================
@@ -460,11 +466,96 @@
       return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
     }
 
-    function fillDatalist(id, values) {
-      const el = $(id)
-      if (!el) return
-      el.innerHTML = values.map(v => `<option value="${safe(v)}"></option>`).join('')
+    const fgSuggestFields = {
+      item: { input: 'fgItem', box: 'fgItemSuggest' },
+      code: { input: 'fgCode', box: 'fgCodeSuggest' },
+      assort: { input: 'fgAssort', box: 'fgAssortSuggest' },
+      location: { input: 'fgLocation', box: 'fgLocationSuggest' },
+      customer: { input: 'fgCustomer', box: 'fgCustomerSuggest' }
     }
+
+    function closeFgSuggest(field = '') {
+      Object.entries(fgSuggestFields).forEach(([name, cfg]) => {
+        if (field && name !== field) return
+        const box = $(cfg.box)
+        if (box) {
+          box.classList.remove('show')
+          box.innerHTML = ''
+        }
+      })
+    }
+
+    window.closeAllFgSuggest = function () {
+      closeFgSuggest()
+    }
+
+    function getFgSuggestValues(field) {
+      let values
+      if (field === 'customer') {
+        values = valuesFromRows(filterRowsByFgForm('customer'), 'customer')
+        ;['BIG C', 'LOTUS'].forEach(v => { if (!values.some(x => sameText(x, v))) values.push(v) })
+      } else {
+        values = valuesFromRows(filterRowsByFgForm(field), field)
+      }
+
+      const keyword = $(fgSuggestFields[field].input)?.value || ''
+      const q = normalize(keyword)
+      return values
+        .filter(v => normalize(v).includes(q))
+        .slice(0, 80)
+    }
+
+    function showFgSuggest(field) {
+      const cfg = fgSuggestFields[field]
+      if (!cfg) return
+
+      const input = $(cfg.input)
+      const box = $(cfg.box)
+      if (!input || !box) return
+
+      const text = input.value.trim()
+      closeFgSuggest()
+
+      if (text.length < 3) {
+        box.classList.remove('show')
+        box.innerHTML = ''
+        return
+      }
+
+      const values = getFgSuggestValues(field)
+      if (!values.length) {
+        box.innerHTML = `<div class="fg-suggest-empty">ไม่พบข้อมูลใน Master Data</div>`
+        box.classList.add('show')
+        return
+      }
+
+      box.innerHTML = values.map(v => `
+        <button type="button" onclick="selectFgSuggest('${field}', '${safeForJs(v)}')">${safe(v)}</button>
+      `).join('')
+      box.classList.add('show')
+    }
+
+    window.handleFgInput = function (field) {
+      autoFillFgFromForm(false)
+      showFgSuggest(field)
+    }
+
+    window.handleFgFocus = function (field) {
+      showFgSuggest(field)
+    }
+
+    window.selectFgSuggest = function (field, value) {
+      const cfg = fgSuggestFields[field]
+      if (!cfg) return
+      const input = $(cfg.input)
+      if (input) input.value = value
+      closeFgSuggest()
+      autoFillFgFromForm(false)
+    }
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.fg-field')) closeFgSuggest()
+    })
 
     function getFgFormValues() {
       return {
@@ -518,14 +609,9 @@
     }
 
     function updateFgDatalists() {
-      fillDatalist('fgItemList', valuesFromRows(filterRowsByFgForm('item'), 'item'))
-      fillDatalist('fgCodeList', valuesFromRows(filterRowsByFgForm('code'), 'code'))
-      fillDatalist('fgAssortList', valuesFromRows(filterRowsByFgForm('assort'), 'assort'))
-      fillDatalist('fgLocationList', valuesFromRows(filterRowsByFgForm('location'), 'location'))
-
-      const customers = valuesFromRows(filterRowsByFgForm('customer'), 'customer')
-      ;['BIG C', 'LOTUS'].forEach(v => { if (!customers.some(x => sameText(x, v))) customers.push(v) })
-      fillDatalist('fgCustomerList', customers)
+      const active = document.activeElement
+      const found = Object.entries(fgSuggestFields).find(([field, cfg]) => active && active.id === cfg.input)
+      if (found) showFgSuggest(found[0])
     }
 
     function findFgRowByForm() {
@@ -579,6 +665,7 @@
     }
 
     window.clearFgSearch = function () {
+      // เวอร์ชันฟอร์มอย่างเดียว: ไม่มีตาราง FG แล้ว จึงล้างเฉพาะฟอร์ม
       clearFgForm(false)
     }
 
@@ -866,6 +953,11 @@
       }[c]))
     }
 
+    function safeForJs(v) {
+      return String(v ?? '').replace(/\/g, '\\').replace(/'/g, "\'").replace(/
+/g, ' ')
+    }
+
     function setLoading(show, text = '') {
       $('loadingText').textContent = text
       $('loading').style.display = show ? 'flex' : 'none'
@@ -993,6 +1085,9 @@
       z-index: 2000;
       width: 290px;
       height: 100vh;
+      max-height: 100vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
       padding: calc(24px + env(safe-area-inset-top)) 18px 18px;
       background: #0f172a;
       transition: .25s ease;
@@ -1901,30 +1996,30 @@
           <p id="fgFormStatus" class="fg-status">เลือกค่าจาก Dropdown หรือกรอกข้อมูลใหม่</p>
 
           <div class="fg-form-grid">
-            <div>
+            <div class="fg-field">
               <label>Item</label>
-              <input id="fgItem" oninput="autoFillFgFromForm()" onfocus="updateFgDatalists()" list="fgItemList" placeholder="เช่น GM71112">
-              <datalist id="fgItemList"></datalist>
+              <input id="fgItem" oninput="handleFgInput('item')" onfocus="handleFgFocus('item')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น GM7">
+              <div id="fgItemSuggest" class="fg-suggest"></div>
             </div>
-            <div>
+            <div class="fg-field">
               <label>CODE</label>
-              <input id="fgCode" oninput="autoFillFgFromForm()" onfocus="updateFgDatalists()" list="fgCodeList" placeholder="เช่น NV">
-              <datalist id="fgCodeList"></datalist>
+              <input id="fgCode" oninput="handleFgInput('code')" onfocus="handleFgFocus('code')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น BKG">
+              <div id="fgCodeSuggest" class="fg-suggest"></div>
             </div>
-            <div>
+            <div class="fg-field">
               <label>Assort</label>
-              <input id="fgAssort" oninput="autoFillFgFromForm()" onfocus="updateFgDatalists()" list="fgAssortList" placeholder="เช่น 9.5">
-              <datalist id="fgAssortList"></datalist>
+              <input id="fgAssort" oninput="handleFgInput('assort')" onfocus="handleFgFocus('assort')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น 9.5">
+              <div id="fgAssortSuggest" class="fg-suggest"></div>
             </div>
-            <div>
+            <div class="fg-field">
               <label>Location</label>
-              <input id="fgLocation" oninput="autoFillFgFromForm()" onfocus="updateFgDatalists()" list="fgLocationList" placeholder="เช่น E-12">
-              <datalist id="fgLocationList"></datalist>
+              <input id="fgLocation" oninput="handleFgInput('location')" onfocus="handleFgFocus('location')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น E-1">
+              <div id="fgLocationSuggest" class="fg-suggest"></div>
             </div>
-            <div>
+            <div class="fg-field">
               <label>Customer</label>
-              <input id="fgCustomer" oninput="autoFillFgFromForm()" onfocus="updateFgDatalists()" list="fgCustomerList" placeholder="BIG C / LOTUS">
-              <datalist id="fgCustomerList"></datalist>
+              <input id="fgCustomer" oninput="handleFgInput('customer')" onfocus="handleFgFocus('customer')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น BIG / LOT">
+              <div id="fgCustomerSuggest" class="fg-suggest"></div>
             </div>
             <div>
               <label>System Qty</label>
@@ -1961,7 +2056,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=fg-form-dropdown-filter-v1').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=fg-buttons-fixed-v2').catch(() => {});
       });
     }
   </script>
