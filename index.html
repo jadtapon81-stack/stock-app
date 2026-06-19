@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Stock App | Shoe Warehouse</title>
+
+  <script type="module">
+    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+    /* =====================
+       1) ตั้งค่า Supabase
+       ===================== */
+    const supabaseUrl = 'https://asslmgjcicpgrxwqaenx.supabase.co'
+    const supabaseKey = 'sb_publishable_PLOIg4kX4r8PN9LXvXZVIQ_OiF-yj-K'
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    const MASTER_TABLE = 'Master_Data'
+    const COUNT_TABLE = 'stock_count'
+    const PAGE_SIZE = 1000
+
+    let masterRows = []
+    let countRows = []
+    let currentUser = localStorage.getItem('stock_user') || ''
+
+    const $ = (id) => document.getElementById(id)
+
+    window.addEventListener('DOMContentLoaded', () => {
+      if (currentUser) {
+        $('loginPage').style.display = 'none'
+        $('appPage').style.display = 'block'
+        $('userNameText').textContent = currentUser
+        $('countedBy').value = currentUser
+        showPage('master')
+        loadMasterData()
+      } else {
+        $('loginPage').style.display = 'flex'
+        $('appPage').style.display = 'none'
+      }
+    })
+
+    /* =====================
+       2) Login / Menu
+       ===================== */
+    window.login = function () {
+      const name = $('loginName').value.trim()
+      if (!name) return alert('กรุณาใส่ชื่อผู้ใช้งาน')
+      localStorage.setItem('stock_user', name)
+      currentUser = name
+      $('userNameText').textContent = name
+      $('countedBy').value = name
+      $('loginPage').style.display = 'none'
+      $('appPage').style.display = 'block'
+      showPage('master')
+      loadMasterData()
+    }
+
+    window.logout = function () {
+      localStorage.removeItem('stock_user')
+      location.reload()
+    }
+
+    window.toggleMenu = function () {
+      $('sideMenu').classList.toggle('open')
+      $('overlay').classList.toggle('show')
+    }
+
+    window.closeMenu = function () {
+      $('sideMenu').classList.remove('open')
+      $('overlay').classList.remove('show')
+    }
+
+    window.showPage = function (page) {
+      $('masterPage').style.display = page === 'master' ? 'block' : 'none'
+      $('countPage').style.display = page === 'count' ? 'block' : 'none'
+      $('btnMaster').classList.toggle('active', page === 'master')
+      $('btnCount').classList.toggle('active', page === 'count')
+      closeMenu()
+    }
+
+    /* =====================
+       3) Load Master Data ทั้งหมด
+       ===================== */
+    async function fetchAll(tableName) {
+      let all = []
+      let from = 0
+
+      while (true) {
+        const to = from + PAGE_SIZE - 1
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .range(from, to)
+
+        if (error) throw error
+        if (!data || data.length === 0) break
+
+        all = all.concat(data)
+        if (data.length < PAGE_SIZE) break
+        from += PAGE_SIZE
+      }
+
+      return all
+    }
+
+    window.loadMasterData = async function () {
+      setLoading(true, 'กำลังโหลด Master Data...')
+      try {
+        masterRows = await fetchAll(MASTER_TABLE)
+        renderMasterTable(masterRows)
+      } catch (err) {
+        alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    function normalize(v) {
+      return String(v ?? '').toLowerCase().replace(/\s+/g, '').replace(/-/g, '')
+    }
+
+    function searchRows(rows, keyword) {
+      const q = normalize(keyword)
+      if (!q) return rows
+      return rows.filter(r => {
+        const text = [
+          r.Item, r.item, r.CODE, r.code, r.Assort, r.assort,
+          r.Location, r.location, r.item_key, r.Quantity, r.quantity
+        ].map(normalize).join('|')
+        return text.includes(q)
+      })
+    }
+
+    window.searchMaster = function () {
+      renderMasterTable(searchRows(masterRows, $('masterSearch').value))
+    }
+
+    window.clearMasterSearch = function () {
+      $('masterSearch').value = ''
+      renderMasterTable(masterRows)
+    }
+
+    function renderMasterTable(rows) {
+      $('masterCount').textContent = rows.length.toLocaleString('th-TH')
+      const body = $('masterBody')
+      body.innerHTML = ''
+
+      rows.forEach(r => {
+        body.insertAdjacentHTML('beforeend', `
+          <tr>
+            <td>${safe(r.Item ?? r.item)}</td>
+            <td>${safe(r.CODE ?? r.code)}</td>
+            <td>${safe(r.Assort ?? r.assort)}</td>
+            <td>${safe(r.Location ?? r.location)}</td>
+            <td>${safe(r.Quantity ?? r.quantity)}</td>
+            <td>${safe(r.item_key)}</td>
+          </tr>
+        `)
+      })
+    }
+
+    /* =====================
+       4) Stock Count
+       ===================== */
+    window.searchForCount = function () {
+      const keyword = $('countSearch').value
+      const result = searchRows(masterRows, keyword)
+      const box = $('countResult')
+      box.innerHTML = ''
+
+      if (!keyword.trim()) {
+        box.innerHTML = `<div class="empty">กรุณากรอกข้อมูลเพื่อค้นหา</div>`
+        return
+      }
+
+      if (result.length === 0) {
+        box.innerHTML = `<div class="empty">ไม่พบข้อมูล</div>`
+        return
+      }
+
+      result.forEach(r => {
+        const item = r.Item ?? r.item ?? ''
+        const code = r.CODE ?? r.code ?? ''
+        const assort = r.Assort ?? r.assort ?? ''
+        const location = r.Location ?? r.location ?? ''
+        const qty = r.Quantity ?? r.quantity ?? 0
+        const key = r.item_key ?? ''
+
+        box.insertAdjacentHTML('beforeend', `
+          <div class="result-card">
+            <div class="shoe-badge">👟</div>
+            <div class="result-grid">
+              <div><b>Item</b><span>${safe(item)}</span></div>
+              <div><b>CODE</b><span>${safe(code)}</span></div>
+              <div><b>Assort</b><span>${safe(assort)}</span></div>
+              <div><b>Location</b><span>${safe(location)}</span></div>
+              <div><b>System Qty</b><span>${safe(qty)}</span></div>
+              <div><b>item_key</b><span>${safe(key)}</span></div>
+            </div>
+            <div class="count-form">
+              <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้" id="count_${r.id}">
+              <button onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>บันทึก</button>
+            </div>
+          </div>
+        `)
+      })
+    }
+
+    window.saveCount = async function (r) {
+      const input = $('count_' + r.id)
+      const countQty = Number(input.value)
+      if (input.value === '') return alert('กรุณาใส่จำนวนที่นับได้')
+
+      const payload = {
+        master_id: r.id,
+        item_key: r.item_key ?? null,
+        item: r.Item ?? r.item ?? null,
+        code: r.CODE ?? r.code ?? null,
+        assort: r.Assort ?? r.assort ?? null,
+        location: r.Location ?? r.location ?? null,
+        system_qty: Number(r.Quantity ?? r.quantity ?? 0),
+        count_qty: countQty,
+        counted_by: currentUser
+      }
+
+      const { error } = await supabase.from(COUNT_TABLE).insert(payload)
+      if (error) return alert('บันทึกไม่สำเร็จ: ' + error.message)
+
+      input.value = ''
+      showToast('บันทึกสำเร็จ')
+    }
+
+    function safe(v) {
+      return String(v ?? '').replace(/[&<>'"]/g, c => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[c]))
+    }
+
+    function setLoading(show, text = '') {
+      $('loadingText').textContent = text
+      $('loading').style.display = show ? 'flex' : 'none'
+    }
+
+    function showToast(text) {
+      $('toast').textContent = text
+      $('toast').classList.add('show')
+      setTimeout(() => $('toast').classList.remove('show'), 1800)
+    }
+  </script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800&display=swap');
+
+    :root {
+      --bg: #f5f7fb;
+      --dark: #0f172a;
+      --dark2: #182235;
+      --card: #ffffff;
+      --line: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+      --blue: #2563eb;
+      --red: #dc2626;
+      --soft-blue: #eff6ff;
+      --radius: 22px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Prompt', system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font-family: inherit; }
+
+    .login-page {
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 24px;
+      background: radial-gradient(circle at top, #1e3a8a, #0f172a 55%);
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 430px;
+      background: rgba(255,255,255,.96);
+      border-radius: 30px;
+      padding: 34px 26px;
+      text-align: center;
+      box-shadow: 0 24px 70px rgba(0,0,0,.25);
+    }
+
+    .logo { font-size: 58px; margin-bottom: 8px; }
+    .login-card h1 { margin: 0; font-size: 34px; }
+    .login-card p { color: var(--muted); margin: 6px 0 24px; }
+
+    input {
+      width: 100%;
+      border: 1.5px solid #d1d5db;
+      border-radius: 16px;
+      padding: 16px 18px;
+      font-size: 18px;
+      outline: none;
+      background: white;
+    }
+
+    input:focus { border-color: var(--blue); box-shadow: 0 0 0 4px rgba(37,99,235,.12); }
+
+    .primary-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 14px;
+      font-size: 20px;
+      font-weight: 700;
+      color: white;
+      background: var(--blue);
+      cursor: pointer;
+    }
+
+    .app-page { display: none; }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      height: calc(72px + env(safe-area-inset-top));
+      padding: env(safe-area-inset-top) 16px 0;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(15,23,42,.96);
+      color: white;
+      backdrop-filter: blur(14px);
+    }
+
+    .hamburger {
+      width: 48px;
+      height: 48px;
+      border: 0;
+      border-radius: 15px;
+      background: #1f2937;
+      color: white;
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    .brand { display: flex; flex-direction: column; line-height: 1.1; }
+    .brand b { font-size: 23px; letter-spacing: .5px; }
+    .brand span { font-size: 13px; color: #cbd5e1; }
+
+    .side-menu {
+      position: fixed;
+      left: -310px;
+      top: 0;
+      z-index: 2000;
+      width: 290px;
+      height: 100vh;
+      padding: calc(24px + env(safe-area-inset-top)) 18px 18px;
+      background: #0f172a;
+      transition: .25s ease;
+      box-shadow: 20px 0 60px rgba(0,0,0,.3);
+    }
+
+    .side-menu.open { left: 0; }
+
+    .menu-head {
+      color: white;
+      margin-bottom: 18px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1e3a8a, #172554);
+    }
+
+    .menu-head .icon { font-size: 36px; }
+    .menu-head b { display: block; font-size: 20px; }
+    .menu-head span { color: #dbeafe; font-size: 14px; }
+
+    .menu-btn {
+      width: 100%;
+      border: 0;
+      border-radius: 18px;
+      padding: 17px 16px;
+      margin-bottom: 12px;
+      color: white;
+      background: #1f2937;
+      font-size: 18px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .menu-btn.active { background: var(--blue); }
+    .menu-btn.logout { background: var(--red); text-align: center; margin-top: 22px; }
+
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 1500;
+      background: rgba(0,0,0,.45);
+    }
+
+    .overlay.show { display: block; }
+
+    main {
+      width: 100%;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 18px 14px 40px;
+    }
+
+    .page-card {
+      background: var(--card);
+      border-radius: 28px;
+      padding: 24px;
+      box-shadow: 0 10px 35px rgba(15,23,42,.08);
+    }
+
+    .title { text-align: center; margin: 0 0 22px; font-size: 36px; }
+
+    .search-row {
+      display: grid;
+      grid-template-columns: 1fr 150px 110px;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .search-row button, .count-form button {
+      border: 0;
+      border-radius: 16px;
+      background: var(--blue);
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .search-row .clear { background: #64748b; }
+
+    .count-line {
+      text-align: right;
+      color: var(--muted);
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      max-height: 70vh;
+    }
+
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th {
+      position: sticky;
+      top: 0;
+      background: #1f2937;
+      color: white;
+      padding: 13px;
+      white-space: nowrap;
+      font-size: 16px;
+    }
+    td { padding: 13px; border-bottom: 1px solid var(--line); text-align: center; }
+    tr:nth-child(even) { background: #f8fafc; }
+
+    .result-card {
+      position: relative;
+      margin-top: 14px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+    }
+
+    .shoe-badge {
+      position: absolute;
+      right: 18px;
+      top: 18px;
+      font-size: 28px;
+    }
+
+    .result-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      padding-right: 42px;
+    }
+
+    .result-grid div {
+      background: var(--soft-blue);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .result-grid b { display: block; font-size: 14px; color: var(--muted); }
+    .result-grid span { font-size: 20px; font-weight: 600; }
+
+    .count-form {
+      display: grid;
+      grid-template-columns: 1fr 120px;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .empty {
+      padding: 24px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed #cbd5e1;
+      border-radius: 18px;
+      margin-top: 14px;
+    }
+
+    .loading {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+      background: rgba(15,23,42,.5);
+      color: white;
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 28px;
+      transform: translateX(-50%) translateY(80px);
+      background: #16a34a;
+      color: white;
+      padding: 14px 22px;
+      border-radius: 999px;
+      opacity: 0;
+      transition: .25s;
+      z-index: 4000;
+    }
+
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 720px) {
+      main { padding: 14px 10px 34px; }
+      .page-card { padding: 18px 12px; border-radius: 24px; }
+      .title { font-size: 31px; }
+      .search-row { grid-template-columns: 1fr; }
+      .search-row button { padding: 15px; }
+      .result-grid { grid-template-columns: 1fr; }
+      .count-form { grid-template-columns: 1fr; }
+      .count-form button { padding: 15px; }
+      .brand b { font-size: 21px; }
+      input { font-size: 17px; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Login -->
+  <section id="loginPage" class="login-page">
+    <div class="login-card">
+      <div class="logo">👟</div>
+      <h1>STOCK APP</h1>
+      <p>Shoe Warehouse Counting System</p>
+      <input id="loginName" placeholder="ใส่ชื่อผู้ใช้งาน เช่น Moo" onkeydown="if(event.key==='Enter') login()">
+      <button class="primary-btn" onclick="login()">เข้าสู่ระบบ</button>
+    </div>
+  </section>
+
+  <!-- App -->
+  <section id="appPage" class="app-page">
+    <header class="topbar">
+      <button class="hamburger" onclick="toggleMenu()">☰</button>
+      <div class="brand">
+        <b>STOCK APP</b>
+        <span>Shoe Warehouse</span>
+      </div>
+    </header>
+
+    <aside id="sideMenu" class="side-menu">
+      <div class="menu-head">
+        <div class="icon">👟</div>
+        <b>ผู้ใช้งาน: <span id="userNameText"></span></b>
+        <span>ระบบคลังรองเท้า</span>
+      </div>
+      <button id="btnMaster" class="menu-btn" onclick="showPage('master')">📦 Master Data</button>
+      <button id="btnCount" class="menu-btn" onclick="showPage('count')">📝 Stock Count</button>
+      <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>
+    </aside>
+
+    <div id="overlay" class="overlay" onclick="closeMenu()"></div>
+
+    <main>
+      <!-- Master Data -->
+      <section id="masterPage" class="page-card">
+        <h2 class="title">Master Data</h2>
+        <div class="search-row">
+          <input id="masterSearch" placeholder="ค้นหา Item / CODE / Location / item_key" onkeydown="if(event.key==='Enter') searchMaster()">
+          <button onclick="searchMaster()">ค้นหา</button>
+          <button class="clear" onclick="clearMasterSearch()">ล้าง</button>
+        </div>
+        <div class="count-line">จำนวนแถว: <b id="masterCount">0</b></div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>CODE</th>
+                <th>Assort</th>
+                <th>Location</th>
+                <th>Quantity</th>
+                <th>item_key</th>
+              </tr>
+            </thead>
+            <tbody id="masterBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Stock Count -->
+      <section id="countPage" class="page-card" style="display:none;">
+        <h2 class="title">Stock Count</h2>
+        <input id="countedBy" type="hidden">
+        <div class="search-row" style="grid-template-columns:1fr 150px;">
+          <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" onkeydown="if(event.key==='Enter') searchForCount()">
+          <button onclick="searchForCount()">ค้นหา</button>
+        </div>
+        <div id="countResult" class="empty">ค้นหารหัสสินค้าเพื่อเริ่มนับสต็อก</div>
+      </section>
+    </main>
+  </section>
+
+  <div id="loading" class="loading"><span id="loadingText"></span></div>
+  <div id="toast" class="toast"></div>
+</body>
+</html>
