@@ -215,6 +215,11 @@
       return savedKeys.has(makeSavedKey(r))
     }
 
+    function getSavedRow(r) {
+      const key = makeSavedKey(r)
+      return countRows.find(row => makeSavedKey(row) === key) || null
+    }
+
     window.clearCountSearch = function () {
       $('countSearch').value = ''
       $('countResult').innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>`
@@ -236,7 +241,8 @@
       }
 
       if (result.length === 0) {
-        box.innerHTML = `<div class="empty">ไม่พบข้อมูล</div>`
+        alert('ไม่มีข้อมูล')
+        box.innerHTML = `<div class="empty">ไม่มีข้อมูล</div>`
         return
       }
 
@@ -248,7 +254,9 @@
         const qty = r.Quantity ?? r.quantity ?? 0
         const key = r.item_key ?? ''
 
-        const saved = isSaved(r)
+        const savedRow = getSavedRow(r)
+        const saved = !!savedRow
+        const savedQty = savedRow?.count_qty ?? ''
         box.insertAdjacentHTML('beforeend', `
           <div class="result-card ${saved ? 'saved-card' : ''}" id="card_${safe(r.id)}">
             <div class="shoe-badge">👟</div>
@@ -262,8 +270,8 @@
               <div><b>item_key</b><span>${safe(key)}</span></div>
             </div>
             <div class="count-form">
-              <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้" id="count_${safe(r.id)}" ${saved ? 'disabled' : ''}>
-              <button class="save-btn" id="save_${safe(r.id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})' ${saved ? 'disabled' : ''}>${saved ? 'บันทึกแล้ว' : 'บันทึก'}</button>
+              <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้" id="count_${safe(r.id)}" value="${safe(savedQty)}">
+              <button class="save-btn" id="save_${safe(r.id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>${saved ? 'อัปเดต' : 'บันทึก'}</button>
               <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
             </div>
           </div>
@@ -288,14 +296,35 @@
         counted_by: currentUser
       }
 
-      const { error } = await supabase.from(COUNT_TABLE).insert(payload)
+      const oldRow = getSavedRow(r)
+
+      if (oldRow) {
+        let query = supabase.from(COUNT_TABLE).update(payload)
+        if (oldRow.id) query = query.eq('id', oldRow.id)
+        else query = query.eq('master_id', r.id).eq('item_key', payload.item_key)
+
+        const { error } = await query
+        if (error) return alert('อัปเดตไม่สำเร็จ: ' + error.message)
+
+        countRows = countRows.map(row => makeSavedKey(row) === makeSavedKey(r) ? { ...row, ...payload } : row)
+        const saveBtn = $('save_' + r.id)
+        if (saveBtn) saveBtn.textContent = 'อัปเดต'
+        const card = $('card_' + r.id)
+        if (card) {
+          card.classList.add('saved-card')
+          if (!card.querySelector('.saved-status')) card.insertAdjacentHTML('afterbegin', '<div class="saved-status">บันทึกแล้ว</div>')
+        }
+        showToast('อัปเดตสำเร็จ')
+        return
+      }
+
+      const { data, error } = await supabase.from(COUNT_TABLE).insert(payload).select('*').single()
       if (error) return alert('บันทึกไม่สำเร็จ: ' + error.message)
 
+      countRows.push(data || payload)
       savedKeys.add(makeSavedKey(r))
-      input.value = ''
-      input.disabled = true
       const saveBtn = $('save_' + r.id)
-      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'บันทึกแล้ว' }
+      if (saveBtn) saveBtn.textContent = 'อัปเดต'
       const card = $('card_' + r.id)
       if (card) {
         card.classList.add('saved-card')
@@ -308,6 +337,11 @@
       const modal = $('scannerModal')
       const video = $('scannerVideo')
       const text = $('scannerText')
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง กรุณาใช้ Safari/Chrome และเปิดผ่าน https')
+        return
+      }
 
       if (!('BarcodeDetector' in window)) {
         const manual = prompt('เครื่องนี้ยังไม่รองรับการสแกนผ่านกล้องใน browser นี้\nกรอกรหัสที่ต้องการค้นหาแทนได้เลย')
@@ -559,6 +593,33 @@
       margin-bottom: 16px;
     }
 
+    .search-wrapper {
+      position: relative;
+    }
+
+    .search-wrapper input {
+      padding-right: 48px;
+    }
+
+    .clear-search {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: #eef2f7;
+      color: #64748b;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      user-select: none;
+    }
+
     .search-row button, .count-form button {
       border: 0;
       border-radius: 16px;
@@ -571,7 +632,7 @@
 
     .search-row .clear { background: #64748b; }
     .search-row .scan { background: #0f766e; }
-    .count-search-row { grid-template-columns: 1fr 110px 100px 90px; }
+    .count-search-row { grid-template-columns: 1fr 120px; }
 
     .count-line {
       text-align: right;
@@ -816,7 +877,7 @@
       .title { font-size: 28px; margin-bottom: 16px; }
       input { font-size: 16px; padding: 15px 16px; border-radius: 15px; }
       .search-row { grid-template-columns: 1fr 96px; gap: 8px; }
-      .count-search-row { grid-template-columns: 1fr 82px 78px; }
+      .count-search-row { grid-template-columns: 1fr 96px; }
       .search-row .clear { grid-column: 1 / -1; }
       .search-row button { padding: 0 10px; min-height: 54px; font-size: 16px; }
       .count-line { font-size: 15px; margin: 2px 2px 10px; }
@@ -912,10 +973,11 @@
         <h2 class="title">Stock Count</h2>
         <input id="countedBy" type="hidden">
         <div class="search-row count-search-row">
-          <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" onkeydown="if(event.key==='Enter') searchForCount()">
+          <div class="search-wrapper">
+            <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" onkeydown="if(event.key==='Enter') searchForCount()">
+            <span class="clear-search" onclick="clearCountSearch()">×</span>
+          </div>
           <button onclick="searchForCount()">ค้นหา</button>
-          <button class="scan" onclick="openScanner('countSearch')">สแกน</button>
-          <button class="clear" onclick="clearCountSearch()">ล้าง</button>
         </div>
         <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>
       </section>
