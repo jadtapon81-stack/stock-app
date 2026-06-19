@@ -36,6 +36,7 @@
 
     const MASTER_TABLE = 'Master_Data'
     const COUNT_TABLE = 'stock_count'
+    const ACTIVE_TABLE = 'active_users'
     const PAGE_SIZE = 1000
 
     let masterRows = []
@@ -48,6 +49,13 @@
     let currentCountCustomer = 'BIG C'
     let currentFgMode = 'IN'
     let currentFgRow = null
+    let presenceTimer = null
+    let activeUsersTimer = null
+    let sessionId = localStorage.getItem('stock_session_id') || ''
+    if (!sessionId) {
+      sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : 's_' + Date.now() + '_' + Math.random().toString(16).slice(2)
+      localStorage.setItem('stock_session_id', sessionId)
+    }
 
     const $ = (id) => document.getElementById(id)
     const showEl = (id, show) => { const el = $(id); if (el) el.style.display = show ? 'block' : 'none' }
@@ -55,19 +63,34 @@
     const setVal = (id, value) => { const el = $(id); if (el) el.value = value }
     const setActive = (id, active) => { const el = $(id); if (el) el.classList.toggle('active', active) }
 
+    function isMooUser() {
+      return String(currentUser || '').trim().toUpperCase() === 'MOO'
+    }
+
+    function updateAdminFeatureVisibility() {
+      const isAdmin = isMooUser()
+      const panel = $('webTestPanel')
+      if (panel) panel.style.display = isAdmin ? 'block' : 'none'
+      const btn = $('webTestBtn')
+      if (btn) btn.disabled = !isAdmin
+    }
+
     window.addEventListener('DOMContentLoaded', () => {
       if (currentUser) {
         showEl('loginPage', false)
         showEl('appPage', true)
         setText('userNameText', currentUser)
         setVal('countedBy', currentUser)
+        updateAdminFeatureVisibility()
         showPage('home')
+        startPresence()
         loadMasterData()
       } else {
         const loginPage = $('loginPage')
         if (loginPage) loginPage.style.display = 'flex'
         showEl('appPage', false)
       }
+      updateAdminFeatureVisibility()
     })
 
     /* =====================
@@ -80,13 +103,16 @@
       currentUser = name
       setText('userNameText', name)
       setVal('countedBy', name)
+      updateAdminFeatureVisibility()
       showEl('loginPage', false)
       showEl('appPage', true)
       showPage('home')
+      startPresence()
       loadMasterData().catch(err => console.error(err))
     }
 
-    window.logout = function () {
+    window.logout = async function () {
+      try { await stopPresence() } catch (e) {}
       localStorage.removeItem('stock_user')
       location.reload()
     }
@@ -136,6 +162,136 @@
       clearFgForm(false)
       showPage('fg')
     }
+
+
+    /* =====================
+       2.1) Active Users / Web Test
+       ===================== */
+    function setActiveUserText(count, users = []) {
+      const text = Number(count || 0).toLocaleString('th-TH')
+      setText('activeUserCount', text)
+      setText('activeUserCountMenu', text)
+      setText('activeUserCountHome', text)
+      const names = users.map(u => u.user_name || 'ไม่ระบุชื่อ').filter(Boolean)
+      setText('activeUserList', names.length ? names.slice(0, 8).join(', ') : 'ยังไม่มีข้อมูลผู้ใช้งานออนไลน์')
+    }
+
+    async function upsertPresence() {
+      if (!currentUser) return
+      try {
+        const payload = {
+          session_id: sessionId,
+          user_name: currentUser,
+          last_seen: new Date().toISOString(),
+          page_url: location.pathname
+        }
+        const { error } = await getSupabase()
+          .from(ACTIVE_TABLE)
+          .upsert(payload, { onConflict: 'session_id' })
+        if (error) throw error
+      } catch (err) {
+        console.warn('อัปเดตผู้ใช้งานออนไลน์ไม่สำเร็จ', err)
+      }
+    }
+
+    async function refreshActiveUsers() {
+      try {
+        const since = new Date(Date.now() - 60 * 1000).toISOString()
+        const { data, error } = await getSupabase()
+          .from(ACTIVE_TABLE)
+          .select('session_id,user_name,last_seen')
+          .gte('last_seen', since)
+          .order('last_seen', { ascending: false })
+        if (error) throw error
+        setActiveUserText(data?.length || 0, data || [])
+      } catch (err) {
+        console.warn('โหลดจำนวนผู้ใช้งานออนไลน์ไม่สำเร็จ', err)
+        setText('activeUserList', 'ยังไม่ได้สร้างตาราง active_users หรือยังไม่เปิด Policy')
+      }
+    }
+
+    function startPresence() {
+      upsertPresence()
+      refreshActiveUsers()
+      if (presenceTimer) clearInterval(presenceTimer)
+      if (activeUsersTimer) clearInterval(activeUsersTimer)
+      presenceTimer = setInterval(upsertPresence, 20000)
+      activeUsersTimer = setInterval(refreshActiveUsers, 15000)
+    }
+
+    async function stopPresence() {
+      if (presenceTimer) clearInterval(presenceTimer)
+      if (activeUsersTimer) clearInterval(activeUsersTimer)
+      presenceTimer = null
+      activeUsersTimer = null
+      try {
+        await getSupabase().from(ACTIVE_TABLE).delete().eq('session_id', sessionId)
+      } catch (err) {
+        console.warn('ลบสถานะออนไลน์ไม่สำเร็จ', err)
+      }
+    }
+
+    window.runConnectionTest = async function () {
+      if (!isMooUser()) {
+        alert('ฟังก์ชันทดสอบเว็บเปิดใช้ได้เฉพาะ User MOO')
+        return
+      }
+      const btn = $('webTestBtn')
+      const result = $('webTestResult')
+      if (btn) btn.disabled = true
+      if (result) result.innerHTML = 'กำลังทดสอบการเชื่อมต่อ 30 คำขอพร้อมกัน...'
+
+      const total = 30
+      const start = performance.now()
+      let ok = 0
+      let fail = 0
+      let errors = []
+
+      try {
+        const jobs = Array.from({ length: total }, async (_, i) => {
+          const t = performance.now()
+          const { error } = await getSupabase()
+            .from(MASTER_TABLE)
+            .select('id', { count: 'exact', head: false })
+            .limit(1)
+          const ms = Math.round(performance.now() - t)
+          if (error) {
+            fail++
+            errors.push(error.message)
+          } else {
+            ok++
+          }
+          return ms
+        })
+
+        const times = await Promise.all(jobs)
+        const totalMs = Math.round(performance.now() - start)
+        const avgMs = Math.round(times.reduce((a,b)=>a+b,0) / times.length)
+        const maxMs = Math.max(...times)
+        const status = fail === 0 ? 'ผ่าน' : 'มีบางคำขอล้มเหลว'
+
+        if (result) {
+          result.innerHTML = `
+            <b>ผลทดสอบ: ${status}</b><br>
+            สำเร็จ ${ok}/${total} คำขอ<br>
+            เวลาเฉลี่ย ${avgMs} ms | ช้าสุด ${maxMs} ms | รวม ${totalMs} ms
+            ${errors.length ? '<br><small>' + safe([...new Set(errors)].slice(0,2).join(' | ')) + '</small>' : ''}
+          `
+        }
+      } catch (err) {
+        if (result) result.textContent = 'ทดสอบไม่สำเร็จ: ' + (err?.message || err)
+      } finally {
+        if (btn) btn.disabled = false
+      }
+    }
+
+    window.addEventListener('beforeunload', () => {
+      if (!currentUser) return
+      try {
+        const payload = JSON.stringify({ session_id: sessionId, user_name: currentUser, last_seen: new Date().toISOString(), page_url: location.pathname })
+        navigator.sendBeacon?.('/presence-close', payload)
+      } catch (e) {}
+    })
 
     /* =====================
        3) Load Master Data ทั้งหมด
@@ -1200,6 +1356,57 @@
       font-size: 17px;
     }
 
+
+    .online-panel {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 20px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .online-panel b {
+      font-size: 18px;
+    }
+
+    .online-panel small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .test-panel {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .test-btn {
+      border: 0;
+      border-radius: 18px;
+      background: #0f766e;
+      color: white;
+      font-weight: 800;
+      font-size: 17px;
+      cursor: pointer;
+      padding: 14px;
+    }
+
+    .test-btn:disabled { opacity: .65; }
+
+    .test-result {
+      padding: 14px;
+      border-radius: 18px;
+      background: #eef2ff;
+      color: #1e293b;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
     .search-row {
       display: grid;
       grid-template-columns: 1fr 150px 110px;
@@ -1754,6 +1961,57 @@
       font-size: 17px;
     }
 
+
+    .online-panel {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 20px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .online-panel b {
+      font-size: 18px;
+    }
+
+    .online-panel small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .test-panel {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .test-btn {
+      border: 0;
+      border-radius: 18px;
+      background: #0f766e;
+      color: white;
+      font-weight: 800;
+      font-size: 17px;
+      cursor: pointer;
+      padding: 14px;
+    }
+
+    .test-btn:disabled { opacity: .65; }
+
+    .test-result {
+      padding: 14px;
+      border-radius: 18px;
+      background: #eef2ff;
+      color: #1e293b;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
     .search-row { grid-template-columns: 1fr 96px; gap: 8px; }
       .count-search-row { grid-template-columns: 1fr 96px; }
       .search-row .clear { grid-column: 1 / -1; }
@@ -1869,6 +2127,57 @@
       font-size: 17px;
     }
 
+
+    .online-panel {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 20px;
+      background: #f8fafc;
+      border: 1px solid var(--line);
+      color: var(--text);
+    }
+
+    .online-panel b {
+      font-size: 18px;
+    }
+
+    .online-panel small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .test-panel {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 180px 1fr;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .test-btn {
+      border: 0;
+      border-radius: 18px;
+      background: #0f766e;
+      color: white;
+      font-weight: 800;
+      font-size: 17px;
+      cursor: pointer;
+      padding: 14px;
+    }
+
+    .test-btn:disabled { opacity: .65; }
+
+    .test-result {
+      padding: 14px;
+      border-radius: 18px;
+      background: #eef2ff;
+      color: #1e293b;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
     .search-row { grid-template-columns: 1fr; }
       .result-grid { grid-template-columns: 1fr; }
       .fg-form-grid { grid-template-columns: 1fr; }
@@ -1903,6 +2212,7 @@
         <div class="icon">👟</div>
         <b>ผู้ใช้งาน: <span id="userNameText"></span></b>
         <span>ระบบคลังรองเท้า</span>
+        <span>ออนไลน์: <b id="activeUserCountMenu">0</b> คน</span>
       </div>
       <button id="btnHome" class="menu-btn" onclick="showPage('home')">🏠 Home</button>
       <button id="btnMaster" class="menu-btn" onclick="showPage('master')">📦 Master Data</button>
@@ -1944,6 +2254,16 @@
 
         <div class="home-summary">
           Master Data ทั้งหมด <b id="homeTotalCount">0</b> รายการ
+        </div>
+
+        <div class="online-panel">
+          <b>ผู้ใช้งานออนไลน์: <span id="activeUserCountHome">0</span> คน</b>
+          <small id="activeUserList">กำลังโหลดผู้ใช้งานออนไลน์...</small>
+        </div>
+
+        <div id="webTestPanel" class="test-panel" style="display:none;">
+          <button id="webTestBtn" class="test-btn" onclick="runConnectionTest()">ทดสอบเว็บ</button>
+          <div id="webTestResult" class="test-result">กดเพื่อจำลองการอ่านข้อมูลพร้อมกัน 30 คำขอ</div>
         </div>
 
         <div class="home-actions" style="margin-top:14px;">
