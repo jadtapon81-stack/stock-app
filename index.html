@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Stock App | Shoe Warehouse</title>
+  <title>Stock App Mobile | Shoe Warehouse</title>
 
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -12,7 +12,7 @@
        1) ตั้งค่า Supabase
        ===================== */
     const supabaseUrl = 'https://asslmgjcicpgrxwqaenx.supabase.co'
-    const supabaseKey = 'sb_publishable_PLOIg4kX4r8PN9LXvXZVIQ_OiF-yj-K'
+    const supabaseKey = 'ใส่_SUPABASE_PUBLISHABLE_KEY_ตรงนี้'
     const supabase = createClient(supabaseUrl, supabaseKey)
 
     const MASTER_TABLE = 'Master_Data'
@@ -75,7 +75,10 @@
       $('countPage').style.display = page === 'count' ? 'block' : 'none'
       $('btnMaster').classList.toggle('active', page === 'master')
       $('btnCount').classList.toggle('active', page === 'count')
+      $('bottomMaster').classList.toggle('active', page === 'master')
+      $('bottomCount').classList.toggle('active', page === 'count')
       closeMenu()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     /* =====================
@@ -143,18 +146,44 @@
     function renderMasterTable(rows) {
       $('masterCount').textContent = rows.length.toLocaleString('th-TH')
       const body = $('masterBody')
+      const cards = $('masterCards')
       body.innerHTML = ''
+      cards.innerHTML = ''
 
       rows.forEach(r => {
+        const item = r.Item ?? r.item ?? ''
+        const code = r.CODE ?? r.code ?? ''
+        const assort = r.Assort ?? r.assort ?? ''
+        const location = r.Location ?? r.location ?? ''
+        const qty = r.Quantity ?? r.quantity ?? ''
+        const key = r.item_key ?? ''
+
         body.insertAdjacentHTML('beforeend', `
           <tr>
-            <td>${safe(r.Item ?? r.item)}</td>
-            <td>${safe(r.CODE ?? r.code)}</td>
-            <td>${safe(r.Assort ?? r.assort)}</td>
-            <td>${safe(r.Location ?? r.location)}</td>
-            <td>${safe(r.Quantity ?? r.quantity)}</td>
-            <td>${safe(r.item_key)}</td>
+            <td>${safe(item)}</td>
+            <td>${safe(code)}</td>
+            <td>${safe(assort)}</td>
+            <td>${safe(location)}</td>
+            <td>${safe(qty)}</td>
+            <td>${safe(key)}</td>
           </tr>
+        `)
+
+        cards.insertAdjacentHTML('beforeend', `
+          <article class="mobile-item-card">
+            <div class="mobile-card-top">
+              <div>
+                <b>${safe(item)}</b>
+                <span>${safe(key || '-')}</span>
+              </div>
+              <strong>${safe(qty)}</strong>
+            </div>
+            <div class="mobile-card-grid">
+              <div><small>CODE</small><p>${safe(code)}</p></div>
+              <div><small>Assort</small><p>${safe(assort)}</p></div>
+              <div><small>Location</small><p>${safe(location)}</p></div>
+            </div>
+          </article>
         `)
       })
     }
@@ -548,17 +577,105 @@
 
     .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
+
+
+    .mobile-cards { display: none; }
+
+    .mobile-item-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: white;
+      padding: 14px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px rgba(15,23,42,.06);
+    }
+
+    .mobile-card-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px dashed #e5e7eb;
+    }
+
+    .mobile-card-top b { display: block; font-size: 20px; line-height: 1.2; }
+    .mobile-card-top span { display: block; color: var(--muted); font-size: 13px; margin-top: 3px; word-break: break-all; }
+    .mobile-card-top strong { background: #ecfdf5; color: #047857; padding: 6px 12px; border-radius: 999px; font-size: 18px; white-space: nowrap; }
+
+    .mobile-card-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .mobile-card-grid div { background: #f8fafc; border-radius: 14px; padding: 9px; min-width: 0; }
+    .mobile-card-grid small { color: var(--muted); font-size: 12px; }
+    .mobile-card-grid p { margin: 2px 0 0; font-weight: 700; font-size: 16px; word-break: break-word; }
+
+    .bottom-nav {
+      display: none;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1100;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      background: rgba(255,255,255,.94);
+      backdrop-filter: blur(16px);
+      border-top: 1px solid #e5e7eb;
+      box-shadow: 0 -10px 30px rgba(15,23,42,.08);
+    }
+
+    .bottom-nav button {
+      border: 0;
+      border-radius: 16px;
+      background: transparent;
+      color: #64748b;
+      padding: 8px 4px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .bottom-nav span { display: block; font-size: 22px; line-height: 1; }
+    .bottom-nav b { display: block; margin-top: 3px; }
+    .bottom-nav button.active { background: #eff6ff; color: var(--blue); }
+
     @media (max-width: 720px) {
-      main { padding: 14px 10px 34px; }
-      .page-card { padding: 18px 12px; border-radius: 24px; }
-      .title { font-size: 31px; }
-      .search-row { grid-template-columns: 1fr; }
-      .search-row button { padding: 15px; }
-      .result-grid { grid-template-columns: 1fr; }
+      body { background: #eef2f7; }
+      .topbar { height: calc(64px + env(safe-area-inset-top)); padding-left: 12px; padding-right: 12px; }
+      .hamburger { width: 44px; height: 44px; font-size: 24px; }
+      .brand b { font-size: 19px; }
+      .brand span { font-size: 12px; }
+      main { padding: 12px 10px calc(96px + env(safe-area-inset-bottom)); }
+      .page-card { padding: 16px 12px; border-radius: 24px; box-shadow: none; }
+      .title { font-size: 28px; margin-bottom: 16px; }
+      input { font-size: 16px; padding: 15px 16px; border-radius: 15px; }
+      .search-row { grid-template-columns: 1fr 96px; gap: 8px; }
+      .search-row .clear { grid-column: 1 / -1; }
+      .search-row button { padding: 0 10px; min-height: 54px; font-size: 16px; }
+      .count-line { font-size: 15px; margin: 2px 2px 10px; }
+      .table-wrap { display: none; }
+      .mobile-cards { display: block; }
+      .mobile-card-grid { grid-template-columns: repeat(3, 1fr); }
+      .result-card { padding: 14px; border-radius: 20px; }
+      .shoe-badge { right: 14px; top: 14px; font-size: 24px; }
+      .result-grid { grid-template-columns: 1fr 1fr; gap: 8px; padding-right: 32px; }
+      .result-grid div { padding: 10px; border-radius: 14px; }
+      .result-grid span { font-size: 17px; }
       .count-form { grid-template-columns: 1fr; }
-      .count-form button { padding: 15px; }
-      .brand b { font-size: 21px; }
-      input { font-size: 17px; }
+      .count-form button { padding: 15px; min-height: 54px; }
+      .bottom-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+      .side-menu { width: 82vw; max-width: 320px; left: -86vw; }
+      .login-card { border-radius: 26px; padding: 30px 22px; }
+      .login-card h1 { font-size: 30px; }
+    }
+
+    @media (max-width: 390px) {
+      .mobile-card-grid { grid-template-columns: 1fr 1fr; }
+      .search-row { grid-template-columns: 1fr; }
+      .result-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -623,6 +740,7 @@
             <tbody id="masterBody"></tbody>
           </table>
         </div>
+        <div id="masterCards" class="mobile-cards"></div>
       </section>
 
       <!-- Stock Count -->
@@ -636,6 +754,21 @@
         <div id="countResult" class="empty">ค้นหารหัสสินค้าเพื่อเริ่มนับสต็อก</div>
       </section>
     </main>
+
+    <nav class="bottom-nav">
+      <button id="bottomMaster" onclick="showPage('master')">
+        <span>📦</span>
+        <b>Master</b>
+      </button>
+      <button id="bottomCount" onclick="showPage('count')">
+        <span>📝</span>
+        <b>Count</b>
+      </button>
+      <button onclick="toggleMenu()">
+        <span>☰</span>
+        <b>Menu</b>
+      </button>
+    </nav>
   </section>
 
   <div id="loading" class="loading"><span id="loadingText"></span></div>
