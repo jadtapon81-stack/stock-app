@@ -344,21 +344,33 @@
     /* =====================
        5) Scanner (ZXing - รองรับ Safari iOS / Chrome Android)
        ===================== */
-    function buildZxingReader() {
-      const hints = new Map()
-      hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-        BarcodeFormat.QR_CODE,
-        BarcodeFormat.CODE_128,
-        BarcodeFormat.EAN_13,
-        BarcodeFormat.EAN_8,
-        BarcodeFormat.CODE_39,
-        BarcodeFormat.ITF
-      ])
-      hints.set(DecodeHintType.TRY_HARDER, true)
-      return new BrowserMultiFormatReader(hints)
-    }
+    let lastScanValue = ''
+let lastScanTime = 0
 
-   window.openScanner = async function (targetId = 'countSearch') {
+function buildZxingReader() {
+  const hints = new Map()
+
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+    BarcodeFormat.QR_CODE,
+    BarcodeFormat.CODE_128,
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.CODE_93,
+    BarcodeFormat.EAN_13,
+    BarcodeFormat.EAN_8,
+    BarcodeFormat.UPC_A,
+    BarcodeFormat.UPC_E,
+    BarcodeFormat.ITF,
+    BarcodeFormat.CODABAR,
+    BarcodeFormat.DATA_MATRIX,
+    BarcodeFormat.PDF_417
+  ])
+
+  hints.set(DecodeHintType.TRY_HARDER, true)
+
+  return new BrowserMultiFormatReader(hints, 300)
+}
+
+window.openScanner = async function (targetId = 'countSearch') {
   const modal = $('scannerModal')
   const video = $('scannerVideo')
   const text = $('scannerText')
@@ -370,31 +382,34 @@
 
   try {
     modal.classList.add('show')
-    text.textContent = 'กำลังขออนุญาตเปิดกล้อง...'
+    text.textContent = 'กำลังเปิดกล้อง...'
 
     zxingReader = buildZxingReader()
 
-    const constraints = {
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
-      },
-      audio: false
-    }
+    text.textContent = 'เล็งกล้องไปที่ QR Code / Barcode'
 
-    text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
-
-    await zxingReader.decodeFromConstraints(
-      constraints,
+    await zxingReader.decodeFromVideoDevice(
+      null,
       video,
       (result, err) => {
-        if (result) {
-          const value = result.getText() || ''
-          $(targetId).value = value
-          closeScanner()
-          showToast('สแกนสำเร็จ')
-          if (targetId === 'countSearch') searchForCount()
+        if (!result) return
+
+        const value = result.getText()
+        const now = Date.now()
+
+        // กันอ่านค่าซ้ำรัวๆ
+        if (value === lastScanValue && now - lastScanTime < 1500) return
+
+        lastScanValue = value
+        lastScanTime = now
+
+        $(targetId).value = value
+        showToast('อ่านค่าได้: ' + value)
+
+        closeScanner()
+
+        if (targetId === 'countSearch') {
+          searchForCount()
         }
       }
     )
@@ -406,21 +421,24 @@
     alert('เปิดกล้องไม่ได้: ' + err.message)
   }
 }
-    window.closeScanner = function () {
-      const modal = $('scannerModal')
-      const video = $('scannerVideo')
 
-      if (zxingReader) {
-        try { zxingReader.reset() } catch (err) {}
-        zxingReader = null
-      }
-      if (scannerStream) {
-        try { scannerStream.getTracks().forEach(t => t.stop()) } catch (err) {}
-      }
-      scannerStream = null
-      if (video) video.srcObject = null
-      modal.classList.remove('show')
-    }
+window.closeScanner = function () {
+  const modal = $('scannerModal')
+  const video = $('scannerVideo')
+
+  if (zxingReader) {
+    try { zxingReader.reset() } catch (err) {}
+    zxingReader = null
+  }
+
+  if (scannerStream) {
+    try { scannerStream.getTracks().forEach(t => t.stop()) } catch (err) {}
+  }
+
+  scannerStream = null
+  if (video) video.srcObject = null
+  modal.classList.remove('show')
+}
 
     function safe(v) {
       return String(v ?? '').replace(/[&<>'"]/g, c => ({
@@ -962,7 +980,7 @@
       <div class="menu-head">
         <div class="icon">👟</div>
         <b>ผู้ใช้งาน: <span id="userNameText"></span></b>
-        <span>ระบบคลังMT</span>
+        <span>ระบบคลังรองเท้า</span>
       </div>
       <button id="btnMaster" class="menu-btn" onclick="showPage('master')">📦 Master Data</button>
       <button id="btnCount" class="menu-btn" onclick="showPage('count')">📝 Stock Count</button>
@@ -1001,7 +1019,7 @@
 
       <!-- Stock Count -->
       <section id="countPage" class="page-card" style="display:none;">
-        <h2 class="title">Stock Count LT</h2>
+        <h2 class="title">Stock Count</h2>
         <input id="countedBy" type="hidden">
         <div class="search-row count-search-row">
           <div class="search-wrapper">
