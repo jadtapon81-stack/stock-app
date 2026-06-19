@@ -1,108 +1,56 @@
-ChatGPT
-
-
-
-
-เขียนโค้ดเปิดกล้องระบบสแกนเหมือนเป้ะแบบแอพชีตให้หน่อยเจออะไรอ่านค่าอันนั้น
-
-คิดเป็นเวลาสองสามวินาที
-ได้ เอาโค้ดนี้ไปวางแทนส่วนสแกนเดิมได้เลย
-หลักการคือ เปิดกล้องหลังทันที + เจอ Barcode/QR อะไรก็อ่านค่านั้นทันที เหมือน AppSheet
-
-<!-- ปุ่มเปิดสแกน -->
-<button onclick="startScan()">📷 สแกน</button>
-
-<!-- กล่องกล้อง -->
-<div id="scannerBox" style="display:none;">
-  <video id="video" autoplay playsinline style="width:100%;border-radius:16px;"></video>
-  <button onclick="stopScan()">ปิดกล้อง</button>
-</div>
+<video id="video" autoplay playsinline></video>
 
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <script>
-let codeReader = null;
-let currentStream = null;
-let lastText = "";
-let lastTime = 0;
+const codeReader = new ZXing.BrowserMultiFormatReader();
 
 async function startScan() {
-  document.getElementById("scannerBox").style.display = "block";
-
-  codeReader = new ZXing.BrowserMultiFormatReader();
 
   try {
-    const devices = await codeReader.listVideoInputDevices();
 
-    // เลือกกล้องหลัง ถ้ามี
-    let backCamera = devices.find(d =>
-      d.label.toLowerCase().includes("back") ||
-      d.label.toLowerCase().includes("rear") ||
-      d.label.toLowerCase().includes("environment")
-    );
-
-    let deviceId = backCamera ? backCamera.deviceId : devices[0]?.deviceId;
-
-    if (!deviceId) {
-      alert("ไม่พบกล้อง");
-      return;
-    }
-
-    codeReader.decodeFromVideoDevice(deviceId, "video", (result, err) => {
-      if (result) {
-        const text = result.getText();
-        const now = Date.now();
-
-        // กันยิงซ้ำเร็วเกินไป
-        if (text === lastText && now - lastTime < 1200) return;
-
-        lastText = text;
-        lastTime = now;
-
-        onScanSuccess(text);
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: {
+          exact: "environment"
+        },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
       }
     });
 
-  } catch (error) {
-    alert("เปิดกล้องไม่ได้: " + error.message);
+    document.getElementById("video").srcObject = stream;
+
+    codeReader.decodeFromVideoElement(
+      document.getElementById("video"),
+      (result, err) => {
+
+        if (result) {
+
+          const scanValue = result.getText();
+
+          console.log(scanValue);
+
+          // ใส่ช่องค้นหา
+          document.getElementById("searchBox").value = scanValue;
+
+          // เรียกค้นหาอัตโนมัติ
+          loadData();
+
+        }
+      }
+    );
+
+  } catch (e) {
+
+    // ถ้าบางเครื่องไม่รองรับ exact
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "environment"
+      }
+    });
+
+    document.getElementById("video").srcObject = stream;
   }
-}
-
-function onScanSuccess(value) {
-  console.log("SCAN:", value);
-
-  // เอาค่าที่สแกนได้ไปใส่ช่องค้นหา
-  const searchBox = document.getElementById("searchBox");
-  if (searchBox) {
-    searchBox.value = value;
-    searchBox.dispatchEvent(new Event("input"));
-  }
-
-  // ถ้ามีฟังก์ชันค้นหาเดิม ให้เรียกใช้
-  if (typeof searchData === "function") {
-    searchData(value);
-  }
-
-  if (typeof loadData === "function") {
-    loadData(value);
-  }
-}
-
-function stopScan() {
-  if (codeReader) {
-    codeReader.reset();
-    codeReader = null;
-  }
-
-  const video = document.getElementById("video");
-  if (video && video.srcObject) {
-    video.srcObject.getTracks().forEach(track => track.stop());
-    video.srcObject = null;
-  }
-
-  document.getElementById("scannerBox").style.display = "none";
 }
 </script>
-สำคัญมาก: เว็บต้องเปิดผ่าน https หรือ localhost กล้องถึงจะทำงานบนมือถือได้.
-
-
