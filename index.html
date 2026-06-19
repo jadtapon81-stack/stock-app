@@ -14,16 +14,25 @@
 
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <script type="module">
-    import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+  <script>
 
     /* =====================
        1) ตั้งค่า Supabase
        ===================== */
     const supabaseUrl = 'https://asslmgjcicpgrxwqaenx.supabase.co'
     const supabaseKey = 'sb_publishable_PLOIg4kX4r8PN9LXvXZVIQ_OiF-yj-K'
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    let supabaseClient = null
+    function getSupabase() {
+      if (!supabaseClient) {
+        if (!window.supabase || !window.supabase.createClient) {
+          throw new Error('โหลด Supabase ไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วรีเฟรชหน้า')
+        }
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey)
+      }
+      return supabaseClient
+    }
 
     const MASTER_TABLE = 'Master_Data'
     const COUNT_TABLE = 'stock_count'
@@ -74,7 +83,7 @@
       showEl('loginPage', false)
       showEl('appPage', true)
       showPage('home')
-      loadMasterData()
+      loadMasterData().catch(err => console.error(err))
     }
 
     window.logout = function () {
@@ -137,7 +146,7 @@
 
       while (true) {
         const to = from + PAGE_SIZE - 1
-        const { data, error } = await supabase
+        const { data, error } = await getSupabase()
           .from(tableName)
           .select('*')
           .range(from, to)
@@ -416,7 +425,7 @@
       const oldRow = getSavedRow(r)
 
       if (oldRow) {
-        let query = supabase.from(COUNT_TABLE).update(payload)
+        let query = getSupabase().from(COUNT_TABLE).update(payload)
         if (oldRow.id) query = query.eq('id', oldRow.id)
         else query = query.eq('master_id', r.id).eq('item_key', payload.item_key)
 
@@ -435,7 +444,7 @@
         return
       }
 
-      const { data, error } = await supabase.from(COUNT_TABLE).insert(payload).select('*').single()
+      const { data, error } = await getSupabase().from(COUNT_TABLE).insert(payload).select('*').single()
       if (error) return alert('บันทึกไม่สำเร็จ: ' + error.message)
 
       countRows.push(data || payload)
@@ -516,9 +525,11 @@
       const text = input.value.trim()
       closeFgSuggest()
 
-      if (text.length < 3) {
-        box.classList.remove('show')
-        box.innerHTML = ''
+      // เงื่อนไขใหม่: ต้องพิมพ์ 3 ตัวเฉพาะช่อง Item เท่านั้น
+      // ช่อง CODE / Assort / Location / Customer ให้แสดง Dropdown ได้ทันที
+      if (field === 'item' && text.length < 3) {
+        box.innerHTML = `<div class="fg-suggest-hint">พิมพ์ Item อย่างน้อย 3 ตัวเพื่อแสดงรายการ</div>`
+        box.classList.add('show')
         return
       }
 
@@ -651,72 +662,15 @@
     }
 
     window.searchFg = function () {
-      const keyword = $('fgSearch').value
-      const rows = fgSearchRows(keyword)
-      renderFgTable(rows)
-
-      if (keyword.trim() && rows.length === 0) {
-        $('fgNewHint').style.display = 'block'
-        currentFgRow = null
-        clearFgForm(false)
-      } else {
-        $('fgNewHint').style.display = 'none'
-      }
+      autoFillFgFromForm()
     }
 
     window.clearFgSearch = function () {
-      // เวอร์ชันฟอร์มอย่างเดียว: ไม่มีตาราง FG แล้ว จึงล้างเฉพาะฟอร์ม
       clearFgForm(false)
     }
 
     function renderFgTable(rows) {
-      $('fgResultCount').textContent = rows.length.toLocaleString('th-TH')
-      const body = $('fgBody')
-      const cards = $('fgCards')
-      body.innerHTML = ''
-      cards.innerHTML = ''
-
-      rows.forEach(r => {
-        const item = r.Item ?? r.item ?? ''
-        const code = r.CODE ?? r.code ?? ''
-        const assort = r.Assort ?? r.assort ?? ''
-        const location = r.Location ?? r.location ?? ''
-        const qty = r.Quantity ?? r.quantity ?? 0
-        const customer = r.customer ?? r.Customer ?? ''
-        const key = r.item_key ?? ''
-
-        body.insertAdjacentHTML('beforeend', `
-          <tr>
-            <td>${safe(item)}</td>
-            <td>${safe(code)}</td>
-            <td>${safe(assort)}</td>
-            <td>${safe(location)}</td>
-            <td>${safe(qty)}</td>
-            <td>${safe(customer)}</td>
-            <td>${safe(key)}</td>
-            <td><button class="mini-select" onclick='selectFgRow(${JSON.stringify(r).replace(/'/g, "&#39;")})'>เลือก</button></td>
-          </tr>
-        `)
-
-        cards.insertAdjacentHTML('beforeend', `
-          <article class="mobile-item-card">
-            <div class="mobile-card-top">
-              <div>
-                <b>${safe(item)}</b>
-                <span>${safe(key || '-')}</span>
-              </div>
-              <strong>${safe(qty)}</strong>
-            </div>
-            <div class="mobile-card-grid">
-              <div><small>CODE</small><p>${safe(code)}</p></div>
-              <div><small>Assort</small><p>${safe(assort)}</p></div>
-              <div><small>Location</small><p>${safe(location)}</p></div>
-              <div><small>Customer</small><p>${safe(customer || '-')}</p></div>
-            </div>
-            <button class="card-select-btn" onclick='selectFgRow(${JSON.stringify(r).replace(/'/g, "&#39;")})'>เลือกข้อมูลนี้</button>
-          </article>
-        `)
-      })
+      // ไม่มีตาราง FG ในเวอร์ชันนี้
     }
 
     window.selectFgRow = function (r, focusQty = true) {
@@ -786,7 +740,7 @@
           customer: customer
         }
 
-        const { error: moveError } = await supabase.from(tableName).insert(movementPayload)
+        const { error: moveError } = await getSupabase().from(tableName).insert(movementPayload)
         if (moveError) throw moveError
 
         if (currentFgRow && currentFgRow.id) {
@@ -954,9 +908,12 @@
     }
 
     function safeForJs(v) {
-      return String(v ?? '').replace(/\/g, '\\').replace(/'/g, "\'").replace(/
-/g, ' ')
+      return String(v ?? '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r?\n/g, ' ')
     }
+
 
     function setLoading(show, text = '') {
       $('loadingText').textContent = text
@@ -1636,6 +1593,67 @@
     .bottom-nav b { display: block; margin-top: 3px; }
     .bottom-nav button.active { background: #eff6ff; color: var(--blue); }
 
+
+
+    /* Fix: เมนูข้างเลื่อนขึ้นลงได้ + Dropdown ไม่เต็มจอ */
+    .side-menu {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+    }
+
+    .fg-field {
+      position: relative;
+    }
+
+    .fg-suggest {
+      display: none;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 8px);
+      max-height: 50vh !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch;
+      z-index: 5000;
+      background: rgba(255,255,255,.98);
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      box-shadow: 0 18px 45px rgba(15,23,42,.22);
+      padding: 8px;
+      backdrop-filter: blur(10px);
+    }
+
+    .fg-suggest.show {
+      display: block;
+    }
+
+    .fg-suggest button {
+      width: 100%;
+      border: 0;
+      border-radius: 13px;
+      padding: 13px 14px;
+      background: transparent;
+      color: #0f172a;
+      text-align: left;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .fg-suggest button:hover,
+    .fg-suggest button:active {
+      background: #eff6ff;
+      color: #2563eb;
+    }
+
+    .fg-suggest-empty, .fg-suggest-hint {
+      padding: 14px;
+      color: #64748b;
+      font-size: 15px;
+      text-align: center;
+    }
+
     @media (max-width: 720px) {
       body { background: #eef2f7; }
       .topbar { height: calc(64px + env(safe-area-inset-top)); padding-left: 12px; padding-right: 12px; }
@@ -2003,22 +2021,22 @@
             </div>
             <div class="fg-field">
               <label>CODE</label>
-              <input id="fgCode" oninput="handleFgInput('code')" onfocus="handleFgFocus('code')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น BKG">
+              <input id="fgCode" oninput="handleFgInput('code')" onfocus="handleFgFocus('code')" autocomplete="off" placeholder="เลือก / พิมพ์ CODE เช่น BK">
               <div id="fgCodeSuggest" class="fg-suggest"></div>
             </div>
             <div class="fg-field">
               <label>Assort</label>
-              <input id="fgAssort" oninput="handleFgInput('assort')" onfocus="handleFgFocus('assort')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น 9.5">
+              <input id="fgAssort" oninput="handleFgInput('assort')" onfocus="handleFgFocus('assort')" autocomplete="off" placeholder="เลือก / พิมพ์ Assort เช่น 9.5">
               <div id="fgAssortSuggest" class="fg-suggest"></div>
             </div>
             <div class="fg-field">
               <label>Location</label>
-              <input id="fgLocation" oninput="handleFgInput('location')" onfocus="handleFgFocus('location')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น E-1">
+              <input id="fgLocation" oninput="handleFgInput('location')" onfocus="handleFgFocus('location')" autocomplete="off" placeholder="เลือก / พิมพ์ Location เช่น E-12">
               <div id="fgLocationSuggest" class="fg-suggest"></div>
             </div>
             <div class="fg-field">
               <label>Customer</label>
-              <input id="fgCustomer" oninput="handleFgInput('customer')" onfocus="handleFgFocus('customer')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น BIG / LOT">
+              <input id="fgCustomer" oninput="handleFgInput('customer')" onfocus="handleFgFocus('customer')" autocomplete="off" placeholder="เลือก / พิมพ์ Customer">
               <div id="fgCustomerSuggest" class="fg-suggest"></div>
             </div>
             <div>
@@ -2056,7 +2074,8 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=fg-buttons-fixed-v2').catch(() => {});
+        navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=fg-all-fixed-v1').catch(() => {});
       });
     }
   </script>
