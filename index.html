@@ -1,56 +1,66 @@
-<video id="video" autoplay playsinline></video>
+<button onclick="startScan()">📷 เปิดกล้องสแกน</button>
+<button onclick="stopScan()">ปิดกล้อง</button>
+
+<video id="video" autoplay playsinline muted
+  style="width:100%;max-width:420px;border-radius:16px;background:#000;">
+</video>
+
+<input id="searchBox" placeholder="ค่าที่สแกนได้">
 
 <script src="https://unpkg.com/@zxing/library@latest"></script>
 
 <script>
-const codeReader = new ZXing.BrowserMultiFormatReader();
+let codeReader;
+let lastValue = "";
+let lastTime = 0;
 
 async function startScan() {
+  const video = document.getElementById("video");
 
   try {
+    codeReader = new ZXing.BrowserMultiFormatReader();
 
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: {
-          exact: "environment"
-        },
-        width: { ideal: 1920 },
-        height: { ideal: 1080 }
-      }
-    });
-
-    document.getElementById("video").srcObject = stream;
-
-    codeReader.decodeFromVideoElement(
-      document.getElementById("video"),
+    await codeReader.decodeFromConstraints(
+      {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      },
+      video,
       (result, err) => {
-
         if (result) {
+          const value = result.getText();
+          const now = Date.now();
 
-          const scanValue = result.getText();
+          // กันอ่านซ้ำเร็วเกินไป
+          if (value === lastValue && now - lastTime < 1000) return;
 
-          console.log(scanValue);
+          lastValue = value;
+          lastTime = now;
 
-          // ใส่ช่องค้นหา
-          document.getElementById("searchBox").value = scanValue;
+          document.getElementById("searchBox").value = value;
 
-          // เรียกค้นหาอัตโนมัติ
-          loadData();
+          console.log("SCAN:", value);
 
+          // ถ้ามีฟังก์ชันค้นหาเดิม
+          if (typeof loadData === "function") {
+            loadData();
+          }
         }
       }
     );
 
   } catch (e) {
+    alert("เปิดกล้องไม่ได้: " + e.message);
+    console.error(e);
+  }
+}
 
-    // ถ้าบางเครื่องไม่รองรับ exact
-    const stream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: "environment"
-      }
-    });
-
-    document.getElementById("video").srcObject = stream;
+function stopScan() {
+  if (codeReader) {
+    codeReader.reset();
   }
 }
 </script>
