@@ -358,47 +358,54 @@
       return new BrowserMultiFormatReader(hints)
     }
 
-    window.openScanner = async function (targetId = 'countSearch') {
-      const modal = $('scannerModal')
-      const video = $('scannerVideo')
-      const text = $('scannerText')
+   window.openScanner = async function (targetId = 'countSearch') {
+  const modal = $('scannerModal')
+  const video = $('scannerVideo')
+  const text = $('scannerText')
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        alert('เบราว์เซอร์นี้ไม่รองรับการเปิดกล้อง กรุณาใช้ Safari/Chrome และเปิดผ่าน https')
-        return
-      }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    alert('เบราว์เซอร์นี้ไม่รองรับกล้อง หรือไม่ได้เปิดผ่าน https')
+    return
+  }
 
-      try {
-        modal.classList.add('show')
-        text.textContent = 'กำลังเปิดกล้อง...'
+  try {
+    modal.classList.add('show')
+    text.textContent = 'กำลังขออนุญาตเปิดกล้อง...'
 
-        zxingReader = buildZxingReader()
+    zxingReader = buildZxingReader()
 
-        // ขอ environment-facing camera ก่อน ถ้าหาไม่ได้ใช้ default
-        const devices = await BrowserMultiFormatReader.listVideoInputDevices()
-        const backCam = devices.find(d => /back|rear|environment/i.test(d.label))
-        const deviceId = backCam ? backCam.deviceId : (devices[0] ? devices[0].deviceId : undefined)
-
-        text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
-
-        await zxingReader.decodeFromVideoDevice(deviceId, video, (result, err) => {
-          if (result) {
-            const value = result.getText() || ''
-            $(targetId).value = value
-            closeScanner()
-            showToast('สแกนสำเร็จ')
-            if (targetId === 'countSearch') searchForCount()
-          }
-          // err ที่เป็น NotFoundException เกิดขึ้นปกติทุกเฟรมที่ยังหาไม่เจอ ไม่ต้องแสดง
-        })
-
-        scannerStream = video.srcObject
-      } catch (err) {
-        closeScanner()
-        alert('เปิดกล้องไม่ได้: กรุณาอนุญาต Camera ใน Safari/Chrome')
-      }
+    const constraints = {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      },
+      audio: false
     }
 
+    text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
+
+    await zxingReader.decodeFromConstraints(
+      constraints,
+      video,
+      (result, err) => {
+        if (result) {
+          const value = result.getText() || ''
+          $(targetId).value = value
+          closeScanner()
+          showToast('สแกนสำเร็จ')
+          if (targetId === 'countSearch') searchForCount()
+        }
+      }
+    )
+
+    scannerStream = video.srcObject
+
+  } catch (err) {
+    closeScanner()
+    alert('เปิดกล้องไม่ได้: ' + err.message)
+  }
+}
     window.closeScanner = function () {
       const modal = $('scannerModal')
       const video = $('scannerVideo')
@@ -1002,6 +1009,7 @@
             <span class="clear-search" onclick="clearCountSearch()">×</span>
           </div>
           <button onclick="searchForCount()">ค้นหา</button>
+          <button class="scan" onclick="openScanner('countSearch')">สแกน</button>
         </div>
         <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>
       </section>
