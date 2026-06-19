@@ -37,6 +37,8 @@
     let zxingReader = null
     let currentUser = localStorage.getItem('stock_user') || ''
     let currentCountCustomer = 'BIG C'
+    let currentFgMode = 'IN'
+    let currentFgRow = null
 
     const $ = (id) => document.getElementById(id)
 
@@ -89,11 +91,14 @@
       $('homePage').style.display = page === 'home' ? 'block' : 'none'
       $('masterPage').style.display = page === 'master' ? 'block' : 'none'
       $('countPage').style.display = page === 'count' ? 'block' : 'none'
+      $('fgPage').style.display = page === 'fg' ? 'block' : 'none'
 
       $('btnHome').classList.toggle('active', page === 'home')
       $('btnMaster').classList.toggle('active', page === 'master')
       $('btnCountBigC').classList.toggle('active', page === 'count' && currentCountCustomer === 'BIG C')
       $('btnCountLotus').classList.toggle('active', page === 'count' && currentCountCustomer === 'LOTUS')
+      $('btnFgIn').classList.toggle('active', page === 'fg' && currentFgMode === 'IN')
+      $('btnFgOut').classList.toggle('active', page === 'fg' && currentFgMode === 'OUT')
 
       closeMenu()
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -104,6 +109,16 @@
       $('countTitle').textContent = 'Stock Count ' + customer
       clearCountSearch()
       showPage('count')
+    }
+
+    window.showFgPage = function (mode) {
+      currentFgMode = mode
+      currentFgRow = null
+      $('fgTitle').textContent = mode === 'IN' ? 'FG IN' : 'FG OUT'
+      $('fgModeText').textContent = mode === 'IN' ? 'เพิ่มสินค้าเข้าคลัง' : 'ตัดสินค้าออกจากคลัง'
+      $('fgSaveBtn').textContent = mode === 'IN' ? 'บันทึก FG IN' : 'บันทึก FG OUT'
+      clearFgSearch()
+      showPage('fg')
     }
 
     /* =====================
@@ -138,6 +153,7 @@
         buildOfflineIndex(masterRows)
         await loadCountHistory()
         renderMasterTable(masterRows)
+        updateFgDatalists()
         updateHomeStats()
       } catch (err) {
         alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message)
@@ -427,8 +443,192 @@
       showToast('บันทึกสำเร็จ')
     }
 
+
+
     /* =====================
-       5) Scanner (ZXing - กล้องหลังเร็ว / อ่านเจออะไรเอาค่านั้น)
+       5) FG IN / FG OUT - Form Only
+       ===================== */
+    function uniqueValues(fieldNames) {
+      const set = new Set()
+      masterRows.forEach(r => {
+        for (const f of fieldNames) {
+          const v = r[f]
+          if (v !== undefined && v !== null && String(v).trim() !== '') set.add(String(v).trim())
+        }
+      })
+      return Array.from(set).sort((a, b) => a.localeCompare(b, 'th'))
+    }
+
+    function fillDatalist(id, values) {
+      const el = $(id)
+      if (!el) return
+      el.innerHTML = values.map(v => `<option value="${safe(v)}"></option>`).join('')
+    }
+
+    function updateFgDatalists() {
+      fillDatalist('fgItemList', uniqueValues(['Item', 'item']))
+      fillDatalist('fgCodeList', uniqueValues(['CODE', 'code']))
+      fillDatalist('fgAssortList', uniqueValues(['Assort', 'assort']))
+      fillDatalist('fgLocationList', uniqueValues(['Location', 'location']))
+      fillDatalist('fgCustomerList', uniqueValues(['customer', 'Customer']).concat(['BIG C', 'LOTUS']))
+    }
+
+    function sameText(a, b) {
+      return normalize(a) === normalize(b)
+    }
+
+    function findFgRowByForm() {
+      const item = $('fgItem').value.trim()
+      const code = $('fgCode').value.trim()
+      const assort = $('fgAssort').value.trim()
+      const location = $('fgLocation').value.trim()
+      const customer = $('fgCustomer').value.trim()
+
+      if (!item && !code && !assort && !location && !customer) return null
+
+      return masterRows.find(r => {
+        const okItem = !item || sameText(r.Item ?? r.item, item)
+        const okCode = !code || sameText(r.CODE ?? r.code, code)
+        const okAssort = !assort || sameText(r.Assort ?? r.assort, assort)
+        const okLocation = !location || sameText(r.Location ?? r.location, location)
+        const okCustomer = !customer || sameText(r.customer ?? r.Customer, customer)
+        return okItem && okCode && okAssort && okLocation && okCustomer
+      }) || null
+    }
+
+    window.autoFillFgFromForm = function () {
+      const row = findFgRowByForm()
+      if (!row) {
+        currentFgRow = null
+        $('fgSystemQty').value = ''
+        $('fgFormStatus').textContent = 'กรอกข้อมูลใหม่ หรือเลือกค่าจาก Dropdown'
+        $('fgFormStatus').className = 'fg-status'
+        return
+      }
+
+      currentFgRow = row
+      $('fgItem').value = row.Item ?? row.item ?? ''
+      $('fgCode').value = row.CODE ?? row.code ?? ''
+      $('fgAssort').value = row.Assort ?? row.assort ?? ''
+      $('fgLocation').value = row.Location ?? row.location ?? ''
+      $('fgCustomer').value = row.customer ?? row.Customer ?? ''
+      $('fgSystemQty').value = row.Quantity ?? row.quantity ?? 0
+      $('fgFormStatus').textContent = 'พบข้อมูลใน Master Data แล้ว'
+      $('fgFormStatus').className = 'fg-status selected'
+    }
+
+    window.clearFgSearch = function () {
+      clearFgForm(false)
+    }
+
+    window.clearFgForm = function (focus = true) {
+      currentFgRow = null
+      ;['fgItem','fgCode','fgAssort','fgLocation','fgCustomer','fgSystemQty','fgMoveQty'].forEach(id => {
+        if ($(id)) $(id).value = ''
+      })
+      $('fgFormStatus').textContent = 'กรอกข้อมูลใหม่ หรือเลือกค่าจาก Dropdown'
+      $('fgFormStatus').className = 'fg-status'
+      if (focus && $('fgItem')) $('fgItem').focus()
+    }
+
+    function buildItemKey(item, code, assort, location, customer) {
+      return String(item || '') + String(code || '').toUpperCase() + String(assort || '') + String(location || '') + String(customer || '')
+    }
+
+    window.saveFgMovement = async function () {
+      const moveQty = Number($('fgMoveQty').value)
+      if (!$('fgMoveQty').value || moveQty <= 0) return alert('กรุณาใส่จำนวน IN / OUT')
+
+      const item = $('fgItem').value.trim()
+      const code = $('fgCode').value.trim()
+      const assort = $('fgAssort').value.trim()
+      const location = $('fgLocation').value.trim()
+      const customer = $('fgCustomer').value.trim()
+
+      if (!item || !code || !assort || !location || !customer) {
+        return alert('กรุณาใส่ข้อมูล Item, CODE, Assort, Location, Customer ให้ครบ')
+      }
+
+      if (!currentFgRow) autoFillFgFromForm()
+
+      const tableName = currentFgMode === 'IN' ? 'fg_in' : 'fg_out'
+      const oldQty = currentFgRow ? Number(currentFgRow.Quantity ?? currentFgRow.quantity ?? 0) : 0
+      const newQty = currentFgMode === 'IN' ? oldQty + moveQty : oldQty - moveQty
+      const itemKey = currentFgRow?.item_key || buildItemKey(item, code, assort, location, customer)
+
+      if (currentFgMode === 'OUT' && currentFgRow && newQty < 0) {
+        if (!confirm('จำนวนคงเหลือจะติดลบ ต้องการบันทึกต่อหรือไม่')) return
+      }
+
+      setLoading(true, currentFgMode === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...')
+
+      try {
+        const movementPayload = {
+          item_key: itemKey,
+          "Item": item,
+          "CODE": code,
+          "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
+          "Location": location,
+          "Quantity": moveQty,
+          customer: customer
+        }
+
+        const { error: moveError } = await supabase.from(tableName).insert(movementPayload)
+        if (moveError) throw moveError
+
+        if (currentFgRow && currentFgRow.id) {
+          const { data, error } = await supabase
+            .from(MASTER_TABLE)
+            .update({
+              "Item": item,
+              "CODE": code,
+              "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
+              "Location": location,
+              "Quantity": newQty,
+              customer: customer
+            })
+            .eq('id', currentFgRow.id)
+            .select('*')
+            .single()
+
+          if (error) throw error
+          masterRows = masterRows.map(r => String(r.id) === String(currentFgRow.id) ? (data || { ...r, Item: item, CODE: code, Assort: assort, Location: location, Quantity: newQty, customer }) : r)
+        } else {
+          const startQty = currentFgMode === 'IN' ? moveQty : -moveQty
+          const masterPayload = {
+            "Item": item,
+            "CODE": code,
+            "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
+            "Location": location,
+            "Quantity": startQty,
+            customer: customer
+          }
+
+          const { data, error } = await supabase
+            .from(MASTER_TABLE)
+            .insert(masterPayload)
+            .select('*')
+            .single()
+
+          if (error) throw error
+          masterRows.push(data || masterPayload)
+        }
+
+        buildOfflineIndex(masterRows)
+        updateFgDatalists()
+        renderMasterTable(masterRows)
+        updateHomeStats()
+        clearFgForm(false)
+        showToast((currentFgMode === 'IN' ? 'FG IN' : 'FG OUT') + ' สำเร็จ')
+      } catch (err) {
+        alert('บันทึกไม่สำเร็จ: ' + (err?.message || err))
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    /* =====================
+       6) Scanner (ZXing - กล้องหลังเร็ว / อ่านเจออะไรเอาค่านั้น)
        ===================== */
     let lastScanValue = ''
     let lastScanTime = 0
@@ -667,10 +867,15 @@
       z-index: 2000;
       width: 290px;
       height: 100vh;
+      overflow-y: auto;
+      overscroll-behavior: contain;
       padding: calc(24px + env(safe-area-inset-top)) 18px 18px;
       background: #0f172a;
       transition: .25s ease;
       box-shadow: 20px 0 60px rgba(0,0,0,.3);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
     }
 
     .side-menu.open { left: 0; }
@@ -962,6 +1167,103 @@
       margin-top: 14px;
     }
 
+
+
+    .mini-select, .card-select-btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 10px 14px;
+      background: #0f766e;
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .card-select-btn {
+      width: 100%;
+      margin-top: 12px;
+      font-size: 16px;
+    }
+
+    .fg-panel {
+      margin-top: 16px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+      background: #f8fafc;
+    }
+
+    .fg-panel h3 {
+      margin: 0 0 4px;
+      font-size: 22px;
+    }
+
+    .fg-status {
+      margin: 0 0 14px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .fg-status.selected {
+      color: #047857;
+      font-weight: 700;
+    }
+
+    .fg-form-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .fg-form-grid label {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 5px;
+      font-weight: 700;
+    }
+
+    .fg-form-actions {
+      display: grid;
+      grid-template-columns: 1fr 160px;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .fg-save {
+      border: 0;
+      border-radius: 16px;
+      background: #2563eb;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      min-height: 54px;
+    }
+
+    .fg-clear {
+      border: 0;
+      border-radius: 16px;
+      background: #64748b;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      min-height: 54px;
+    }
+
+    .fg-new-hint {
+      display: none;
+      margin: 12px 0;
+      padding: 12px;
+      border-radius: 16px;
+      background: #fff7ed;
+      color: #9a3412;
+      font-weight: 700;
+      text-align: center;
+    }
+
     .scanner-modal {
       display: none;
       position: fixed;
@@ -1231,6 +1533,8 @@
       .count-form { grid-template-columns: 1fr 1fr; }
       .count-form input { grid-column: 1 / -1; }
       .count-form button { padding: 15px; min-height: 54px; }
+      .fg-form-grid { grid-template-columns: 1fr 1fr; }
+      .fg-form-actions { grid-template-columns: 1fr; }
       .side-menu { width: 82vw; max-width: 320px; left: -86vw; }
       .login-card { border-radius: 26px; padding: 30px 22px; }
       .login-card h1 { font-size: 30px; }
@@ -1330,6 +1634,7 @@
 
     .search-row { grid-template-columns: 1fr; }
       .result-grid { grid-template-columns: 1fr; }
+      .fg-form-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -1366,6 +1671,8 @@
       <button id="btnMaster" class="menu-btn" onclick="showPage('master')">📦 Master Data</button>
       <button id="btnCountBigC" class="menu-btn" onclick="showCountPage('BIG C')">📝 Stock Count BIG C</button>
       <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
+      <button id="btnFgIn" class="menu-btn" onclick="showFgPage('IN')">➕ FG IN</button>
+      <button id="btnFgOut" class="menu-btn" onclick="showFgPage('OUT')">➖ FG OUT</button>
       <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>
     </aside>
 
@@ -1400,6 +1707,21 @@
 
         <div class="home-summary">
           Master Data ทั้งหมด <b id="homeTotalCount">0</b> รายการ
+        </div>
+
+        <div class="home-actions" style="margin-top:14px;">
+          <button class="home-card bigc" onclick="showFgPage('IN')">
+            <span>➕</span>
+            <b>FG IN</b>
+            <small>เพิ่มสินค้าเข้า Master Data</small>
+            <strong>เพิ่ม Quantity</strong>
+          </button>
+          <button class="home-card lotus" onclick="showFgPage('OUT')">
+            <span>➖</span>
+            <b>FG OUT</b>
+            <small>ตัดสินค้าออกจาก Master Data</small>
+            <strong>ลด Quantity</strong>
+          </button>
         </div>
       </section>
 
@@ -1444,6 +1766,59 @@
         </div>
         <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก BIG C</div>
       </section>
+
+      <!-- FG IN / FG OUT -->
+      <section id="fgPage" class="page-card" style="display:none;">
+        <h2 id="fgTitle" class="title">FG IN</h2>
+        <div class="home-summary" id="fgModeText">เพิ่มสินค้าเข้าคลัง</div>
+
+        <div class="fg-panel fg-panel-only">
+          <h3>ข้อมูลสำหรับบันทึก</h3>
+          <p id="fgFormStatus" class="fg-status">กรอกข้อมูลใหม่ หรือเลือกค่าจาก Dropdown</p>
+
+          <div class="fg-form-grid">
+            <div>
+              <label>Item</label>
+              <input id="fgItem" list="fgItemList" placeholder="เช่น GM71112" oninput="autoFillFgFromForm()">
+              <datalist id="fgItemList"></datalist>
+            </div>
+            <div>
+              <label>CODE</label>
+              <input id="fgCode" list="fgCodeList" placeholder="เช่น NV" oninput="autoFillFgFromForm()">
+              <datalist id="fgCodeList"></datalist>
+            </div>
+            <div>
+              <label>Assort</label>
+              <input id="fgAssort" list="fgAssortList" placeholder="เช่น 9.5" oninput="autoFillFgFromForm()">
+              <datalist id="fgAssortList"></datalist>
+            </div>
+            <div>
+              <label>Location</label>
+              <input id="fgLocation" list="fgLocationList" placeholder="เช่น E-12" oninput="autoFillFgFromForm()">
+              <datalist id="fgLocationList"></datalist>
+            </div>
+            <div>
+              <label>Customer</label>
+              <input id="fgCustomer" list="fgCustomerList" placeholder="BIG C / LOTUS" oninput="autoFillFgFromForm()">
+              <datalist id="fgCustomerList"></datalist>
+            </div>
+            <div>
+              <label>System Qty</label>
+              <input id="fgSystemQty" type="number" readonly placeholder="อัตโนมัติเมื่อเลือกข้อมูล">
+            </div>
+            <div>
+              <label>จำนวน IN / OUT</label>
+              <input id="fgMoveQty" type="number" inputmode="decimal" placeholder="จำนวนที่ต้องการ">
+            </div>
+          </div>
+
+          <div class="fg-form-actions">
+            <button id="fgSaveBtn" class="fg-save" onclick="saveFgMovement()">บันทึก FG IN</button>
+            <button class="fg-clear" onclick="clearFgForm()">ล้างฟอร์ม</button>
+          </div>
+        </div>
+      </section>
+
     </main>
 
   </section>
@@ -1462,7 +1837,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=home-customer-count-v1').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=fg-in-out-v1').catch(() => {});
       });
     }
   </script>
