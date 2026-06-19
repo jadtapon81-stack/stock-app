@@ -410,6 +410,43 @@
       ].filter(Boolean)
     }
 
+    async function getMainBackCameraId() {
+      try {
+        const cameras = await Html5Qrcode.getCameras()
+        if (!cameras || cameras.length === 0) return null
+
+        const normalText = (v) => String(v || '').toLowerCase()
+
+        // ตัดกล้องหน้าออกก่อน
+        const backCameras = cameras.filter(cam => {
+          const label = normalText(cam.label)
+          return !/(front|user|facetime|หน้า)/i.test(label)
+        })
+
+        const list = backCameras.length ? backCameras : cameras
+
+        // เลือกกล้องหลัก / wide / back ปกติ และเลี่ยง Ultra wide, Telephoto, Macro
+        const mainBack = list.find(cam => {
+          const label = normalText(cam.label)
+          const isBack = /(back|rear|environment|หลัง|wide|camera)/i.test(label)
+          const isBadLens = /(ultra|tele|telephoto|macro|depth|front|user)/i.test(label)
+          return isBack && !isBadLens
+        })
+
+        if (mainBack) return mainBack.id
+
+        // iPhone บางรุ่น label เป็น Back Camera เฉย ๆ
+        const anyBack = list.find(cam => /(back|rear|environment|หลัง)/i.test(normalText(cam.label)))
+        if (anyBack) return anyBack.id
+
+        // fallback: มือถือส่วนใหญ่กล้องหลังมักอยู่รายการท้าย
+        return list[list.length - 1].id
+      } catch (err) {
+        console.warn('เลือกกล้องหลักไม่สำเร็จ', err)
+        return null
+      }
+    }
+
     window.openScanner = async function (targetId = 'countSearch') {
       const modal = $('scannerModal')
       const text = $('scannerText')
@@ -428,7 +465,7 @@
 
       try {
         modal.classList.add('show')
-        text.textContent = 'กำลังเปิดกล้อง...'
+        text.textContent = 'กำลังเชื่อมต่อกล้องหลัก...'
         reader.innerHTML = ''
 
         if (html5QrScanner) {
@@ -440,37 +477,39 @@
         html5QrScanner = new Html5Qrcode(readerId)
 
         const config = {
-          fps: 15,
+          fps: 20,
           qrbox: function(viewfinderWidth, viewfinderHeight) {
-            const width = Math.floor(viewfinderWidth * 0.86)
-            const height = Math.floor(Math.min(viewfinderHeight * 0.45, 220))
+            const width = Math.floor(viewfinderWidth * 0.90)
+            const height = Math.floor(Math.min(viewfinderHeight * 0.50, 240))
             return { width, height }
           },
           aspectRatio: 1.7777778,
-          rememberLastUsedCamera: true,
+          rememberLastUsedCamera: false,
           formatsToSupport: getScannerFormats(),
           experimentalFeatures: {
             useBarCodeDetectorIfSupported: true
           }
         }
 
-        text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
+        const mainCameraId = await getMainBackCameraId()
+        const cameraConfig = mainCameraId || { facingMode: { exact: 'environment' } }
+
+        text.textContent = 'ใช้กล้องหลักแล้ว เล็งไปที่ Barcode / QR Code'
 
         await html5QrScanner.start(
-          { facingMode: 'environment' },
+          cameraConfig,
           config,
           async (decodedText) => {
             const value = String(decodedText || '').trim()
             const now = Date.now()
 
             if (!value) return
-            if (value === lastScanValue && now - lastScanTime < 1200) return
+            if (value === lastScanValue && now - lastScanTime < 800) return
 
             lastScanValue = value
             lastScanTime = now
 
             $(targetId).value = value
-
             await closeScanner()
 
             if (targetId === 'countSearch') {
@@ -490,8 +529,42 @@
           () => {}
         )
       } catch (err) {
+        // ถ้า exact environment ไม่ได้ ให้ fallback เป็นกล้องหลังทั่วไป
+        try {
+          if (html5QrScanner) {
+            await html5QrScanner.start(
+              { facingMode: 'environment' },
+              {
+                fps: 20,
+                qrbox: { width: 280, height: 180 },
+                rememberLastUsedCamera: false,
+                formatsToSupport: getScannerFormats()
+              },
+              async (decodedText) => {
+                const value = String(decodedText || '').trim()
+                if (!value) return
+                $(targetId).value = value
+                await closeScanner()
+
+                if (targetId === 'countSearch') {
+                  const result = searchOfflineRows(value)
+                  if (result.length === 0) {
+                    $('countResult').innerHTML = `<div class="empty">ไม่พบข้อมูลที่ตรงกับ: ${safe(value)}</div>`
+                    showToast('ไม่พบข้อมูล')
+                    return
+                  }
+                  renderCountResult(result)
+                  showToast('พบข้อมูล: ' + result.length + ' รายการ')
+                }
+              },
+              () => {}
+            )
+            return
+          }
+        } catch (err2) {}
+
         await closeScanner()
-        alert('เปิดกล้อง/อ่านโค้ดไม่ได้: ' + (err?.message || err))
+        alert('เปิดกล้องหลักไม่ได้: ' + (err?.message || err))
       }
     }
 
@@ -1134,7 +1207,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=offline-scan-v4').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=main-camera-v5').catch(() => {});
       });
     }
   </script>
