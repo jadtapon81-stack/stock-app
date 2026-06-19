@@ -21,6 +21,9 @@
 
     let masterRows = []
     let countRows = []
+    let savedKeys = new Set()
+    let scannerStream = null
+    let scannerTimer = null
     let currentUser = localStorage.getItem('stock_user') || ''
 
     const $ = (id) => document.getElementById(id)
@@ -75,8 +78,6 @@
       $('countPage').style.display = page === 'count' ? 'block' : 'none'
       $('btnMaster').classList.toggle('active', page === 'master')
       $('btnCount').classList.toggle('active', page === 'count')
-      $('bottomMaster').classList.toggle('active', page === 'master')
-      $('bottomCount').classList.toggle('active', page === 'count')
       closeMenu()
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
@@ -110,6 +111,7 @@
       setLoading(true, 'กำลังโหลด Master Data...')
       try {
         masterRows = await fetchAll(MASTER_TABLE)
+        await loadCountHistory()
         renderMasterTable(masterRows)
       } catch (err) {
         alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message)
@@ -188,6 +190,37 @@
       })
     }
 
+    async function loadCountHistory() {
+      try {
+        countRows = await fetchAll(COUNT_TABLE)
+        savedKeys = new Set(countRows.map(makeSavedKey))
+      } catch (err) {
+        console.warn('โหลดประวัติการนับไม่สำเร็จ', err)
+        countRows = []
+        savedKeys = new Set()
+      }
+    }
+
+    function makeSavedKey(r) {
+      const masterId = r.master_id ?? r.id ?? ''
+      const itemKey = r.item_key ?? ''
+      const item = r.item ?? r.Item ?? ''
+      const code = r.code ?? r.CODE ?? ''
+      const assort = r.assort ?? r.Assort ?? ''
+      const location = r.location ?? r.Location ?? ''
+      return [masterId, itemKey, item, code, assort, location].map(v => String(v ?? '').trim()).join('|')
+    }
+
+    function isSaved(r) {
+      return savedKeys.has(makeSavedKey(r))
+    }
+
+    window.clearCountSearch = function () {
+      $('countSearch').value = ''
+      $('countResult').innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>`
+      $('countSearch').focus()
+    }
+
     /* =====================
        4) Stock Count
        ===================== */
@@ -215,9 +248,11 @@
         const qty = r.Quantity ?? r.quantity ?? 0
         const key = r.item_key ?? ''
 
+        const saved = isSaved(r)
         box.insertAdjacentHTML('beforeend', `
-          <div class="result-card">
+          <div class="result-card ${saved ? 'saved-card' : ''}" id="card_${safe(r.id)}">
             <div class="shoe-badge">👟</div>
+            ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
             <div class="result-grid">
               <div><b>Item</b><span>${safe(item)}</span></div>
               <div><b>CODE</b><span>${safe(code)}</span></div>
@@ -227,8 +262,9 @@
               <div><b>item_key</b><span>${safe(key)}</span></div>
             </div>
             <div class="count-form">
-              <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้" id="count_${r.id}">
-              <button onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>บันทึก</button>
+              <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้" id="count_${safe(r.id)}" ${saved ? 'disabled' : ''}>
+              <button class="save-btn" id="save_${safe(r.id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})' ${saved ? 'disabled' : ''}>${saved ? 'บันทึกแล้ว' : 'บันทึก'}</button>
+              <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
             </div>
           </div>
         `)
@@ -255,8 +291,70 @@
       const { error } = await supabase.from(COUNT_TABLE).insert(payload)
       if (error) return alert('บันทึกไม่สำเร็จ: ' + error.message)
 
+      savedKeys.add(makeSavedKey(r))
       input.value = ''
+      input.disabled = true
+      const saveBtn = $('save_' + r.id)
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = 'บันทึกแล้ว' }
+      const card = $('card_' + r.id)
+      if (card) {
+        card.classList.add('saved-card')
+        if (!card.querySelector('.saved-status')) card.insertAdjacentHTML('afterbegin', '<div class="saved-status">บันทึกแล้ว</div>')
+      }
       showToast('บันทึกสำเร็จ')
+    }
+
+    window.openScanner = async function (targetId = 'countSearch') {
+      const modal = $('scannerModal')
+      const video = $('scannerVideo')
+      const text = $('scannerText')
+
+      if (!('BarcodeDetector' in window)) {
+        const manual = prompt('เครื่องนี้ยังไม่รองรับการสแกนผ่านกล้องใน browser นี้\nกรอกรหัสที่ต้องการค้นหาแทนได้เลย')
+        if (manual) {
+          $(targetId).value = manual.trim()
+          if (targetId === 'countSearch') searchForCount()
+        }
+        return
+      }
+
+      try {
+        modal.classList.add('show')
+        text.textContent = 'กำลังเปิดกล้อง...'
+        scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        video.srcObject = scannerStream
+        await video.play()
+        text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
+
+        const detector = new BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13', 'ean_8', 'code_39', 'itf'] })
+
+        scannerTimer = setInterval(async () => {
+          try {
+            const codes = await detector.detect(video)
+            if (codes.length) {
+              const value = codes[0].rawValue || ''
+              $(targetId).value = value
+              closeScanner()
+              showToast('สแกนสำเร็จ')
+              if (targetId === 'countSearch') searchForCount()
+            }
+          } catch (err) {}
+        }, 450)
+      } catch (err) {
+        closeScanner()
+        alert('เปิดกล้องไม่ได้: กรุณาอนุญาต Camera ใน Safari/Chrome')
+      }
+    }
+
+    window.closeScanner = function () {
+      const modal = $('scannerModal')
+      const video = $('scannerVideo')
+      if (scannerTimer) clearInterval(scannerTimer)
+      scannerTimer = null
+      if (scannerStream) scannerStream.getTracks().forEach(t => t.stop())
+      scannerStream = null
+      video.srcObject = null
+      modal.classList.remove('show')
     }
 
     function safe(v) {
@@ -472,6 +570,8 @@
     }
 
     .search-row .clear { background: #64748b; }
+    .search-row .scan { background: #0f766e; }
+    .count-search-row { grid-template-columns: 1fr 110px 100px 90px; }
 
     .count-line {
       text-align: right;
@@ -534,10 +634,30 @@
 
     .count-form {
       display: grid;
-      grid-template-columns: 1fr 120px;
+      grid-template-columns: 1fr 112px 96px;
       gap: 10px;
       margin-top: 14px;
     }
+
+    .count-form .scan-btn { background: #0f766e; }
+    .count-form button:disabled, .count-form input:disabled { opacity: .65; cursor: not-allowed; }
+
+    .saved-card { border-color: #86efac; background: linear-gradient(180deg, #ffffff, #f0fdf4); }
+
+    .saved-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .saved-status::before { content: '✓'; }
 
     .empty {
       padding: 24px;
@@ -546,6 +666,49 @@
       border: 1px dashed #cbd5e1;
       border-radius: 18px;
       margin-top: 14px;
+    }
+
+    .scanner-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 2800;
+      padding: 22px;
+      background: rgba(15,23,42,.92);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .scanner-modal.show { display: flex; }
+
+    .scanner-box {
+      width: 100%;
+      max-width: 440px;
+      background: white;
+      border-radius: 24px;
+      padding: 16px;
+      text-align: center;
+    }
+
+    .scanner-box video {
+      width: 100%;
+      max-height: 360px;
+      border-radius: 18px;
+      background: #020617;
+      object-fit: cover;
+    }
+
+    .scanner-box p { color: var(--muted); margin: 10px 0; }
+
+    .scanner-close {
+      width: 100%;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px;
+      background: var(--red);
+      color: white;
+      font-weight: 700;
+      font-size: 17px;
     }
 
     .loading {
@@ -648,11 +811,12 @@
       .hamburger { width: 44px; height: 44px; font-size: 24px; }
       .brand b { font-size: 19px; }
       .brand span { font-size: 12px; }
-      main { padding: 12px 10px calc(96px + env(safe-area-inset-bottom)); }
+      main { padding: 12px 10px calc(24px + env(safe-area-inset-bottom)); }
       .page-card { padding: 16px 12px; border-radius: 24px; box-shadow: none; }
       .title { font-size: 28px; margin-bottom: 16px; }
       input { font-size: 16px; padding: 15px 16px; border-radius: 15px; }
       .search-row { grid-template-columns: 1fr 96px; gap: 8px; }
+      .count-search-row { grid-template-columns: 1fr 82px 78px; }
       .search-row .clear { grid-column: 1 / -1; }
       .search-row button { padding: 0 10px; min-height: 54px; font-size: 16px; }
       .count-line { font-size: 15px; margin: 2px 2px 10px; }
@@ -664,9 +828,9 @@
       .result-grid { grid-template-columns: 1fr 1fr; gap: 8px; padding-right: 32px; }
       .result-grid div { padding: 10px; border-radius: 14px; }
       .result-grid span { font-size: 17px; }
-      .count-form { grid-template-columns: 1fr; }
+      .count-form { grid-template-columns: 1fr 1fr; }
+      .count-form input { grid-column: 1 / -1; }
       .count-form button { padding: 15px; min-height: 54px; }
-      .bottom-nav { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
       .side-menu { width: 82vw; max-width: 320px; left: -86vw; }
       .login-card { border-radius: 26px; padding: 30px 22px; }
       .login-card h1 { font-size: 30px; }
@@ -747,29 +911,25 @@
       <section id="countPage" class="page-card" style="display:none;">
         <h2 class="title">Stock Count</h2>
         <input id="countedBy" type="hidden">
-        <div class="search-row" style="grid-template-columns:1fr 150px;">
+        <div class="search-row count-search-row">
           <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" onkeydown="if(event.key==='Enter') searchForCount()">
           <button onclick="searchForCount()">ค้นหา</button>
+          <button class="scan" onclick="openScanner('countSearch')">สแกน</button>
+          <button class="clear" onclick="clearCountSearch()">ล้าง</button>
         </div>
-        <div id="countResult" class="empty">ค้นหารหัสสินค้าเพื่อเริ่มนับสต็อก</div>
+        <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>
       </section>
     </main>
 
-    <nav class="bottom-nav">
-      <button id="bottomMaster" onclick="showPage('master')">
-        <span>📦</span>
-        <b>Master</b>
-      </button>
-      <button id="bottomCount" onclick="showPage('count')">
-        <span>📝</span>
-        <b>Count</b>
-      </button>
-      <button onclick="toggleMenu()">
-        <span>☰</span>
-        <b>Menu</b>
-      </button>
-    </nav>
   </section>
+
+  <div id="scannerModal" class="scanner-modal">
+    <div class="scanner-box">
+      <video id="scannerVideo" playsinline muted></video>
+      <p id="scannerText">เล็งกล้องไปที่ Barcode / QR Code</p>
+      <button class="scanner-close" onclick="closeScanner()">ปิดกล้อง</button>
+    </div>
+  </div>
 
   <div id="loading" class="loading"><span id="loadingText"></span></div>
   <div id="toast" class="toast"></div>
