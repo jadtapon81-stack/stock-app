@@ -36,6 +36,7 @@
     let html5QrScanner = null
     let zxingReader = null
     let currentUser = localStorage.getItem('stock_user') || ''
+    let currentCountCustomer = 'BIG C'
 
     const $ = (id) => document.getElementById(id)
 
@@ -45,7 +46,7 @@
         $('appPage').style.display = 'block'
         $('userNameText').textContent = currentUser
         $('countedBy').value = currentUser
-        showPage('master')
+        showPage('home')
         loadMasterData()
       } else {
         $('loginPage').style.display = 'flex'
@@ -65,7 +66,7 @@
       $('countedBy').value = name
       $('loginPage').style.display = 'none'
       $('appPage').style.display = 'block'
-      showPage('master')
+      showPage('home')
       loadMasterData()
     }
 
@@ -85,12 +86,24 @@
     }
 
     window.showPage = function (page) {
+      $('homePage').style.display = page === 'home' ? 'block' : 'none'
       $('masterPage').style.display = page === 'master' ? 'block' : 'none'
       $('countPage').style.display = page === 'count' ? 'block' : 'none'
+
+      $('btnHome').classList.toggle('active', page === 'home')
       $('btnMaster').classList.toggle('active', page === 'master')
-      $('btnCount').classList.toggle('active', page === 'count')
+      $('btnCountBigC').classList.toggle('active', page === 'count' && currentCountCustomer === 'BIG C')
+      $('btnCountLotus').classList.toggle('active', page === 'count' && currentCountCustomer === 'LOTUS')
+
       closeMenu()
       window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    window.showCountPage = function (customer) {
+      currentCountCustomer = customer
+      $('countTitle').textContent = 'Stock Count ' + customer
+      clearCountSearch()
+      showPage('count')
     }
 
     /* =====================
@@ -125,6 +138,7 @@
         buildOfflineIndex(masterRows)
         await loadCountHistory()
         renderMasterTable(masterRows)
+        updateHomeStats()
       } catch (err) {
         alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message)
       } finally {
@@ -154,21 +168,38 @@
       })
     }
 
-    function searchOfflineRows(keyword) {
+    function getCustomerValue(r) {
+      return String(r.customer ?? r.Customer ?? r.channel ?? r.Channel ?? '').trim()
+    }
+
+    function isCustomerRow(r, customer) {
+      if (!customer) return true
+      const c = normalize(customer)
+      const direct = normalize(getCustomerValue(r))
+      const key = normalize(r.item_key)
+      return direct === c || key.endsWith(c)
+    }
+
+    function searchOfflineRows(keyword, customer = currentCountCustomer) {
       const q = normalize(keyword)
       if (!q) return []
+
       const exact = offlineIndex.get(q)
-      if (exact && exact.length) return exact
+      if (exact && exact.length) return exact.filter(r => isCustomerRow(r, customer))
 
       // fallback สำหรับกรณีสแกนแล้วมีข้อความยาว/มีช่องว่าง/มี prefix-suffix
       return masterRows.filter(r => {
+        if (!isCustomerRow(r, customer)) return false
+
         const fields = [
           r.item_key,
           r.CODE ?? r.code,
           r.Item ?? r.item,
           r.Location ?? r.location,
-          r.Assort ?? r.assort
+          r.Assort ?? r.assort,
+          r.customer ?? r.Customer
         ].map(normalize)
+
         return fields.some(v => v && (v.includes(q) || q.includes(v)))
       })
     }
@@ -179,7 +210,7 @@
       return rows.filter(r => {
         const text = [
           r.Item, r.item, r.CODE, r.code, r.Assort, r.assort,
-          r.Location, r.location, r.item_key, r.Quantity, r.quantity
+          r.Location, r.location, r.item_key, r.Quantity, r.quantity, r.customer, r.Customer
         ].map(normalize).join('|')
         return text.includes(q)
       })
@@ -192,6 +223,14 @@
     window.clearMasterSearch = function () {
       $('masterSearch').value = ''
       renderMasterTable(masterRows)
+    }
+
+    function updateHomeStats() {
+      const bigCCount = masterRows.filter(r => isCustomerRow(r, 'BIG C')).length
+      const lotusCount = masterRows.filter(r => isCustomerRow(r, 'LOTUS')).length
+      if ($('homeBigCCount')) $('homeBigCCount').textContent = bigCCount.toLocaleString('th-TH')
+      if ($('homeLotusCount')) $('homeLotusCount').textContent = lotusCount.toLocaleString('th-TH')
+      if ($('homeTotalCount')) $('homeTotalCount').textContent = masterRows.length.toLocaleString('th-TH')
     }
 
     function renderMasterTable(rows) {
@@ -271,7 +310,7 @@
 
     window.clearCountSearch = function () {
       $('countSearch').value = ''
-      $('countResult').innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>`
+      $('countResult').innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก ${safe(currentCountCustomer)}</div>`
       $('countSearch').focus()
     }
 
@@ -324,7 +363,7 @@
         return
       }
 
-      const result = searchOfflineRows(keyword)
+      const result = searchOfflineRows(keyword, currentCountCustomer)
 
       if (result.length === 0) {
         box.innerHTML = `<div class="empty">ไม่มีข้อมูลที่ตรงกับ: ${safe(keyword)}</div>`
@@ -402,7 +441,7 @@
       await closeScanner()
 
       if (targetId === 'countSearch') {
-        const result = searchOfflineRows(value)
+        const result = searchOfflineRows(value, currentCountCustomer)
 
         if (result.length === 0) {
           $('countResult').innerHTML = `<div class="empty">ไม่พบข้อมูลที่ตรงกับ: ${safe(value)}</div>`
@@ -689,6 +728,96 @@
     }
 
     .title { text-align: center; margin: 0 0 22px; font-size: 36px; }
+
+    .home-hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 22px;
+      border-radius: 26px;
+      color: white;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      margin-bottom: 18px;
+    }
+
+    .home-hero h2 {
+      margin: 0 0 6px;
+      font-size: 34px;
+    }
+
+    .home-hero p {
+      margin: 0;
+      color: #dbeafe;
+      font-size: 16px;
+    }
+
+    .home-icon {
+      font-size: 54px;
+      flex: 0 0 auto;
+    }
+
+    .home-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .home-card {
+      border: 0;
+      border-radius: 24px;
+      padding: 22px;
+      text-align: left;
+      color: white;
+      cursor: pointer;
+      min-height: 170px;
+      box-shadow: 0 14px 32px rgba(15,23,42,.14);
+    }
+
+    .home-card span {
+      display: block;
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .home-card b {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .home-card small {
+      display: block;
+      color: rgba(255,255,255,.82);
+      font-size: 15px;
+    }
+
+    .home-card strong {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      font-size: 15px;
+    }
+
+    .home-card.bigc {
+      background: linear-gradient(135deg, #0f766e, #134e4a);
+    }
+
+    .home-card.lotus {
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+    }
+
+    .home-summary {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      text-align: center;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 17px;
+    }
 
     .search-row {
       display: grid;
@@ -996,7 +1125,97 @@
       .page-card { padding: 16px 12px; border-radius: 24px; box-shadow: none; }
       .title { font-size: 28px; margin-bottom: 16px; }
       input { font-size: 16px; padding: 15px 16px; border-radius: 15px; }
-      .search-row { grid-template-columns: 1fr 96px; gap: 8px; }
+      .home-hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 22px;
+      border-radius: 26px;
+      color: white;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      margin-bottom: 18px;
+    }
+
+    .home-hero h2 {
+      margin: 0 0 6px;
+      font-size: 34px;
+    }
+
+    .home-hero p {
+      margin: 0;
+      color: #dbeafe;
+      font-size: 16px;
+    }
+
+    .home-icon {
+      font-size: 54px;
+      flex: 0 0 auto;
+    }
+
+    .home-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .home-card {
+      border: 0;
+      border-radius: 24px;
+      padding: 22px;
+      text-align: left;
+      color: white;
+      cursor: pointer;
+      min-height: 170px;
+      box-shadow: 0 14px 32px rgba(15,23,42,.14);
+    }
+
+    .home-card span {
+      display: block;
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .home-card b {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .home-card small {
+      display: block;
+      color: rgba(255,255,255,.82);
+      font-size: 15px;
+    }
+
+    .home-card strong {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      font-size: 15px;
+    }
+
+    .home-card.bigc {
+      background: linear-gradient(135deg, #0f766e, #134e4a);
+    }
+
+    .home-card.lotus {
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+    }
+
+    .home-summary {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      text-align: center;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .search-row { grid-template-columns: 1fr 96px; gap: 8px; }
       .count-search-row { grid-template-columns: 1fr 96px; }
       .search-row .clear { grid-column: 1 / -1; }
       .search-row button { padding: 0 10px; min-height: 54px; font-size: 16px; }
@@ -1019,7 +1238,97 @@
 
     @media (max-width: 390px) {
       .mobile-card-grid { grid-template-columns: 1fr 1fr; }
-      .search-row { grid-template-columns: 1fr; }
+      .home-hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+      padding: 22px;
+      border-radius: 26px;
+      color: white;
+      background: linear-gradient(135deg, #0f172a, #1e3a8a);
+      margin-bottom: 18px;
+    }
+
+    .home-hero h2 {
+      margin: 0 0 6px;
+      font-size: 34px;
+    }
+
+    .home-hero p {
+      margin: 0;
+      color: #dbeafe;
+      font-size: 16px;
+    }
+
+    .home-icon {
+      font-size: 54px;
+      flex: 0 0 auto;
+    }
+
+    .home-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .home-card {
+      border: 0;
+      border-radius: 24px;
+      padding: 22px;
+      text-align: left;
+      color: white;
+      cursor: pointer;
+      min-height: 170px;
+      box-shadow: 0 14px 32px rgba(15,23,42,.14);
+    }
+
+    .home-card span {
+      display: block;
+      font-size: 34px;
+      margin-bottom: 10px;
+    }
+
+    .home-card b {
+      display: block;
+      font-size: 24px;
+      margin-bottom: 4px;
+    }
+
+    .home-card small {
+      display: block;
+      color: rgba(255,255,255,.82);
+      font-size: 15px;
+    }
+
+    .home-card strong {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.18);
+      font-size: 15px;
+    }
+
+    .home-card.bigc {
+      background: linear-gradient(135deg, #0f766e, #134e4a);
+    }
+
+    .home-card.lotus {
+      background: linear-gradient(135deg, #7c3aed, #4c1d95);
+    }
+
+    .home-summary {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 18px;
+      text-align: center;
+      background: #f8fafc;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .search-row { grid-template-columns: 1fr; }
       .result-grid { grid-template-columns: 1fr; }
     }
   </style>
@@ -1053,16 +1362,49 @@
         <b>ผู้ใช้งาน: <span id="userNameText"></span></b>
         <span>ระบบคลังรองเท้า</span>
       </div>
+      <button id="btnHome" class="menu-btn" onclick="showPage('home')">🏠 Home</button>
       <button id="btnMaster" class="menu-btn" onclick="showPage('master')">📦 Master Data</button>
-      <button id="btnCount" class="menu-btn" onclick="showPage('count')">📝 Stock Count</button>
+      <button id="btnCountBigC" class="menu-btn" onclick="showCountPage('BIG C')">📝 Stock Count BIG C</button>
+      <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
       <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>
     </aside>
 
     <div id="overlay" class="overlay" onclick="closeMenu()"></div>
 
     <main>
+      <!-- Home -->
+      <section id="homePage" class="page-card">
+        <div class="home-hero">
+          <div>
+            <h2>Stock Count Home</h2>
+            <p>เลือกช่องทางที่ต้องการนับ ระบบจะค้นหาเฉพาะ Customer ของช่องทางนั้น</p>
+          </div>
+          <div class="home-icon">👟</div>
+        </div>
+
+        <div class="home-actions">
+          <button class="home-card bigc" onclick="showCountPage('BIG C')">
+            <span>🏬</span>
+            <b>Stock Count BIG C</b>
+            <small>ค้นหาเฉพาะข้อมูล BIG C</small>
+            <strong><span id="homeBigCCount">0</span> รายการ</strong>
+          </button>
+
+          <button class="home-card lotus" onclick="showCountPage('LOTUS')">
+            <span>🌸</span>
+            <b>Stock Count LOTUS</b>
+            <small>ค้นหาเฉพาะข้อมูล LOTUS</small>
+            <strong><span id="homeLotusCount">0</span> รายการ</strong>
+          </button>
+        </div>
+
+        <div class="home-summary">
+          Master Data ทั้งหมด <b id="homeTotalCount">0</b> รายการ
+        </div>
+      </section>
+
       <!-- Master Data -->
-      <section id="masterPage" class="page-card">
+      <section id="masterPage"  class="page-card">
         <h2 class="title">Master Data</h2>
         <div class="search-row">
           <input id="masterSearch" placeholder="ค้นหา Item / CODE / Location / item_key" onkeydown="if(event.key==='Enter') searchMaster()">
@@ -1090,7 +1432,7 @@
 
       <!-- Stock Count -->
       <section id="countPage" class="page-card" style="display:none;">
-        <h2 class="title">Stock Count</h2>
+        <h2 id="countTitle" class="title">Stock Count BIG C</h2>
         <input id="countedBy" type="hidden">
         <div class="search-row count-search-row">
           <div class="search-wrapper">
@@ -1100,7 +1442,7 @@
           <button onclick="searchForCount()">ค้นหา</button>
           <button class="scan" onclick="openScanner('countSearch')">สแกน</button>
         </div>
-        <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก</div>
+        <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก BIG C</div>
       </section>
     </main>
 
@@ -1120,7 +1462,7 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js?v=zxing-fast-camera-v1').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=home-customer-count-v1').catch(() => {});
       });
     }
   </script>
