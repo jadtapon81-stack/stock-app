@@ -12,9 +12,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
   <script type="module">
     import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-    import { BrowserMultiFormatReader, BarcodeFormat, DecodeHintType } from 'https://esm.sh/@zxing/library@0.21.3'
 
     /* =====================
        1) ตั้งค่า Supabase
@@ -30,8 +31,7 @@
     let masterRows = []
     let countRows = []
     let savedKeys = new Set()
-    let scannerStream = null
-    let zxingReader = null
+    let html5QrScanner = null
     let currentUser = localStorage.getItem('stock_user') || ''
 
     const $ = (id) => document.getElementById(id)
@@ -342,91 +342,118 @@
     }
 
     /* =====================
-       5) Scanner (ZXing - รองรับ Safari iOS / Chrome Android)
+       5) Scanner (html5-qrcode - อ่านเหมือน AppSheet)
        ===================== */
     let lastScanValue = ''
-let lastScanTime = 0
+    let lastScanTime = 0
 
-function buildZxingReader() {
-  const hints = new Map();
-  
-  // เพิ่มการตั้งค่าเพื่อประสิทธิภาพในการอ่านบนมือถือ
-  hints.set(DecodeHintType.TRY_HARDER, true); 
-  hints.set(DecodeHintType.POSSIBLE_FORMATS, [
-    BarcodeFormat.QR_CODE,
-    BarcodeFormat.CODE_128,
-    BarcodeFormat.EAN_13,
-    BarcodeFormat.EAN_8,
-    BarcodeFormat.CODE_39
-  ]);
+    function getScannerFormats() {
+      return [
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.CODE_39,
+        Html5QrcodeSupportedFormats.CODE_93,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.ITF,
+        Html5QrcodeSupportedFormats.CODABAR,
+        Html5QrcodeSupportedFormats.DATA_MATRIX,
+        Html5QrcodeSupportedFormats.PDF_417,
+        Html5QrcodeSupportedFormats.AZTEC
+      ].filter(Boolean)
+    }
 
-  // ลดเวลาการตอบสนองลงเล็กน้อย
-  return new BrowserMultiFormatReader(hints, 500); 
-}
+    window.openScanner = async function (targetId = 'countSearch') {
+      const modal = $('scannerModal')
+      const text = $('scannerText')
+      const readerId = 'scannerReader'
+      const reader = $(readerId)
 
-window.openScanner = async function (targetId = 'countSearch') {
-  const modal = $('scannerModal');
-  const video = $('scannerVideo');
-  const text = $('scannerText');
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert('เบราว์เซอร์ไม่รองรับกล้อง');
-    return;
-  }
-
-  try {
-    modal.classList.add('show');
-    zxingReader = buildZxingReader();
-
-    // บังคับใช้กล้องหลัง (environment) และขอความละเอียดที่ชัดขึ้น
-    const constraints = {
-      video: {
-        facingMode: { ideal: 'environment' },
-        width: { ideal: 1280 },
-        height: { ideal: 720 }
+      if (!window.Html5Qrcode) {
+        alert('โหลดระบบสแกนไม่สำเร็จ กรุณาเชื่อมต่ออินเทอร์เน็ตแล้วเปิดใหม่')
+        return
       }
-    };
 
-    await zxingReader.decodeFromConstraints(constraints, video, (result, err) => {
-      if (result) {
-        const value = result.getText();
-        // ลด Delay การอ่านซ้ำ
-        $(targetId).value = value;
-        showToast('สแกนสำเร็จ: ' + value);
-        
-        // ปิดกล้องทันทีที่อ่านเจอ
-        closeScanner();
-        
-        if (targetId === 'countSearch') {
-          searchForCount();
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('เบราว์เซอร์ไม่รองรับกล้อง หรือไม่ได้เปิดผ่าน https')
+        return
+      }
+
+      try {
+        modal.classList.add('show')
+        text.textContent = 'กำลังเปิดกล้อง...'
+        reader.innerHTML = ''
+
+        if (html5QrScanner) {
+          try { await html5QrScanner.stop() } catch (err) {}
+          try { await html5QrScanner.clear() } catch (err) {}
+          html5QrScanner = null
         }
+
+        html5QrScanner = new Html5Qrcode(readerId)
+
+        const config = {
+          fps: 15,
+          qrbox: function(viewfinderWidth, viewfinderHeight) {
+            const width = Math.floor(viewfinderWidth * 0.86)
+            const height = Math.floor(Math.min(viewfinderHeight * 0.45, 220))
+            return { width, height }
+          },
+          aspectRatio: 1.7777778,
+          rememberLastUsedCamera: true,
+          formatsToSupport: getScannerFormats(),
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true
+          }
+        }
+
+        text.textContent = 'เล็งกล้องไปที่ Barcode / QR Code'
+
+        await html5QrScanner.start(
+          { facingMode: 'environment' },
+          config,
+          async (decodedText) => {
+            const value = String(decodedText || '').trim()
+            const now = Date.now()
+
+            if (!value) return
+            if (value === lastScanValue && now - lastScanTime < 1200) return
+
+            lastScanValue = value
+            lastScanTime = now
+
+            $(targetId).value = value
+            showToast('สแกนสำเร็จ: ' + value)
+
+            await closeScanner()
+
+            if (targetId === 'countSearch') {
+              searchForCount()
+            }
+          },
+          () => {}
+        )
+      } catch (err) {
+        await closeScanner()
+        alert('เปิดกล้อง/อ่านโค้ดไม่ได้: ' + (err?.message || err))
       }
-      // ลบเงื่อนไขเช็ค err ในส่วนนี้ออก เพื่อให้กล้องทำงานต่อเนื่องโดยไม่หยุดเมื่อเจอ error เล็กน้อย
-    });
+    }
 
-  } catch (err) {
-    console.error(err);
-    alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
-  }
-};
+    window.closeScanner = async function () {
+      const modal = $('scannerModal')
+      const reader = $('scannerReader')
 
-window.closeScanner = function () {
-  const modal = $('scannerModal')
-  const video = $('scannerVideo')
+      if (html5QrScanner) {
+        try { await html5QrScanner.stop() } catch (err) {}
+        try { await html5QrScanner.clear() } catch (err) {}
+        html5QrScanner = null
+      }
 
-  if (zxingReader) {
-    try { zxingReader.reset() } catch (err) {}
-    zxingReader = null
-  }
-
-  if (scannerStream) {
-    try { scannerStream.getTracks().forEach(t => t.stop()) } catch (err) {}
-  }
-
-  scannerStream = null
-  if (video) video.srcObject = null
-  modal.classList.remove('show')
-}
+      if (reader) reader.innerHTML = ''
+      modal.classList.remove('show')
+    }
 
     function safe(v) {
       return String(v ?? '').replace(/[&<>'"]/g, c => ({
@@ -796,6 +823,22 @@ window.closeScanner = function () {
       object-fit: cover;
     }
 
+
+    #scannerReader {
+      width: 100%;
+      min-height: 260px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: #020617;
+    }
+
+    #scannerReader video {
+      width: 100% !important;
+      max-height: 360px;
+      object-fit: cover;
+      border-radius: 18px;
+    }
+
     .scanner-box p { color: var(--muted); margin: 10px 0; }
 
     .scanner-close {
@@ -1025,7 +1068,7 @@ window.closeScanner = function () {
 
   <div id="scannerModal" class="scanner-modal">
     <div class="scanner-box">
-      <video id="scannerVideo" playsinline muted></video>
+      <div id="scannerReader"></div>
       <p id="scannerText">เล็งกล้องไปที่ Barcode / QR Code</p>
       <button class="scanner-close" onclick="closeScanner()">ปิดกล้อง</button>
     </div>
@@ -1037,7 +1080,7 @@ window.closeScanner = function () {
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=scan-v3').catch(() => {});
       });
     }
   </script>
