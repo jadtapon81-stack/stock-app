@@ -348,79 +348,67 @@
 let lastScanTime = 0
 
 function buildZxingReader() {
-  const hints = new Map()
-
+  const hints = new Map();
+  
+  // เพิ่มการตั้งค่าเพื่อประสิทธิภาพในการอ่านบนมือถือ
+  hints.set(DecodeHintType.TRY_HARDER, true); 
   hints.set(DecodeHintType.POSSIBLE_FORMATS, [
     BarcodeFormat.QR_CODE,
     BarcodeFormat.CODE_128,
-    BarcodeFormat.CODE_39,
-    BarcodeFormat.CODE_93,
     BarcodeFormat.EAN_13,
     BarcodeFormat.EAN_8,
-    BarcodeFormat.UPC_A,
-    BarcodeFormat.UPC_E,
-    BarcodeFormat.ITF,
-    BarcodeFormat.CODABAR,
-    BarcodeFormat.DATA_MATRIX,
-    BarcodeFormat.PDF_417
-  ])
+    BarcodeFormat.CODE_39
+  ]);
 
-  hints.set(DecodeHintType.TRY_HARDER, true)
-
-  return new BrowserMultiFormatReader(hints, 300)
+  // ลดเวลาการตอบสนองลงเล็กน้อย
+  return new BrowserMultiFormatReader(hints, 500); 
 }
 
 window.openScanner = async function (targetId = 'countSearch') {
-  const modal = $('scannerModal')
-  const video = $('scannerVideo')
-  const text = $('scannerText')
+  const modal = $('scannerModal');
+  const video = $('scannerVideo');
+  const text = $('scannerText');
 
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    alert('เบราว์เซอร์นี้ไม่รองรับกล้อง หรือไม่ได้เปิดผ่าน https')
-    return
+    alert('เบราว์เซอร์ไม่รองรับกล้อง');
+    return;
   }
 
   try {
-    modal.classList.add('show')
-    text.textContent = 'กำลังเปิดกล้อง...'
+    modal.classList.add('show');
+    zxingReader = buildZxingReader();
 
-    zxingReader = buildZxingReader()
+    // บังคับใช้กล้องหลัง (environment) และขอความละเอียดที่ชัดขึ้น
+    const constraints = {
+      video: {
+        facingMode: { ideal: 'environment' },
+        width: { ideal: 1280 },
+        height: { ideal: 720 }
+      }
+    };
 
-    text.textContent = 'เล็งกล้องไปที่ QR Code / Barcode'
-
-    await zxingReader.decodeFromVideoDevice(
-      null,
-      video,
-      (result, err) => {
-        if (!result) return
-
-        const value = result.getText()
-        const now = Date.now()
-
-        // กันอ่านค่าซ้ำรัวๆ
-        if (value === lastScanValue && now - lastScanTime < 1500) return
-
-        lastScanValue = value
-        lastScanTime = now
-
-        $(targetId).value = value
-        showToast('อ่านค่าได้: ' + value)
-
-        closeScanner()
-
+    await zxingReader.decodeFromConstraints(constraints, video, (result, err) => {
+      if (result) {
+        const value = result.getText();
+        // ลด Delay การอ่านซ้ำ
+        $(targetId).value = value;
+        showToast('สแกนสำเร็จ: ' + value);
+        
+        // ปิดกล้องทันทีที่อ่านเจอ
+        closeScanner();
+        
         if (targetId === 'countSearch') {
-          searchForCount()
+          searchForCount();
         }
       }
-    )
-
-    scannerStream = video.srcObject
+      // ลบเงื่อนไขเช็ค err ในส่วนนี้ออก เพื่อให้กล้องทำงานต่อเนื่องโดยไม่หยุดเมื่อเจอ error เล็กน้อย
+    });
 
   } catch (err) {
-    closeScanner()
-    alert('เปิดกล้องไม่ได้: ' + err.message)
+    console.error(err);
+    alert('ไม่สามารถเปิดกล้องได้: ' + err.message);
   }
-}
+};
 
 window.closeScanner = function () {
   const modal = $('scannerModal')
