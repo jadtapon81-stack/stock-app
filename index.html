@@ -376,29 +376,48 @@
       return direct === c || key.endsWith(c)
     }
 
-    function searchOfflineRows(keyword, customer = currentCountCustomer) {
-      const q = normalize(keyword)
-      if (!q) return []
+function searchOfflineRows(keyword, customer = currentCountCustomer) {
+  const q = normalize(keyword)
+  if (!q) return []
 
-      const exact = offlineIndex.get(q)
-      if (exact && exact.length) return exact.filter(r => isCustomerRow(r, customer))
+  // ค้นหาแบบรหัสเต็ม เช่น GM42245BR39
+  const exactComposite = masterRows.filter(r => {
+    if (!isCustomerRow(r, customer)) return false
 
-      // fallback สำหรับกรณีสแกนแล้วมีข้อความยาว/มีช่องว่าง/มี prefix-suffix
-      return masterRows.filter(r => {
-        if (!isCustomerRow(r, customer)) return false
+    const item = normalize(r.Item ?? r.item)
+    const code = normalize(r.CODE ?? r.code)
+    const assort = normalize(r.Assort ?? r.assort)
+    const location = normalize(r.Location ?? r.location)
+    const itemKey = normalize(r.item_key)
 
-        const fields = [
-          r.item_key,
-          r.CODE ?? r.code,
-          r.Item ?? r.item,
-          r.Location ?? r.location,
-          r.Assort ?? r.assort,
-          r.customer ?? r.Customer
-        ].map(normalize)
+    const itemCodeAssort = item + code + assort
+    const itemCodeAssortLocation = item + code + assort + location
 
-        return fields.some(v => v && (v.includes(q) || q.includes(v)))
-      })
-    }
+    return (
+      q === itemCodeAssort ||
+      q === itemCodeAssortLocation ||
+      q === itemKey
+    )
+  })
+
+  if (exactComposite.length) return exactComposite
+
+  // ถ้าไม่ใช่รหัสเต็ม ค่อยค้นหาแบบกว้าง
+  return masterRows.filter(r => {
+    if (!isCustomerRow(r, customer)) return false
+
+    const fields = [
+      r.item_key,
+      r.CODE ?? r.code,
+      r.Item ?? r.item,
+      r.Location ?? r.location,
+      r.Assort ?? r.assort,
+      r.customer ?? r.Customer
+    ].map(normalize)
+
+    return fields.some(v => v && v.includes(q))
+  })
+}
 
     function searchRows(rows, keyword) {
       const q = normalize(keyword)
