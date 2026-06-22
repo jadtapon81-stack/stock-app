@@ -15,7 +15,7 @@
   <script src="https://unpkg.com/html5-qrcode"></script>
   <script src="https://unpkg.com/@zxing/library@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
 
     /* =====================
@@ -35,11 +35,13 @@
     }
 
     const MASTER_TABLE = 'Master_Data'
+    const AVAILABLE_TABLE = 'available_stock'
     const COUNT_TABLE = 'stock_count'
     const ACTIVE_TABLE = 'active_users'
     const PAGE_SIZE = 1000
 
     let masterRows = []
+    let availableRows = []
     let offlineIndex = new Map()
     let countRows = []
     let savedKeys = new Set()
@@ -327,6 +329,7 @@
       setLoading(true, 'กำลังโหลด Master Data...')
       try {
         masterRows = await fetchAll(MASTER_TABLE)
+        availableRows = await fetchAll(AVAILABLE_TABLE)
         buildOfflineIndex(masterRows)
         await loadCountHistory()
         renderMasterTable(masterRows)
@@ -797,6 +800,11 @@
       return ''
     }
 
+    function getAvailableQty(itemKey) {
+      const row = availableRows.find(x => String(x.item_key || '') === String(itemKey || ''))
+      return row?.available_qty ?? row?.available_Qty ?? row?.quantity ?? row?.Quantity ?? 0
+    }
+
     function sameText(a, b) {
       return normalize(a) === normalize(b)
     }
@@ -890,7 +898,7 @@
       $('fgAssort').value = rowValue(r, 'assort')
       $('fgLocation').value = rowValue(r, 'location')
       $('fgCustomer').value = rowValue(r, 'customer')
-      $('fgSystemQty').value = r.Quantity ?? r.quantity ?? 0
+      $('fgSystemQty').value = getAvailableQty(r.item_key)
       if (focusQty) $('fgMoveQty').value = ''
       $('fgFormStatus').textContent = 'พบข้อมูลใน Master Data แล้ว'
       $('fgFormStatus').className = 'fg-status selected'
@@ -929,7 +937,7 @@
       }
 
       const tableName = currentFgMode === 'IN' ? 'fg_in' : 'fg_out'
-      const oldQty = currentFgRow ? Number(currentFgRow.Quantity ?? currentFgRow.quantity ?? 0) : 0
+      const oldQty = currentFgRow ? Number(getAvailableQty(currentFgRow.item_key)) : 0
       const newQty = currentFgMode === 'IN' ? oldQty + moveQty : oldQty - moveQty
       const itemKey = currentFgRow?.item_key || buildItemKey(item, code, assort, location, customer)
 
@@ -940,57 +948,27 @@
       setLoading(true, currentFgMode === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...')
 
       try {
-        const movementPayload = {
+         const movementPayload = {
           item_key: itemKey,
-          "Item": item,
-          "CODE": code,
-          "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
-          "Location": location,
-          "Quantity": moveQty,
-          customer: customer
-        }
-
-        const { error: moveError } = await getSupabase().from(tableName).insert(movementPayload)
-        if (moveError) throw moveError
-
-        if (currentFgRow && currentFgRow.id) {
-          const { data, error } = await getSupabase()
-            .from(MASTER_TABLE)
-            .update({
-              "Item": item,
-              "CODE": code,
-              "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
-              "Location": location,
-              "Quantity": newQty,
-              customer: customer
-            })
-            .eq('id', currentFgRow.id)
-            .select('*')
-            .single()
-
-          if (error) throw error
-          masterRows = masterRows.map(r => String(r.id) === String(currentFgRow.id) ? (data || { ...r, Item: item, CODE: code, Assort: assort, Location: location, Quantity: newQty, customer }) : r)
-        } else {
-          const startQty = currentFgMode === 'IN' ? moveQty : -moveQty
-          const masterPayload = {
             "Item": item,
             "CODE": code,
             "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
             "Location": location,
-            "Quantity": startQty,
-            customer: customer
+            "Quantity": moveQty,
+            customer: customer,
+            created_by: currentUser
           }
+        const { error: moveError } = await getSupabase().from(tableName).insert(movementPayload)
+        if (moveError) throw moveError
 
-          const { data, error } = await getSupabase()
-            .from(MASTER_TABLE)
-            .insert(masterPayload)
-            .select('*')
-            .single()
-
-          if (error) throw error
-          masterRows.push(data || masterPayload)
-        }
-
+         if (currentFgRow && currentFgRow.id) {
+          // ไม่ต้อง update Master_Data
+         // Master_Data ต้องเป็นยอดตั้งต้นเท่านั้น
+         } else {
+         alert('ไม่พบข้อมูลใน Master Data กรุณาเลือกข้อมูลจาก Dropdown ก่อน')
+         return
+         }
+        availableRows = await fetchAll(AVAILABLE_TABLE)
         buildOfflineIndex(masterRows)
         updateFgDatalists()
         renderMasterTable(masterRows)
@@ -1135,6 +1113,39 @@
       $('toast').classList.add('show')
       setTimeout(() => $('toast').classList.remove('show'), 1800)
     }
+    window.exportExcel = async function () {
+  try {
+    setLoading(true, 'กำลัง Export Excel...')
+
+    const tables = [
+      { name: 'Master_Data', table: 'Master_Data' },
+      { name: 'FG_IN', table: 'fg_in' },
+      { name: 'FG_OUT', table: 'fg_out' },
+      { name: 'Available_Stock', table: 'available_stock' },
+      { name: 'Transaction', table: 'stock_transaction' }
+    ]
+
+    const wb = XLSX.utils.book_new()
+
+    for (const t of tables) {
+      const rows = await fetchAll(t.table)
+
+      const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}])
+      XLSX.utils.book_append_sheet(wb, ws, t.name)
+    }
+
+    const today = new Date().toISOString().slice(0, 10)
+
+    XLSX.writeFile(wb, `stock_export_${today}.xlsx`)
+
+    showToast('Export Excel สำเร็จ')
+
+  } catch (err) {
+    alert('Export Excel ไม่สำเร็จ: ' + (err?.message || err))
+  } finally {
+    setLoading(false)
+  }
+}
   </script>
 
   <style>
@@ -1172,7 +1183,7 @@
 
     .app-page{display:none;min-height:100vh;padding-bottom:94px}
     .topbar{position:sticky;top:0;z-index:1000;height:calc(86px + env(safe-area-inset-top));padding:calc(14px + env(safe-area-inset-top)) 18px 14px;display:flex;align-items:center;gap:14px;color:white;background:linear-gradient(135deg,#6541f2 0%,#bb17dc 48%,#ef3d9a 100%);box-shadow:0 14px 30px rgba(149,28,220,.28)}
-    .topbar:after{content:'🔔';margin-left:auto;width:44px;height:44px;display:grid;place-items:center;border-radius:999px;background:rgba(255,255,255,.16);font-size:22px}
+
     .hamburger{width:52px;height:52px;border:0;border-radius:18px;background:rgba(255,255,255,.14);color:white;font-size:30px;display:grid;place-items:center;backdrop-filter:blur(12px)}
     .brand{line-height:1.1}.brand b{display:block;font-size:25px;font-weight:800;letter-spacing:.2px}.brand span{font-size:14px;color:rgba(255,255,255,.84)}
 
@@ -1632,7 +1643,7 @@
       <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
       <button id="btnFgIn" class="menu-btn" onclick="showFgPage('IN')">➕ FG IN</button>
       <button id="btnFgOut" class="menu-btn" onclick="showFgPage('OUT')">➖ FG OUT</button>
-      <button id="sideWebTestBtn" class="menu-btn web-test-menu" onclick="runConnectionTest()">ทดสอบเว็บ</button>
+      <button class="menu-btn" onclick="exportExcel()">  📊 Export Excel</button>
       <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>
     </aside>
 
