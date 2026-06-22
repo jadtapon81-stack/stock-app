@@ -581,13 +581,12 @@
           <div class="result-card ${saved ? 'saved-card' : ''}" id="card_${safe(r.id)}">
             <div class="shoe-badge">👟</div>
             ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
-            <div class="result-grid">
+            <div class="result-grid count-result-grid">
+              <div class="system-qty-card"><b>System Qty</b><span>${safe(qty)}</span></div>
               <div><b>Item</b><span>${safe(item)}</span></div>
               <div><b>CODE</b><span>${safe(code)}</span></div>
               <div><b>Assort</b><span>${safe(assort)}</span></div>
               <div><b>Location</b><span>${safe(location)}</span></div>
-              <div><b>System Qty</b><span>${safe(qty)}</span></div>
-              <div><b>item_key</b><span>${safe(key)}</span></div>
             </div>
             <div class="count-form">
               <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้" id="count_${safe(r.id)}" value="${safe(savedQty)}">
@@ -1652,8 +1651,181 @@ body{
     word-break:break-word;
   }
 }
+
+/* ===== MOBILE COUNT UI FIX ===== */
+@media screen and (max-width:768px){
+  main{
+    padding: 12px 10px 80px !important;
+  }
+
+  .topbar{
+    height: 95px !important;
+    padding-top: 10px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .hamburger{
+    width: 46px !important;
+    height: 46px !important;
+    font-size: 34px !important;
+  }
+
+  .brand{
+    margin-left: 8px !important;
+  }
+
+  .brand b{
+    font-size: 26px !important;
+    line-height: .95 !important;
+  }
+
+  .brand span{
+    font-size: 16px !important;
+    margin-top: 3px !important;
+  }
+
+  .notif-btn{
+    width: 46px !important;
+    height: 46px !important;
+    font-size: 30px !important;
+  }
+
+  .notif-btn small{
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 13px !important;
+  }
+
+  .user-welcome-card{
+    grid-template-columns: 70px 1fr !important;
+    padding: 18px !important;
+    gap: 14px !important;
+  }
+
+  .user-avatar{
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 32px !important;
+  }
+
+  .user-welcome-card h2{
+    font-size: 20px !important;
+  }
+
+  .user-welcome-card p,
+  .user-welcome-card small{
+    font-size: 14px !important;
+  }
+
+  .ring-grid{
+    grid-template-columns: repeat(2,1fr) !important;
+    gap: 12px !important;
+  }
+
+  .ring-stat span{
+    width: 80px !important;
+    height: 80px !important;
+    font-size: 24px !important;
+  }
+
+  .overview-card{
+    padding: 18px !important;
+  }
+
+  .section-head b{
+    font-size: 20px !important;
+  }
+
+  .search-row,
+  .count-search-row,
+  .fg-form-actions,
+  .count-form{
+    grid-template-columns: 1fr !important;
+  }
+
+  .search-row button,
+  .count-form button{
+    width: 100% !important;
+    min-height: 52px !important;
+    font-size: 17px !important;
+  }
+
+  .count-form input{
+    width: 100% !important;
+    height: 58px !important;
+    font-size: 18px !important;
+  }
+
+  .result-card{
+    width: 100% !important;
+    padding: 14px !important;
+    border-radius: 22px !important;
+    margin: 0 0 16px !important;
+  }
+
+  .result-grid,
+  .count-result-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 10px !important;
+    padding-right: 0 !important;
+  }
+
+  .result-grid div,
+  .count-result-grid div{
+    min-height: 86px !important;
+    padding: 12px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .result-grid b,
+  .count-result-grid b{
+    display: block !important;
+    font-size: 12px !important;
+    line-height: 1.2 !important;
+    margin-bottom: 6px !important;
+    color: #6b7280 !important;
+  }
+
+  .result-grid span,
+  .count-result-grid span{
+    display: block !important;
+    font-size: 17px !important;
+    line-height: 1.25 !important;
+    font-weight: 900 !important;
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .system-qty-card{
+    grid-column: 1 / -1 !important;
+    background: #fff1f2 !important;
+    border: 1px solid rgba(217,11,22,.16) !important;
+  }
+
+  .system-qty-card b{
+    color: #a80010 !important;
+  }
+
+  .system-qty-card span{
+    font-size: 28px !important;
+    color: #d90b16 !important;
+  }
+
+  .shoe-badge{
+    display: none !important;
+  }
+
+  .fg-form-grid,
+  .mobile-card-grid{
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
 </style>
-  </style>
 </head>
 
 <body>
