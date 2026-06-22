@@ -574,6 +574,7 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
 
     window.clearCountSearch = function () {
       $('countSearch').value = ''
+      closeCountSuggest()
       $('countResult').innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก ${safe(currentCountCustomer)}</div>`
       $('countSearch').focus()
     }
@@ -581,6 +582,86 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     /* =====================
        4) Stock Count
        ===================== */
+    function closeCountSuggest() {
+      const box = $('countSuggest')
+      if (!box) return
+      box.classList.remove('show')
+      box.innerHTML = ''
+    }
+
+    window.showCountSuggest = function () {
+      const input = $('countSearch')
+      const box = $('countSuggest')
+      if (!input || !box) return
+
+      const q = normalize(input.value)
+      if (q.length < 2) {
+        closeCountSuggest()
+        return
+      }
+
+      const rows = masterRows
+        .filter(r => isCustomerRow(r, currentCountCustomer))
+        .filter(r => {
+          const item = normalize(r.Item ?? r.item)
+          const code = normalize(r.CODE ?? r.code)
+          const assort = normalize(r.Assort ?? r.assort)
+          const location = normalize(r.Location ?? r.location)
+          const itemKey = normalize(r.item_key)
+          const customer = normalize(r.customer ?? r.Customer)
+
+          const fullCode = item + code + assort
+          const fullCodeLocation = item + code + assort + location
+          const fullCodeCustomer = item + code + assort + location + customer
+
+          return (
+            item.includes(q) ||
+            code.includes(q) ||
+            assort.includes(q) ||
+            location.includes(q) ||
+            itemKey.includes(q) ||
+            fullCode.includes(q) ||
+            fullCodeLocation.includes(q) ||
+            fullCodeCustomer.includes(q)
+          )
+        })
+        .slice(0, 50)
+
+      if (!rows.length) {
+        box.innerHTML = `<div class="count-suggest-empty">ไม่พบข้อมูล</div>`
+        box.classList.add('show')
+        return
+      }
+
+      box.innerHTML = rows.map(r => {
+        const item = r.Item ?? r.item ?? ''
+        const code = r.CODE ?? r.code ?? ''
+        const assort = r.Assort ?? r.assort ?? ''
+        const location = r.Location ?? r.location ?? ''
+        const qty = r.Quantity ?? r.quantity ?? 0
+        const value = `${item}${code}${assort}`
+        const text = `${item}${code}${assort} | ${location} | Qty ${qty}`
+
+        return `
+          <button type="button" onclick="selectCountSuggest('${safeForJs(value)}')">
+            ${safe(text)}
+          </button>
+        `
+      }).join('')
+
+      box.classList.add('show')
+    }
+
+    window.selectCountSuggest = function (value) {
+      $('countSearch').value = value
+      closeCountSuggest()
+      searchForCount()
+    }
+
+    document.addEventListener('click', (event) => {
+      if (!event.target.closest('.count-search-wrap')) closeCountSuggest()
+    })
+
     function renderCountResult(result) {
       const box = $('countResult')
       box.innerHTML = ''
@@ -618,6 +699,7 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     }
 
     window.searchForCount = function () {
+      closeCountSuggest()
       const keyword = $('countSearch').value
       const box = $('countResult')
 
@@ -1844,6 +1926,70 @@ body{
     grid-template-columns: 1fr 1fr !important;
   }
 }
+
+/* ===== COUNT DROPDOWN SEARCH FIX ===== */
+.count-search-wrap{
+  position:relative;
+}
+
+.count-suggest{
+  display:none;
+  position:absolute;
+  left:0;
+  right:0;
+  top:calc(100% + 10px);
+  z-index:6000;
+  background:#fff;
+  border:1px solid #eef0f3;
+  border-radius:18px;
+  box-shadow:0 18px 45px rgba(16,24,40,.18);
+  max-height:320px;
+  overflow-y:auto;
+  padding:8px;
+}
+
+.count-suggest.show{
+  display:block;
+}
+
+.count-suggest button{
+  width:100%;
+  border:0;
+  background:#fff;
+  color:#111827;
+  padding:13px 14px;
+  text-align:left;
+  border-radius:13px;
+  font-weight:800;
+  font-size:15px;
+  line-height:1.25;
+}
+
+.count-suggest button:hover,
+.count-suggest button:active{
+  background:#fff1f2;
+  color:#d90b16;
+}
+
+.count-suggest-empty{
+  padding:14px;
+  color:#6b7280;
+  text-align:center;
+  font-weight:700;
+}
+
+@media screen and (max-width:768px){
+  .count-suggest{
+    max-height:42vh;
+    border-radius:20px;
+  }
+
+  .count-suggest button{
+    font-size:16px;
+    padding:15px 14px;
+  }
+}
+
 </style>
 </head>
 
@@ -2002,9 +2148,10 @@ body{
         <h2 id="countTitle" class="title">Stock Count BIG C</h2>
         <input id="countedBy" type="hidden">
         <div class="search-row count-search-row">
-          <div class="search-wrapper">
-            <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" onkeydown="if(event.key==='Enter') searchForCount()">
+          <div class="search-wrapper count-search-wrap">
+            <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" autocomplete="off" oninput="showCountSuggest()" onkeydown="if(event.key==='Enter') searchForCount()">
             <span class="clear-search" onclick="clearCountSearch()">×</span>
+            <div id="countSuggest" class="count-suggest"></div>
           </div>
           <button onclick="searchForCount()">ค้นหา</button>
           <button class="scan" onclick="openScanner('countSearch')">สแกน</button>
