@@ -382,13 +382,22 @@
       return String(r.customer ?? r.Customer ?? r.channel ?? r.Channel ?? '').trim()
     }
 
-    function isCustomerRow(r, customer) {
-      if (!customer) return true
-      const c = normalize(customer)
-      const direct = normalize(getCustomerValue(r))
-      const key = normalize(r.item_key)
-      return direct === c || key.endsWith(c)
-    }
+  function isCustomerRow(r, customer){
+
+    const dbCustomer = normalize(getCustomerValue(r));
+    const key = normalize(r.item_key);
+
+    let search = normalize(customer);
+
+    if(search === 'bigc') search = 'bc';
+    if(search === 'lotus') search = 'lt';
+
+    return (
+        dbCustomer === search ||
+        key.endsWith(search)
+    );
+
+}
 
 function searchOfflineRows(keyword, customer = currentCountCustomer) {
   const q = normalize(keyword)
