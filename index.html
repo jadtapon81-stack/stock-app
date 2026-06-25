@@ -2045,7 +2045,7 @@ body{
 .fg-qty-input-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:74px;}
 .fg-qty-input-wrap input{width:100% !important;border:0 !important;background:transparent !important;box-shadow:none !important;padding:0 !important;text-align:center !important;font-size:36px !important;font-weight:900 !important;color:#111827 !important;height:42px !important;}
 .fg-qty-input-wrap small{font-size:13px;font-weight:900;color:#111827;margin-top:2px;}
-.fg-quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.fg-quick-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;}
 .fg-quick-grid button{height:54px;border:1.5px solid rgba(217,11,22,.22);border-radius:12px;background:#fff;color:#d90b16;font-size:18px;font-weight:900;}
 .fg-mode-out .fg-quick-grid button{border-color:rgba(240,90,0,.24);color:#f05a00;}
 .fg-confirm-btn{width:100%;min-height:94px;border:0;border-radius:16px;background:linear-gradient(135deg,#ef171f,#d90b16);color:#fff;display:grid;grid-template-columns:110px 1fr;grid-template-rows:auto auto;align-items:center;text-align:left;padding:16px 24px;box-shadow:0 16px 26px rgba(217,11,22,.18);}
@@ -2061,7 +2061,7 @@ body{
 .toast::before{content:'✓';position:absolute;left:18px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#16a34a;color:#fff;font-size:28px;font-weight:900;}
 .toast.show{opacity:1 !important;transform:translateX(-50%) translateY(0) !important;}
 @media (max-width:720px){.fg-modern-page{max-width:100% !important;}.fg-modern-shell{border-radius:22px;padding:14px;box-shadow:0 10px 28px rgba(16,24,40,.09);}.fg-modern-title{font-size:32px;}.fg-info-row{grid-template-columns:96px 1fr;min-height:66px;padding:12px 14px;}.fg-row-input{font-size:19px !important;}.fg-stock-number{font-size:58px !important;}.fg-confirm-btn{min-height:88px;grid-template-columns:88px 1fr;padding:14px 18px;}.fg-confirm-btn span{width:58px;height:58px;font-size:42px;}.fg-confirm-btn b{font-size:24px;}.fg-confirm-btn small{font-size:16px;}.fg-footer-line{font-size:14px;}}
-@media (max-width:390px){.fg-clear-top{font-size:13px;padding:8px 10px;}.fg-modern-title{font-size:29px;}.fg-quick-grid{gap:7px;}.fg-quick-grid button{font-size:15px;height:48px;}.fg-stepper button{font-size:34px;}.fg-info-row{grid-template-columns:82px 1fr;}}
+@media (max-width:390px){.fg-clear-top{font-size:13px;padding:8px 10px;}.fg-modern-title{font-size:29px;}.fg-quick-grid{gap:8px;}.fg-quick-grid button{font-size:18px;height:50px;}.fg-stepper button{font-size:34px;}.fg-info-row{grid-template-columns:82px 1fr;}}
 
 </style>
 </head>
@@ -2288,10 +2288,8 @@ body{
             </div>
 
             <div class="fg-quick-grid">
+              <button type="button" onclick="addFgQty(-10)">-10</button>
               <button type="button" onclick="addFgQty(10)">+10</button>
-              <button type="button" onclick="addFgQty(50)">+50</button>
-              <button type="button" onclick="addFgQty(100)">+100</button>
-              <button type="button" onclick="addFgQty(500)">+500</button>
             </div>
 
             <button id="fgSaveBtn" class="fg-confirm-btn" onclick="saveFgMovement()">
@@ -2423,13 +2421,13 @@ window.saveFgMovement = async function(){
   if(!item || !code || !assort || !location || !customer){
     return alert('กรุณาใส่ข้อมูล Item, CODE, Assort, Location, Customer ให้ครบ');
   }
-  if(!currentFgRow || !currentFgRow.id){
-    return alert('กรุณาเลือกข้อมูลจาก Master Data ก่อน');
-  }
+  // อนุญาตให้บันทึกข้อมูลใหม่ได้ แม้ไม่มีใน master_data
+  // master_data จะไม่ถูกแก้ไข และ available_stock จะคำนวณจาก transaction เท่านั้น
   const tableName = currentFgMode === 'IN' ? 'fg_in' : 'fg_out';
-  const oldQty = Number(getAvailableQty(currentFgRow.item_key));
+  const baseItemKey = currentFgRow?.item_key || buildItemKey(item, code, assort, location, customer);
+  const oldQty = currentFgRow ? Number(getAvailableQty(currentFgRow.item_key)) : 0;
   const newQty = currentFgMode === 'IN' ? oldQty + moveQty : oldQty - moveQty;
-  const itemKey = currentFgRow.item_key || buildItemKey(item, code, assort, location, customer);
+  const itemKey = baseItemKey;
   if(currentFgMode === 'OUT' && newQty < 0){
     if(!confirm('จำนวนคงเหลือจะติดลบ ต้องการบันทึกต่อหรือไม่')) return;
   }
@@ -2464,6 +2462,158 @@ window.saveFgMovement = async function(){
 };
 window.addEventListener('DOMContentLoaded',()=>setInterval(()=>setText('fgNowText', fgNowText()), 30000));
 </script>
+
+<!-- patched: quick qty only -10/+10, allow new FG items without master alert -->
+
+
+<script>
+/* ===== PATCH: hide empty FG dropdown + popup for new item ===== */
+(function(){
+  function fgSetStatus(text, cls){
+    const st = $('fgFormStatus');
+    if(st){
+      st.textContent = text || 'เลือกข้อมูลสินค้า';
+      st.className = cls || 'fg-status-mini';
+    }
+  }
+
+  // ไม่โชว์ Dropdown ถ้าไม่มีข้อมูล / ไม่โชว์ข้อความ "ไม่พบข้อมูลใน Master Data"
+  window.showFgSuggest = function(field){
+    const cfg = fgSuggestFields[field];
+    if(!cfg) return;
+    const input = $(cfg.input);
+    const box = $(cfg.box);
+    if(!input || !box) return;
+
+    const text = input.value.trim();
+    closeFgSuggest();
+
+    // ช่อง Item ต้องพิมพ์อย่างน้อย 3 ตัว แต่ไม่ต้องแสดงกล่องคำแนะนำให้บังช่องต่อไป
+    if(field === 'item' && text.length < 3) return;
+
+    const values = getFgSuggestValues(field);
+    if(!values.length) return;
+
+    box.innerHTML = values.map(v => `
+      <button type="button" onclick="selectFgSuggest('${field}', '${safeForJs(v)}')">${safe(v)}</button>
+    `).join('');
+    box.classList.add('show');
+  };
+
+  // ถ้าไม่เจอใน Master Data ให้เงียบไว้ ใช้กรอกต่อได้ ไม่เด้ง ไม่โชว์ dropdown
+  window.autoFillFgFromForm = function(){
+    updateFgDatalists();
+    const row = findFgRowByForm();
+    if(!row){
+      currentFgRow = null;
+      const stock = $('fgSystemQty');
+      if(stock && !stock.value) stock.value = '0';
+      fgSetStatus('กรอกข้อมูลใหม่ได้', 'fg-status-mini');
+      return;
+    }
+    selectFgRow(row, false);
+    updateFgDatalists();
+  };
+
+  // ปรับปุ่มด่วนให้เหลือ -10 / +10 เท่านั้น ถ้าไฟล์ยังมีปุ่มเก่าอยู่
+  function patchQuickButtons(){
+    document.querySelectorAll('.fg-quick-row,.fg-quick-actions,.quick-btns,.fg-step-quick').forEach(row => {
+      const txt = row.textContent || '';
+      if(txt.includes('+50') || txt.includes('+100') || txt.includes('+500')){
+        row.innerHTML = `
+          <button type="button" onclick="changeFgQty(-10)">-10</button>
+          <button type="button" onclick="changeFgQty(10)">+10</button>
+        `;
+        row.classList.add('fg-only-quick10');
+      }
+    });
+  }
+
+  const oldShowFgPage = window.showFgPage;
+  window.showFgPage = function(mode){
+    oldShowFgPage(mode);
+    setTimeout(patchQuickButtons, 0);
+  };
+  window.addEventListener('DOMContentLoaded', patchQuickButtons);
+
+  // บันทึก: ถ้าเป็นสินค้าใหม่ ให้ Popup แจ้งเฉพาะตอนบันทึกสำเร็จ
+  window.saveFgMovement = async function(){
+    const moveQty = Number($('fgMoveQty').value);
+    if(!$('fgMoveQty').value || moveQty <= 0) return alert('กรุณาใส่จำนวน CARTON');
+
+    autoFillFgFromForm();
+
+    const item = $('fgItem').value.trim();
+    const code = $('fgCode').value.trim();
+    const assort = $('fgAssort').value.trim();
+    const location = $('fgLocation').value.trim();
+    const customer = $('fgCustomer').value.trim();
+
+    if(!item || !code || !assort || !location || !customer){
+      return alert('กรุณาใส่ข้อมูล Item, CODE, Assort, Location, Customer ให้ครบ');
+    }
+
+    const isNewItem = !currentFgRow;
+    const tableName = currentFgMode === 'IN' ? 'fg_in' : 'fg_out';
+    const itemKey = currentFgRow?.item_key || buildItemKey(item, code, assort, location, customer);
+    const oldQty = currentFgRow ? Number(getAvailableQty(currentFgRow.item_key)) : 0;
+    const newQty = currentFgMode === 'IN' ? oldQty + moveQty : oldQty - moveQty;
+
+    if(currentFgMode === 'OUT' && newQty < 0){
+      if(!confirm('จำนวนคงเหลือจะติดลบ ต้องการบันทึกต่อหรือไม่')) return;
+    }
+
+    setLoading(true, currentFgMode === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...');
+
+    try{
+      const movementPayload = {
+        item_key: itemKey,
+        "Item": item,
+        "CODE": code,
+        "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
+        "Location": location,
+        "Quantity": moveQty,
+        customer: customer,
+        created_by: currentUser
+      };
+
+      const { error } = await getSupabase().from(tableName).insert(movementPayload);
+      if(error) throw error;
+
+      try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('โหลด available_stock ไม่สำเร็จหลังบันทึก', e); }
+      updateHomeStats();
+
+      const msg = isNewItem
+        ? `เพิ่มรายการใหม่เรียบร้อยแล้ว\n${item} จำนวน ${moveQty.toLocaleString('th-TH')} CARTON`
+        : (currentFgMode === 'IN'
+            ? `เพิ่มข้อมูลเรียบร้อยแล้ว\nรายการ FG IN จำนวน ${moveQty.toLocaleString('th-TH')} CARTON`
+            : `บันทึกข้อมูลเรียบร้อยแล้ว\nรายการ FG OUT จำนวน ${moveQty.toLocaleString('th-TH')} CARTON`);
+
+      clearFgForm(false);
+      showToast(msg);
+    }catch(err){
+      alert('บันทึกไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+})();
+</script>
+
+<style>
+/* PATCH: quick button row minimal */
+.fg-only-quick10{
+  display:grid !important;
+  grid-template-columns:1fr 1fr !important;
+  gap:12px !important;
+}
+.fg-only-quick10 button{
+  min-height:50px !important;
+  border-radius:14px !important;
+  font-size:20px !important;
+  font-weight:900 !important;
+}
+</style>
 
 </body>
 </html>
