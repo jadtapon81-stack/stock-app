@@ -1080,7 +1080,12 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
          alert('ไม่พบข้อมูลใน Master Data กรุณาเลือกข้อมูลจาก Dropdown ก่อน')
          return
          }
-        availableRows = await fetchAll(AVAILABLE_TABLE)
+        try {
+          availableRows = await fetchAll(AVAILABLE_TABLE)
+        } catch (e) {
+          console.warn('โหลด available_stock ไม่สำเร็จหลังบันทึก ใช้ Quantity จาก master_data แทน', e)
+          availableRows = []
+        }
         buildOfflineIndex(masterRows)
         updateFgDatalists()
         renderMasterTable(masterRows)
