@@ -2013,6 +2013,56 @@ body{
   }
 }
 
+
+
+/* ===== FG IN / OUT MINIMAL PRODUCTION UI ===== */
+.fg-modern-page{max-width:720px !important;margin:0 auto !important;padding:0 !important;background:transparent !important;}
+.fg-modern-shell{width:100%;margin:0 auto;background:#fff;border-radius:24px;box-shadow:0 18px 50px rgba(16,24,40,.10);padding:18px;}
+.fg-modern-head{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;min-height:48px;}
+.fg-modern-title{margin:0;text-align:center;font-size:34px;font-weight:900;letter-spacing:.5px;color:#d90b16;line-height:1;}
+.fg-mode-out .fg-modern-title{color:#f05a00;}
+.fg-clear-top{position:absolute;right:0;top:50%;transform:translateY(-50%);border:1px solid #eef0f3;background:#fff;color:#6b7280;border-radius:999px;padding:9px 14px;font-weight:900;font-size:15px;box-shadow:0 6px 16px rgba(16,24,40,.06);}
+.fg-modern-card{background:#fff;border-radius:22px;}
+.fg-status-mini{display:none;margin:0 0 12px;color:#16a34a;font-weight:900;font-size:14px;text-align:center;}
+.fg-info-list{display:grid;gap:7px;margin-bottom:14px;}
+.fg-info-row{position:relative;display:grid;grid-template-columns:120px 1fr;align-items:center;min-height:74px;padding:13px 18px;border:1px solid #edf0f3;border-radius:18px;background:#fff;box-shadow:0 4px 12px rgba(16,24,40,.035);}
+.fg-row-label{font-size:15px;font-weight:900;color:#111827;}
+.fg-row-input{border:0 !important;background:transparent !important;box-shadow:none !important;border-radius:0 !important;padding:0 !important;height:auto !important;font-size:20px !important;font-weight:900 !important;color:#111827 !important;text-align:left !important;}
+.fg-row-input::placeholder{color:#111827;opacity:1;font-weight:900;}
+.fg-row-input:focus{box-shadow:none !important;border:0 !important;}
+.fg-stock-box{margin:14px 0 18px;padding:22px 16px;border-radius:18px;text-align:center;background:linear-gradient(135deg,#fff1f2,#fff7ed);border:1px solid rgba(217,11,22,.08);}
+.fg-stock-label{font-size:17px;font-weight:900;color:#1f2937;margin-bottom:4px;}
+.fg-stock-number{width:100% !important;border:0 !important;background:transparent !important;box-shadow:none !important;padding:0 !important;text-align:center !important;font-size:64px !important;line-height:1 !important;font-weight:900 !important;color:#d90b16 !important;height:auto !important;}
+.fg-mode-out .fg-stock-number{color:#f05a00 !important;}
+.fg-unit{font-size:18px;font-weight:900;color:#111827;letter-spacing:.3px;}
+.fg-qty-title{text-align:center;margin:2px 0 12px;font-size:20px;font-weight:900;color:#111827;}
+.fg-qty-title span{color:#d90b16;}
+.fg-mode-out .fg-qty-title span{color:#f05a00;}
+.fg-stepper{display:grid;grid-template-columns:1fr 1.8fr 1fr;border:1px solid #e5e7eb;border-radius:16px;overflow:hidden;background:#fff;margin-bottom:12px;}
+.fg-stepper button{border:0;background:#fff;color:#d90b16;font-size:38px;font-weight:800;min-height:74px;border-right:1px solid #e5e7eb;}
+.fg-stepper button:last-child{border-right:0;border-left:1px solid #e5e7eb;}
+.fg-mode-out .fg-stepper button{color:#f05a00;}
+.fg-qty-input-wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:74px;}
+.fg-qty-input-wrap input{width:100% !important;border:0 !important;background:transparent !important;box-shadow:none !important;padding:0 !important;text-align:center !important;font-size:36px !important;font-weight:900 !important;color:#111827 !important;height:42px !important;}
+.fg-qty-input-wrap small{font-size:13px;font-weight:900;color:#111827;margin-top:2px;}
+.fg-quick-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px;}
+.fg-quick-grid button{height:54px;border:1.5px solid rgba(217,11,22,.22);border-radius:12px;background:#fff;color:#d90b16;font-size:18px;font-weight:900;}
+.fg-mode-out .fg-quick-grid button{border-color:rgba(240,90,0,.24);color:#f05a00;}
+.fg-confirm-btn{width:100%;min-height:94px;border:0;border-radius:16px;background:linear-gradient(135deg,#ef171f,#d90b16);color:#fff;display:grid;grid-template-columns:110px 1fr;grid-template-rows:auto auto;align-items:center;text-align:left;padding:16px 24px;box-shadow:0 16px 26px rgba(217,11,22,.18);}
+.fg-mode-out .fg-confirm-btn{background:linear-gradient(135deg,#ff7a00,#f05a00);box-shadow:0 16px 26px rgba(240,90,0,.18);}
+.fg-confirm-btn span{grid-row:1 / 3;width:66px;height:66px;border-radius:50%;background:#fff;color:#d90b16;display:grid;place-items:center;font-size:48px;font-weight:900;line-height:1;justify-self:center;}
+.fg-mode-out .fg-confirm-btn span{color:#f05a00;}
+.fg-confirm-btn b{font-size:28px;font-weight:900;line-height:1.05;}
+.fg-confirm-btn small{font-size:18px;font-weight:700;opacity:.95;}
+.fg-footer-line{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:18px;color:#8b93a3;font-size:16px;font-weight:700;}
+.fg-footer-line b{font-weight:800;color:#6b7280;}
+.fg-suggest{top:calc(100% + 6px) !important;left:12px !important;right:12px !important;}
+.toast{top:calc(24px + env(safe-area-inset-top)) !important;bottom:auto !important;left:50% !important;transform:translateX(-50%) translateY(-30px) !important;min-width:360px;max-width:min(92vw,520px);background:#fff !important;color:#111827 !important;border:1px solid #eef0f3;border-radius:18px !important;box-shadow:0 18px 50px rgba(16,24,40,.18) !important;padding:16px 20px 16px 66px !important;font-weight:900;line-height:1.25;text-align:left;}
+.toast::before{content:'✓';position:absolute;left:18px;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#16a34a;color:#fff;font-size:28px;font-weight:900;}
+.toast.show{opacity:1 !important;transform:translateX(-50%) translateY(0) !important;}
+@media (max-width:720px){.fg-modern-page{max-width:100% !important;}.fg-modern-shell{border-radius:22px;padding:14px;box-shadow:0 10px 28px rgba(16,24,40,.09);}.fg-modern-title{font-size:32px;}.fg-info-row{grid-template-columns:96px 1fr;min-height:66px;padding:12px 14px;}.fg-row-input{font-size:19px !important;}.fg-stock-number{font-size:58px !important;}.fg-confirm-btn{min-height:88px;grid-template-columns:88px 1fr;padding:14px 18px;}.fg-confirm-btn span{width:58px;height:58px;font-size:42px;}.fg-confirm-btn b{font-size:24px;}.fg-confirm-btn small{font-size:16px;}.fg-footer-line{font-size:14px;}}
+@media (max-width:390px){.fg-clear-top{font-size:13px;padding:8px 10px;}.fg-modern-title{font-size:29px;}.fg-quick-grid{gap:7px;}.fg-quick-grid button{font-size:15px;height:48px;}.fg-stepper button{font-size:34px;}.fg-info-row{grid-template-columns:82px 1fr;}}
+
 </style>
 </head>
 
@@ -2183,53 +2233,77 @@ body{
       </section>
 
       <!-- FG IN / FG OUT -->
-      <section id="fgPage" class="page-card" style="display:none;">
-        <h2 id="fgTitle" class="title">FG IN</h2>
-        <div class="home-summary" id="fgModeText">เพิ่มสินค้าเข้าคลัง</div>
-
-        <div class="fg-panel">
-          <h3>ข้อมูลสำหรับบันทึก</h3>
-          <p id="fgFormStatus" class="fg-status">เลือกค่าจาก Dropdown หรือกรอกข้อมูลใหม่</p>
-
-          <div class="fg-form-grid">
-            <div class="fg-field">
-              <label>Item</label>
-              <input id="fgItem" oninput="handleFgInput('item')" onfocus="handleFgFocus('item')" autocomplete="off" placeholder="พิมพ์อย่างน้อย 3 ตัว เช่น GM7">
-              <div id="fgItemSuggest" class="fg-suggest"></div>
-            </div>
-            <div class="fg-field">
-              <label>CODE</label>
-              <input id="fgCode" oninput="handleFgInput('code')" onfocus="handleFgFocus('code')" autocomplete="off" placeholder="เลือก / พิมพ์ CODE เช่น BK">
-              <div id="fgCodeSuggest" class="fg-suggest"></div>
-            </div>
-            <div class="fg-field">
-              <label>Assort</label>
-              <input id="fgAssort" oninput="handleFgInput('assort')" onfocus="handleFgFocus('assort')" autocomplete="off" placeholder="เลือก / พิมพ์ Assort เช่น 9.5">
-              <div id="fgAssortSuggest" class="fg-suggest"></div>
-            </div>
-            <div class="fg-field">
-              <label>Location</label>
-              <input id="fgLocation" oninput="handleFgInput('location')" onfocus="handleFgFocus('location')" autocomplete="off" placeholder="เลือก / พิมพ์ Location เช่น E-12">
-              <div id="fgLocationSuggest" class="fg-suggest"></div>
-            </div>
-            <div class="fg-field">
-              <label>Customer</label>
-              <input id="fgCustomer" oninput="handleFgInput('customer')" onfocus="handleFgFocus('customer')" autocomplete="off" placeholder="เลือก / พิมพ์ Customer">
-              <div id="fgCustomerSuggest" class="fg-suggest"></div>
-            </div>
-            <div>
-              <label>System Qty</label>
-              <input id="fgSystemQty" type="number" readonly placeholder="อัตโนมัติเมื่อเลือกข้อมูล">
-            </div>
-            <div>
-              <label>จำนวน IN / OUT</label>
-              <input id="fgMoveQty" type="number" inputmode="decimal" placeholder="จำนวนที่ต้องการเพิ่ม/ลด">
-            </div>
+      <section id="fgPage" class="page-card fg-modern-page fg-mode-in" style="display:none;">
+        <div class="fg-modern-shell">
+          <div class="fg-modern-head">
+            <h2 id="fgTitle" class="fg-modern-title">FG IN</h2>
+            <button class="fg-clear-top" type="button" onclick="clearFgForm()">↻ เคลียร์</button>
           </div>
 
-          <div class="fg-form-actions">
-            <button id="fgSaveBtn" class="fg-save" onclick="saveFgMovement()">บันทึก FG IN</button>
-            <button class="fg-clear" onclick="clearFgForm()">ล้างฟอร์ม</button>
+          <div class="fg-modern-card">
+            <div id="fgFormStatus" class="fg-status-mini">เลือกข้อมูลสินค้า</div>
+
+            <div class="fg-info-list">
+              <div class="fg-info-row fg-field">
+                <div class="fg-row-label">Item</div>
+                <input id="fgItem" class="fg-row-input" oninput="handleFgInput('item')" onfocus="handleFgFocus('item')" autocomplete="off" placeholder="-">
+                <div id="fgItemSuggest" class="fg-suggest"></div>
+              </div>
+              <div class="fg-info-row fg-field">
+                <div class="fg-row-label">CODE</div>
+                <input id="fgCode" class="fg-row-input" oninput="handleFgInput('code')" onfocus="handleFgFocus('code')" autocomplete="off" placeholder="-">
+                <div id="fgCodeSuggest" class="fg-suggest"></div>
+              </div>
+              <div class="fg-info-row fg-field">
+                <div class="fg-row-label">Assort</div>
+                <input id="fgAssort" class="fg-row-input" oninput="handleFgInput('assort')" onfocus="handleFgFocus('assort')" autocomplete="off" placeholder="-">
+                <div id="fgAssortSuggest" class="fg-suggest"></div>
+              </div>
+              <div class="fg-info-row fg-field">
+                <div class="fg-row-label">Location</div>
+                <input id="fgLocation" class="fg-row-input" oninput="handleFgInput('location')" onfocus="handleFgFocus('location')" autocomplete="off" placeholder="-">
+                <div id="fgLocationSuggest" class="fg-suggest"></div>
+              </div>
+              <div class="fg-info-row fg-field">
+                <div class="fg-row-label">Customer</div>
+                <input id="fgCustomer" class="fg-row-input" oninput="handleFgInput('customer')" onfocus="handleFgFocus('customer')" autocomplete="off" placeholder="-">
+                <div id="fgCustomerSuggest" class="fg-suggest"></div>
+              </div>
+            </div>
+
+            <div class="fg-stock-box">
+              <div class="fg-stock-label">ยอดคงเหลือปัจจุบัน (Available Stock)</div>
+              <input id="fgSystemQty" class="fg-stock-number" type="number" readonly value="0">
+              <div class="fg-unit">CARTON</div>
+            </div>
+
+            <div class="fg-qty-title">จำนวนที่ต้องการ <span id="fgQtyModeText">IN</span></div>
+            <div class="fg-stepper">
+              <button type="button" onclick="changeFgQty(-1)">−</button>
+              <div class="fg-qty-input-wrap">
+                <input id="fgMoveQty" type="number" inputmode="decimal" value="0" min="0" step="1">
+                <small>CARTON</small>
+              </div>
+              <button type="button" onclick="changeFgQty(1)">+</button>
+            </div>
+
+            <div class="fg-quick-grid">
+              <button type="button" onclick="addFgQty(10)">+10</button>
+              <button type="button" onclick="addFgQty(50)">+50</button>
+              <button type="button" onclick="addFgQty(100)">+100</button>
+              <button type="button" onclick="addFgQty(500)">+500</button>
+            </div>
+
+            <button id="fgSaveBtn" class="fg-confirm-btn" onclick="saveFgMovement()">
+              <span id="fgActionIcon">↓</span>
+              <b>ยืนยัน FG IN</b>
+              <small>เพิ่มสินค้าเข้าคลัง</small>
+            </button>
+
+            <div class="fg-footer-line">
+              <span>บันทึกโดย: <b id="fgUserText">-</b></span>
+              <span>▣ <b id="fgNowText">--/--/---- --:--</b></span>
+            </div>
           </div>
         </div>
       </section>
@@ -2265,5 +2339,131 @@ body{
       });
     }
   </script>
+
+<script>
+/* ===== FG MINIMAL UI BEHAVIOR OVERRIDE ===== */
+function fgNowText(){
+  const d = new Date();
+  return d.toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function updateFgHeader(){
+  const isIn = currentFgMode === 'IN';
+  const page = $('fgPage');
+  if(page){
+    page.classList.toggle('fg-mode-in', isIn);
+    page.classList.toggle('fg-mode-out', !isIn);
+  }
+  setText('fgTitle', isIn ? 'FG IN' : 'FG OUT');
+  setText('fgQtyModeText', isIn ? 'IN' : 'OUT');
+  const btn = $('fgSaveBtn');
+  if(btn){
+    btn.innerHTML = `<span id="fgActionIcon">${isIn ? '↓' : '↑'}</span><b>ยืนยัน ${isIn ? 'FG IN' : 'FG OUT'}</b><small>${isIn ? 'เพิ่มสินค้าเข้าคลัง' : 'เบิกสินค้าออกจากคลัง'}</small>`;
+  }
+  setText('fgUserText', currentUser || '-');
+  setText('fgNowText', fgNowText());
+}
+window.showFgPage = function(mode){
+  currentFgMode = mode === 'OUT' ? 'OUT' : 'IN';
+  currentFgRow = null;
+  clearFgForm(false);
+  updateFgHeader();
+  showPage('fg');
+};
+function readFgQty(){
+  const el = $('fgMoveQty');
+  const n = Number(el?.value || 0);
+  return Number.isFinite(n) ? n : 0;
+}
+window.changeFgQty = function(delta){
+  const el = $('fgMoveQty');
+  if(!el) return;
+  el.value = Math.max(0, readFgQty() + Number(delta || 0));
+};
+window.addFgQty = function(qty){
+  const el = $('fgMoveQty');
+  if(!el) return;
+  el.value = Math.max(0, readFgQty() + Number(qty || 0));
+};
+const originalClearFgForm = window.clearFgForm;
+window.clearFgForm = function(focus = true){
+  if(typeof originalClearFgForm === 'function') originalClearFgForm(false);
+  ['fgItem','fgCode','fgAssort','fgLocation','fgCustomer'].forEach(id=>{ const el=$(id); if(el) el.value=''; });
+  const stock=$('fgSystemQty'); if(stock) stock.value='0';
+  const qty=$('fgMoveQty'); if(qty) qty.value='0';
+  const st=$('fgFormStatus'); if(st){ st.textContent='เลือกข้อมูลสินค้า'; st.className='fg-status-mini'; }
+  updateFgHeader();
+  if(focus && $('fgItem')) $('fgItem').focus();
+};
+const originalSelectFgRow = window.selectFgRow;
+window.selectFgRow = function(r, focusQty = true){
+  if(typeof originalSelectFgRow === 'function') originalSelectFgRow(r, false);
+  const stock = $('fgSystemQty');
+  if(stock) stock.value = getAvailableQty(r.item_key);
+  const st=$('fgFormStatus'); if(st){ st.textContent='พบข้อมูลสินค้าแล้ว'; st.className='fg-status-mini selected'; }
+  updateFgHeader();
+  if(focusQty && $('fgMoveQty')) $('fgMoveQty').focus();
+};
+window.showToast = function(text){
+  const toast = $('toast');
+  if(!toast) return alert(text);
+  toast.textContent = text;
+  toast.classList.add('show');
+  clearTimeout(window.__toastTimer);
+  window.__toastTimer = setTimeout(()=>toast.classList.remove('show'), 2300);
+};
+window.saveFgMovement = async function(){
+  const moveQty = Number($('fgMoveQty').value);
+  if(!$('fgMoveQty').value || moveQty <= 0) return alert('กรุณาใส่จำนวน CARTON');
+  autoFillFgFromForm();
+  const item = $('fgItem').value.trim();
+  const code = $('fgCode').value.trim();
+  const assort = $('fgAssort').value.trim();
+  const location = $('fgLocation').value.trim();
+  const customer = $('fgCustomer').value.trim();
+  if(!item || !code || !assort || !location || !customer){
+    return alert('กรุณาใส่ข้อมูล Item, CODE, Assort, Location, Customer ให้ครบ');
+  }
+  if(!currentFgRow || !currentFgRow.id){
+    return alert('กรุณาเลือกข้อมูลจาก Master Data ก่อน');
+  }
+  const tableName = currentFgMode === 'IN' ? 'fg_in' : 'fg_out';
+  const oldQty = Number(getAvailableQty(currentFgRow.item_key));
+  const newQty = currentFgMode === 'IN' ? oldQty + moveQty : oldQty - moveQty;
+  const itemKey = currentFgRow.item_key || buildItemKey(item, code, assort, location, customer);
+  if(currentFgMode === 'OUT' && newQty < 0){
+    if(!confirm('จำนวนคงเหลือจะติดลบ ต้องการบันทึกต่อหรือไม่')) return;
+  }
+  setLoading(true, currentFgMode === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...');
+  try{
+    const movementPayload = {
+      item_key: itemKey,
+      "Item": item,
+      "CODE": code,
+      "Assort": Number.isNaN(Number(assort)) ? assort : Number(assort),
+      "Location": location,
+      "Quantity": moveQty,
+      customer: customer,
+      created_by: currentUser
+    };
+    const { error } = await getSupabase().from(tableName).insert(movementPayload);
+    if(error) throw error;
+    try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('โหลด available_stock ไม่สำเร็จหลังบันทึก', e); }
+    updateHomeStats();
+    const msg = currentFgMode === 'IN'
+      ? `เพิ่มข้อมูลเรียบร้อยแล้ว
+รายการ FG IN จำนวน ${moveQty.toLocaleString('th-TH')} CARTON`
+      : `บันทึกข้อมูลเรียบร้อยแล้ว
+รายการ FG OUT จำนวน ${moveQty.toLocaleString('th-TH')} CARTON`;
+    clearFgForm(false);
+    showToast(msg);
+  }catch(err){
+    alert('บันทึกไม่สำเร็จ: ' + (err?.message || err));
+  }finally{
+    setLoading(false);
+  }
+};
+window.addEventListener('DOMContentLoaded',()=>setInterval(()=>setText('fgNowText', fgNowText()), 30000));
+</script>
+
 </body>
 </html>
