@@ -34,7 +34,7 @@
       return supabaseClient
     }
 
-    const MASTER_TABLE = 'Master_Data'
+    const MASTER_TABLE = 'master_data'
     const AVAILABLE_TABLE = 'available_stock'
     const COUNT_TABLE = 'stock_count'
     const ACTIVE_TABLE = 'active_users'
@@ -329,7 +329,12 @@
       setLoading(true, 'กำลังโหลด Master Data...')
       try {
         masterRows = await fetchAll(MASTER_TABLE)
-        availableRows = await fetchAll(AVAILABLE_TABLE)
+        try {
+          availableRows = await fetchAll(AVAILABLE_TABLE)
+        } catch (e) {
+          console.warn('โหลด available_stock ไม่สำเร็จ ใช้ Quantity จาก master_data แทน', e)
+          availableRows = []
+        }
         buildOfflineIndex(masterRows)
         await loadCountHistory()
         renderMasterTable(masterRows)
@@ -902,7 +907,10 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
 
     function getAvailableQty(itemKey) {
       const row = availableRows.find(x => String(x.item_key || '') === String(itemKey || ''))
-      return row?.available_qty ?? row?.available_Qty ?? row?.quantity ?? row?.Quantity ?? 0
+      if (row) return row?.available_qty ?? row?.available_Qty ?? row?.quantity ?? row?.Quantity ?? 0
+
+      const masterRow = masterRows.find(x => String(x.item_key || '') === String(itemKey || ''))
+      return masterRow?.Quantity ?? masterRow?.quantity ?? 0
     }
 
     function sameText(a, b) {
@@ -1218,7 +1226,7 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     setLoading(true, 'กำลัง Export Excel...')
 
     const tables = [
-      { name: 'Master_Data', table: 'Master_Data' },
+      { name: 'Master_Data', table: 'master_data' },
       { name: 'FG_IN', table: 'fg_in' },
       { name: 'FG_OUT', table: 'fg_out' },
       { name: 'Available_Stock', table: 'available_stock' },
@@ -1228,7 +1236,13 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     const wb = XLSX.utils.book_new()
 
     for (const t of tables) {
-      const rows = await fetchAll(t.table)
+      let rows = []
+      try {
+        rows = await fetchAll(t.table)
+      } catch (e) {
+        console.warn('Export ข้ามตาราง/วิวที่โหลดไม่ได้:', t.table, e)
+        rows = [{ error: 'โหลดข้อมูลไม่ได้ หรือยังไม่มีตาราง/วิวนี้', table: t.table }]
+      }
 
       const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}])
       XLSX.utils.book_append_sheet(wb, ws, t.name)
