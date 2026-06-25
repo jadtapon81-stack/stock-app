@@ -48,7 +48,7 @@
     let html5QrScanner = null
     let zxingReader = null
     let currentUser = localStorage.getItem('stock_user') || ''
-    let currentCountCustomer = 'BIG C'
+    let currentCountCustomer = 'BC'
     let currentFgMode = 'IN'
     let currentFgRow = null
     let presenceTimer = null
@@ -143,8 +143,8 @@
 
       setActive('btnHome', page === 'home')
       setActive('btnMaster', page === 'master')
-      setActive('btnCountBigC', page === 'count' && currentCountCustomer === 'BIG C')
-      setActive('btnCountLotus', page === 'count' && currentCountCustomer === 'LOTUS')
+      setActive('btnCountBigC', page === 'count' && currentCountCustomer === 'BC')
+      setActive('btnCountLotus', page === 'count' && currentCountCustomer === 'LT')
       setActive('btnFgIn', page === 'fg' && currentFgMode === 'IN')
       setActive('btnFgOut', page === 'fg' && currentFgMode === 'OUT')
 
@@ -152,12 +152,21 @@
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    window.showCountPage = function (customer) {
-      currentCountCustomer = customer
-      $('countTitle').textContent = 'Stock Count ' + customer
-      clearCountSearch()
-      showPage('count')
-    }
+   window.showCountPage = function(customer){
+
+    if(customer === 'BIG C') customer = 'BC';
+    if(customer === 'LOTUS') customer = 'LT';
+
+    currentCountCustomer = customer;
+
+    $('countTitle').textContent =
+        customer === 'BC'
+        ? 'Stock Count BIG C'
+        : 'Stock Count LOTUS';
+
+    clearCountSearch();
+    showPage('count');
+}
 
     window.showFgPage = function (mode) {
       currentFgMode = mode
@@ -2039,8 +2048,8 @@ body{
       </div>
       <button id="btnHome" class="menu-btn" onclick="showPage('home')">🏠 Home</button>
       <button id="btnMaster" class="menu-btn" onclick="showPage('master')">📦 Master Data</button>
-      <button id="btnCountBigC" class="menu-btn" onclick="showCountPage('BIG C')">📝 Stock Count BIG C</button>
-      <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
+      <button id="btnCountBigC" class="menu-btn" onclick="showCountPage('BC')">📝 Stock Count BIG C</button>
+      <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LT')">📝 Stock Count LOTUS</button>
       <button id="btnFgIn" class="menu-btn" onclick="showFgPage('IN')">➕ FG IN</button>
       <button id="btnFgOut" class="menu-btn" onclick="showFgPage('OUT')">➖ FG OUT</button>
       <button class="menu-btn" onclick="exportExcel()">  📊 Export Excel</button>
