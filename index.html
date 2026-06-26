@@ -479,6 +479,7 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     function setLastUpdateTime() {
       const now = new Date()
       const text = now.toLocaleString('th-TH', {
+        timeZone: 'Asia/Bangkok',
         day: '2-digit',
         month: '2-digit',
         year: '2-digit',
@@ -1726,7 +1727,6 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
       .quick-item span b{font-size:18px;}
       .quick-item span small{font-size:14px;}
     }
-<style>
 body{
   margin:0;
   font-family:Arial,sans-serif;
@@ -2164,9 +2164,9 @@ body{
           <small id="activeUserList">กำลังโหลดผู้ใช้งานออนไลน์...</small>
         </div>
 
-        <div id="webTestPanel" class="test-panel" style="display:none;">
-          <button id="webTestBtn" class="test-btn" onclick="runConnectionTest()">ทดสอบเว็บ</button>
-          <div id="webTestResult" class="test-result">กดเพื่อจำลองการอ่านข้อมูลพร้อมกัน 30 คำขอ</div>
+        <div id="legacyWebTestPanel" class="test-panel" style="display:none;">
+          <button id="legacyWebTestBtn" class="test-btn" onclick="runConnectionTest()">ทดสอบเว็บ</button>
+          <div id="legacyWebTestResult" class="test-result">กดเพื่อจำลองการอ่านข้อมูลพร้อมกัน 30 คำขอ</div>
         </div>
 
         <h3 class="menu-title">เมนูหลัก</h3>
@@ -2335,7 +2335,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=fg-all-fixed-v1').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=role-refresh-clean-v3').catch(() => {});
       });
     }
   </script>
@@ -2344,7 +2344,7 @@ body{
 /* ===== FG MANUAL MODE / NO AUTO FILL / QUICK ±10 / EXPORT ALL EXCEPT USER ===== */
 function fgNowText(){
   const d = new Date();
-  return d.toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 
 function updateFgHeader(){
@@ -2630,10 +2630,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   vertical-align:middle;
 }
 </style>
-
-</body>
-</html>
-
 <!-- ===== PATCH: FG manual input + keep Master Data dropdown + export excludes USER ===== -->
 <script>
 (function(){
@@ -3382,6 +3378,29 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   function qs(id){ return document.getElementById(id); }
   function num(n){ return Number(n||0).toLocaleString('th-TH'); }
+  function parseDbDate(value){
+    if(!value) return new Date();
+    if(value instanceof Date) return value;
+    let s = String(value).trim();
+    // Supabase บางตารางส่งเวลาแบบไม่มี timezone เช่น 2026-06-26T01:13:00
+    // ให้ถือว่าเป็น UTC แล้วแสดงเป็นเวลาไทย (+7)
+    if(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(s) && !/(Z|[+-]\d{2}:?\d{2})$/.test(s)){
+      s = s.replace(' ', 'T') + 'Z';
+    }
+    return new Date(s);
+  }
+  function formatThaiDateTime(value){
+    return parseDbDate(value).toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  }
+  function formatThaiTime(value){
+    return parseDbDate(value).toLocaleTimeString('th-TH',{timeZone:'Asia/Bangkok',hour:'2-digit',minute:'2-digit'});
+  }
+  function formatThaiDateForFile(value){
+    const d = parseDbDate(value || Date.now());
+    const parts = new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+    const get = t => (parts.find(p=>p.type===t)||{}).value || '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+  }
   function pct(a,b){ return b ? ((a/b)*100).toFixed(2) : '0.00'; }
   function isAdmin(){ return String(currentRole||'user').toLowerCase()==='admin'; }
   window.isAdminUser = isAdmin;
@@ -3531,7 +3550,8 @@ window.addEventListener('DOMContentLoaded',()=>{
       ${admin ? `
         <button id="btnDashboard" class="menu-btn admin-only" onclick="showPage('dashboard')">📊 Dashboard</button>
         <button id="btnMaster" class="menu-btn admin-only" onclick="showPage('master')">📦 Master Data</button>
-        <button class="menu-btn admin-only" onclick="runConnectionTest()">⚡ ทดสอบความเร็ว</button>
+        <button id="webTestBtn" class="menu-btn admin-only" onclick="runConnectionTest()">⚡ ทดสอบความเร็ว</button>
+        <div id="webTestResult" class="menu-test-result admin-only">กดเพื่อทดสอบการอ่านข้อมูล</div>
         <button class="menu-btn admin-only" onclick="exportExcel()">📤 Export Data</button>` : ``}
       <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>`;
   }
@@ -3543,30 +3563,24 @@ window.addEventListener('DOMContentLoaded',()=>{
       home.className = 'page-card role-home role-admin-home';
       home.innerHTML = `
         <div class="role-red-head">
+          <button class="hamb-mini" onclick="toggleMenu()">☰</button>
           <div><b>GAMBOL</b><span>MODERNTRADE</span></div>
           <button class="role-admin-badge" onclick="showPage('dashboard')">Admin<br><small>ผู้ดูแลระบบ</small></button>
         </div>
         <section class="role-sheet admin-sheet">
-          <h2>แผงควบคุมผู้ดูแล</h2>
-          <div class="admin-summary-grid">
-            <div><small>จำนวนผู้ใช้งานอยู่ตอนนี้</small><b id="adminOnlineCount">0 คน</b></div>
-            <div><small>ทดสอบความเร็ว</small><b id="adminSpeedText">กดทดสอบ</b></div>
-            <div><small>บันทึกล่าสุด</small><b id="adminLastTime">--:--</b></div>
-            <button onclick="exportExcel()"><small>Export</small><b>ส่งออกข้อมูล</b></button>
-          </div>
+          <div class="role-title-row"><h2>แผงควบคุมผู้ดูแล</h2></div>
           <div class="role-menu-grid admin-menu-grid">
             <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
             <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
             <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br>LOTUS</b><span>นับสต็อก โลตัส</span></button>
             <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br>BIG C</b><span>นับสต็อก บิ๊กซี</span></button>
             <button onclick="showPage('dashboard')"><i>📊</i><b>DASHBOARD</b><span>ภาพรวมข้อมูล</span></button>
-            <button onclick="runConnectionTest()"><i>⚡</i><b>SPEED TEST</b><span>ทดสอบความเร็ว</span></button>
+            <button onclick="showPage('master')"><i>📦</i><b>MASTER DATA</b><span>ตรวจสอบฐานข้อมูล</span></button>
             <button onclick="exportExcel()"><i>📤</i><b>EXPORT DATA</b><span>ส่งออกข้อมูล</span></button>
-            <button onclick="showPage('dashboard')"><i>👥</i><b>ACTIVE USERS</b><span>ผู้ใช้งานปัจจุบัน</span></button>
+            <button onclick="showLatestActivityBox()"><i>🕒</i><b>LATEST DATA</b><span>ข้อมูลล่าสุด</span></button>
           </div>
           <div class="role-card slim"><h3>ผู้ใช้งานที่กำลังใช้งาน <span id="adminOnlineNow">Online now: 0 คน</span></h3><div id="adminOnlineNames" class="online-chip-list">กำลังโหลด...</div></div>
-          <div class="role-card"><h3>ข้อมูลที่กรอกล่าสุด <button onclick="loadAdminLatestActivity()">ดูทั้งหมด ›</button></h3><div id="adminLatestActivity" class="latest-table-mini"></div></div>
-          <div id="webTestPanel" class="test-panel role-test-panel"><button id="webTestBtn" class="test-btn" onclick="runConnectionTest()">ทดสอบความเร็ว</button><div id="webTestResult" class="test-result">กดเพื่อทดสอบการอ่านข้อมูลพร้อมกัน</div></div>
+          <div class="role-card"><h3>ข้อมูลที่กรอกล่าสุด</h3><div id="adminLatestActivity" class="latest-table-mini"></div></div>
           <div id="adminCountOverview" class="role-card"></div>
         </section>`;
     }else{
@@ -3576,10 +3590,10 @@ window.addEventListener('DOMContentLoaded',()=>{
           <button class="hamb-mini" onclick="toggleMenu()">☰</button>
           <div><b>GAMBOL</b><span>MODERNTRADE</span></div>
           <button class="home-mini" onclick="showPage('home')">⌂</button>
-          <p>ยินดีต้อนรับเข้าสู่ระบบคลังสินค้า</p>
+          
         </div>
         <section class="role-sheet">
-          <h2>งานหลัก</h2>
+          <div class="role-title-row user-title-row"><h2>งานหลัก</h2><button class="role-refresh-btn user-refresh-btn" onclick="refreshAppData()">รีเฟรช</button></div>
           <div class="role-menu-grid user-menu-grid">
             <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
             <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
@@ -3596,14 +3610,13 @@ window.addEventListener('DOMContentLoaded',()=>{
     if(!main || qs('dashboardPage')) return;
     main.insertAdjacentHTML('beforeend', `
       <section id="dashboardPage" class="page-card role-dashboard-page" style="display:none;">
-        <div class="dashboard-red-bar"><button onclick="toggleMenu()">☰</button><h2>Dashboard</h2><button onclick="showPage('home')">⌂<small>Home</small></button></div>
+        <div class="dashboard-red-bar"><button onclick="toggleMenu()" title="เมนู">☰</button><h2>Dashboard</h2><button class="dash-refresh-btn" onclick="refreshAppData()" title="รีเฟรชข้อมูลล่าสุด">รีเฟรช</button><button onclick="showPage('home')" title="Home">⌂<small>Home</small></button></div>
         <div id="dashboardCapture" class="dashboard-capture">
-          <section class="dash-progress-card"><h3>ภาพรวมความคืบหน้า</h3><div id="dashMainProgress"></div></section>
+          <section class="dash-progress-card"><div class="dash-title-row"><h3>ภาพรวมความคืบหน้า</h3></div><div id="dashMainProgress"></div></section>
           <section><h3>แยกตาม Customer</h3><div id="dashCustomerCards"></div></section>
           <section class="dash-alert-card"><h3>ข้อมูลที่ต้องตรวจสอบ</h3><div id="dashCheckList"></div></section>
-          <section class="dash-alert-card"><h3>ผู้ใช้งานปัจจุบัน</h3><div id="dashActiveUsers"></div></section>
-          <section class="dash-alert-card"><h3>ข้อมูลที่กรอกล่าสุด</h3><div id="dashLatestActivity"></div></section>
-          <button class="download-dashboard-btn" onclick="downloadDashboardImage()">▧ บันทึกหน้า Dashboard เป็นรูป</button>
+          <section class="dash-alert-card export-hide"><h3>ข้อมูลที่กรอกล่าสุด</h3><div id="dashLatestActivity"></div></section>
+          <button class="download-dashboard-btn export-hide" onclick="downloadDashboardImage()">▧ บันทึกหน้า Dashboard เป็นรูป</button>
           <div class="dash-update-time">◷ อัปเดตล่าสุด <span id="dashUpdateTime">--/--/---- --:--</span></div>
         </div>
       </section>`);
@@ -3667,13 +3680,32 @@ window.addEventListener('DOMContentLoaded',()=>{
   function renderCountOverview(){
     const st = combinedStats();
     const block = `
-      <h3>ความคืบหน้าการนับ</h3>
+      <div class="role-count-head"><h3>ความคืบหน้าการนับ</h3></div>
       <div class="count-summary-cards"><div><small>นับแล้ว</small><b>${num(st.counted)}</b><span>หน่วย</span></div><div><small>ยังไม่นับ</small><b>${num(st.remaining)}</b><span>หน่วย</span></div><div><small>คิดเป็น %</small><b>${st.progress}%</b><span>ความคืบหน้า</span></div></div>
       <div class="customer-progress-line"><b>LOTUS</b><i><em style="width:${Math.min(Number(st.lotus.progress),100)}%"></em></i><strong>${st.lotus.progress}%</strong><span>${num(st.lotus.counted)} / ${num(st.lotus.total)} หน่วย</span></div>
       <div class="customer-progress-line bigc"><b>BIG C</b><i><em style="width:${Math.min(Number(st.bigc.progress),100)}%"></em></i><strong>${st.bigc.progress}%</strong><span>${num(st.bigc.counted)} / ${num(st.bigc.total)} หน่วย</span></div>`;
     const userBox=qs('userCountOverview'); if(userBox) userBox.innerHTML=block;
-    const adminBox=qs('adminCountOverview'); if(adminBox) adminBox.innerHTML='<h3>ภาพรวมการนับ</h3>'+block;
+    const adminBox=qs('adminCountOverview'); if(adminBox) adminBox.innerHTML=block;
   }
+
+  window.refreshAppData = async function(){
+    try{
+      if(typeof loadMasterData === 'function'){
+        await loadMasterData();
+      }
+      renderCountOverview();
+      if(isAdmin()){
+        await loadOnlineUsersForDashboard();
+        await loadAdminLatestActivity();
+      }
+      if(qs('dashboardPage') && qs('dashboardPage').style.display !== 'none'){
+        await refreshRoleDashboard();
+      }
+      showToast('ข้อมูลล่าสุดแล้ว');
+    }catch(err){
+      alert('รีเฟรชไม่สำเร็จ: ' + (err?.message || err));
+    }
+  };
 
   async function loadOnlineUsersForDashboard(){
     try{
@@ -3688,6 +3720,12 @@ window.addEventListener('DOMContentLoaded',()=>{
     }catch(e){ console.warn(e); }
   }
 
+  window.showLatestActivityBox = async function(){
+    await loadAdminLatestActivity();
+    const box = qs('adminLatestActivity');
+    if(box) box.closest('.role-card')?.scrollIntoView({behavior:'smooth', block:'start'});
+  };
+
   window.loadAdminLatestActivity = async function(){
     const rows=[];
     async function pull(table,type){
@@ -3699,16 +3737,16 @@ window.addEventListener('DOMContentLoaded',()=>{
     await pull('fg_in','FG IN'); await pull('fg_out','FG OUT'); await pull(COUNT_TABLE,'COUNT');
     rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
     const html = `<table><thead><tr><th>ชื่อคนที่กรอก</th><th>ทำรายการ</th><th>จำนวน</th><th>Location</th><th>เวลา</th></tr></thead><tbody>`+
-      rows.slice(0,6).map(r=>`<tr><td>${safeHtml(r.created_by||r.counted_by||'-')}</td><td class="act-${String(r._type).replace(/\s+/g,'').toLowerCase()}">${safeHtml(r._type)}</td><td>${safeHtml(r.Quantity??r.quantity??r.count_qty??'-')}</td><td>${safeHtml(r.Location??r.location??'-')}</td><td>${new Date(r.created_at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('')+'</tbody></table>';
+      rows.slice(0,6).map(r=>`<tr><td>${safeHtml(r.created_by||r.counted_by||'-')}</td><td class="act-${String(r._type).replace(/\s+/g,'').toLowerCase()}">${safeHtml(r._type)}</td><td>${safeHtml(r.Quantity??r.quantity??r.count_qty??'-')}</td><td>${safeHtml(r.Location??r.location??'-')}</td><td>${formatThaiTime(r.created_at||Date.now())}</td></tr>`).join('')+'</tbody></table>';
     const box=qs('adminLatestActivity'); if(box) box.innerHTML=html;
     const dash=qs('dashLatestActivity'); if(dash) dash.innerHTML=html;
-    const last=qs('adminLastTime'); if(last && rows[0]) last.textContent = new Date(rows[0].created_at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.';
+    const last=qs('adminLastTime'); if(last && rows[0]) last.textContent = formatThaiTime(rows[0].created_at||Date.now())+' น.';
   };
 
   window.refreshRoleDashboard = async function(){
     renderCountOverview();
     const st=combinedStats();
-    const now = new Date().toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const now = formatThaiDateTime();
     const up=qs('dashUpdateTime'); if(up) up.textContent=now;
     const main=qs('dashMainProgress'); if(main) main.innerHTML=`<div class="dash-ring"><b>${Math.round(Number(st.progress))}%</b></div><div class="dash-kpis"><span><small>Counted</small><b>${num(st.counted)}</b></span><span><small>Remaining</small><b>${num(st.remaining)}</b></span><span><small>Diff</small><b>${num(st.diff)}</b></span><span><small>Total</small><b>${num(st.total)}</b></span></div>`;
     const cust=qs('dashCustomerCards'); if(cust) cust.innerHTML=[['BIG C',st.bigc],['LOTUS',st.lotus]].map(([name,s])=>`<div class="dash-customer-card"><b>${name}</b><strong>${s.progress}%</strong><p><em>${num(s.counted)}</em> / ${num(s.total)}</p><i><span style="width:${Math.min(Number(s.progress),100)}%"></span></i><small>Diff ${num(s.diff)}</small></div>`).join('');
@@ -3728,26 +3766,78 @@ window.addEventListener('DOMContentLoaded',()=>{
     document.body.classList.toggle('is-admin', admin);
     document.body.classList.toggle('is-user', !admin);
     document.querySelectorAll('.admin-only').forEach(el=>el.style.display = admin ? '' : 'none');
-    const panel = qs('webTestPanel'); if(panel) panel.style.display = admin ? 'grid' : 'none';
+    const sideBtn = qs('webTestBtn'); if(sideBtn) sideBtn.style.display = admin ? '' : 'none'; const testResult = qs('webTestResult'); if(testResult) testResult.style.display = admin ? 'block' : 'none';
   };
 
   window.downloadDashboardImage = async function(){
-    const target = qs('dashboardCapture') || qs('dashboardPage');
-    if(!target || !window.html2canvas){ alert('โหลดระบบบันทึกรูปไม่สำเร็จ'); return; }
-    const canvas = await html2canvas(target,{scale:2,backgroundColor:'#ffffff',useCORS:true});
-    const link=document.createElement('a');
-    link.download='dashboard_'+new Date().toISOString().slice(0,10)+'.png';
-    link.href=canvas.toDataURL('image/png');
-    link.click();
+    const source = qs('dashboardCapture') || qs('dashboardPage');
+    if(!source || !window.html2canvas){ alert('โหลดระบบบันทึกรูปไม่สำเร็จ'); return; }
+
+    const holder = document.createElement('div');
+    holder.style.position = 'fixed';
+    holder.style.left = '-10000px';
+    holder.style.top = '0';
+    holder.style.width = '430px';
+    holder.style.maxWidth = '430px';
+    holder.style.padding = '0';
+    holder.style.background = '#fafafa';
+    holder.style.zIndex = '-1';
+
+    const clone = source.cloneNode(true);
+    clone.style.width = '430px';
+    clone.style.maxWidth = '430px';
+    clone.style.margin = '0 auto';
+    clone.querySelectorAll('.export-hide').forEach(el => el.remove());
+
+    holder.appendChild(clone);
+    document.body.appendChild(holder);
+
+    try{
+      const canvas = await html2canvas(clone,{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:430,width:430,scrollX:0,scrollY:0});
+      const link=document.createElement('a');
+      link.download='dashboard_'+formatThaiDateForFile()+'.png';
+      link.href=canvas.toDataURL('image/png');
+      link.click();
+    } finally {
+      document.body.removeChild(holder);
+    }
   };
 
-  const oldRunTest = window.runConnectionTest;
   window.runConnectionTest = async function(){
-    if(!isAdmin()){ alert('ฟังก์ชันทดสอบเว็บใช้ได้เฉพาะผู้ดูแลระบบ'); return; }
-    const t = performance.now();
-    if(typeof oldRunTest==='function') await oldRunTest();
-    const ms = ((performance.now()-t)/1000).toFixed(2)+' วินาที';
-    const el=qs('adminSpeedText'); if(el) el.textContent=ms;
+    if(!isAdmin()){
+      alert('ฟังก์ชันทดสอบเว็บใช้ได้เฉพาะผู้ดูแลระบบ');
+      return;
+    }
+    const btn = qs('webTestBtn');
+    const result = qs('webTestResult');
+    if(btn) btn.disabled = true;
+    if(result) result.innerHTML = 'กำลังทดสอบการอ่านข้อมูลพร้อมกัน 30 คำขอ...';
+    const total = 30;
+    const start = performance.now();
+    let ok = 0, fail = 0;
+    const errors = [];
+    try{
+      const jobs = Array.from({length: total}, async () => {
+        const t = performance.now();
+        const { error } = await getSupabase().from(MASTER_TABLE).select('id', { count: 'exact', head: false }).limit(1);
+        const ms = Math.round(performance.now() - t);
+        if(error){ fail++; errors.push(error.message || 'unknown error'); } else { ok++; }
+        return ms;
+      });
+      const times = await Promise.all(jobs);
+      const totalMs = Math.round(performance.now() - start);
+      const avgMs = Math.round(times.reduce((a,b)=>a+b,0) / times.length);
+      const maxMs = Math.max(...times);
+      const seconds = (totalMs/1000).toFixed(2);
+      const status = fail === 0 ? 'ผ่าน' : 'มีบางคำขอล้มเหลว';
+      if(result){
+        result.innerHTML = `<b>ผลทดสอบ: ${status}</b><br>สำเร็จ ${ok}/${total} คำขอ<br>เวลาเฉลี่ย ${avgMs} ms | ช้าสุด ${maxMs} ms | รวม ${seconds} วินาที${errors.length ? '<br><small>' + safeHtml([...new Set(errors)].slice(0,2).join(' | ')) + '</small>' : ''}`;
+      }
+    }catch(err){
+      if(result) result.textContent = 'ทดสอบไม่สำเร็จ: ' + (err?.message || err);
+    } finally {
+      if(btn) btn.disabled = false;
+    }
   };
 
   window.addEventListener('DOMContentLoaded',()=>{
@@ -3795,4 +3885,156 @@ window.addEventListener('DOMContentLoaded',()=>{
 .role-dashboard-page{margin:-18px -14px 0 !important;background:#fafafa !important;padding-bottom:20px !important}.dashboard-red-bar{height:150px;background:linear-gradient(135deg,#d70512,#ef4b1d);color:#fff;display:grid;grid-template-columns:70px 1fr 80px;align-items:center;padding:18px 22px;border-radius:0 0 0 0}.dashboard-red-bar button{border:0;background:rgba(255,255,255,.17);color:#fff;border-radius:18px;min-height:58px;font-size:30px}.dashboard-red-bar h2{text-align:center;font-size:34px;margin:0}.dashboard-red-bar small{display:block;font-size:12px}.dashboard-capture{padding:20px 14px}.dashboard-capture section{margin-bottom:18px}.dashboard-capture h3{font-size:25px;margin:0 0 12px;color:#20242f}.dash-progress-card,.dash-alert-card{background:#fff;border-radius:24px;padding:20px;box-shadow:0 8px 24px rgba(16,24,40,.09);border:1px solid #f0f1f4}.dash-ring{width:170px;height:170px;border-radius:50%;margin:0 auto 15px;background:conic-gradient(#d70914 68%,#f4e6e7 0);display:grid;place-items:center}.dash-ring b{width:125px;height:125px;background:#fff;border-radius:50%;display:grid;place-items:center;font-size:42px;color:#c70712}.dash-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.dash-kpis span{display:block;padding:12px;border-radius:14px;text-align:center;background:#f7f8fb}.dash-kpis small{display:block;color:#667085}.dash-kpis b{font-size:22px;color:#c70712}.dash-customer-card{background:#fff;border:1px solid #f0f1f4;border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 8px 24px rgba(16,24,40,.08);display:grid;grid-template-columns:1fr 80px;gap:8px}.dash-customer-card b{font-size:28px}.dash-customer-card strong{font-size:28px;color:#c70712;text-align:right}.dash-customer-card p{margin:0;font-size:22px}.dash-customer-card p em{color:#c70712;font-style:normal;font-weight:900}.dash-customer-card i{grid-column:1/3;height:14px;background:#e6e8ed;border-radius:999px;overflow:hidden}.dash-customer-card i span{display:block;height:100%;background:linear-gradient(90deg,#d70914,#ff6b20)}.dash-customer-card small{grid-column:1/3;color:#667085;font-weight:800}.check-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #eef0f3;font-size:20px}.check-row b{font-size:28px;color:#d71920}.dash-online-count{font-size:34px;font-weight:900;color:#159447;margin-bottom:12px}.download-dashboard-btn{width:100%;min-height:72px;border:1.6px solid #ffd0cc;border-radius:22px;background:#fff7f5;color:#c70712;font-size:22px;font-weight:900;text-align:left;padding:0 24px}.dash-update-time{text-align:center;color:#6b7280;font-size:18px;margin:20px 0 8px}
 
 @media(max-width:520px){.role-logo-main{font-size:50px}.role-logo-sub{font-size:18px;letter-spacing:8px}.role-login-card{padding-left:24px;padding-right:24px}.role-red-head b{font-size:42px}.role-red-head span{font-size:18px;letter-spacing:6px}.admin-menu-grid{grid-template-columns:1fr 1fr}.admin-summary-grid{grid-template-columns:1fr 1fr}.dash-kpis{grid-template-columns:1fr 1fr}.role-menu-grid button b{font-size:21px}}
+
+
+/* ===== Mobile fix + refresh button tuning ===== */
+.menu-test-result{margin:8px 4px 12px;padding:10px 12px;border-radius:14px;background:#fff8e8;color:#875400;font-size:12px;line-height:1.45;border:1px solid #f7e4b0}
+.role-title-row,.role-count-head,.dash-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.role-title-row h2,.role-count-head h3,.dash-title-row h3{margin:0!important;min-width:0}.role-refresh-btn{border:0;border-radius:999px;background:#fff1f2;color:#c70712;font-weight:900;padding:9px 13px;white-space:nowrap;box-shadow:inset 0 0 0 1px #ffd2d6;font-size:14px}.role-refresh-btn:active{transform:scale(.97)}
+.latest-table-mini{overflow:auto;-webkit-overflow-scrolling:touch}.latest-table-mini table{min-width:0!important;width:100%;border-collapse:collapse;table-layout:fixed}.latest-table-mini th,.latest-table-mini td{padding:10px 8px;border-bottom:1px solid #edf0f3;text-align:left;word-break:break-word}.export-hide{ }
+.dashboard-red-bar{grid-template-columns:58px 1fr 48px 64px!important;gap:8px}.dashboard-red-bar button{display:flex;flex-direction:column;align-items:center;justify-content:center}.dashboard-red-bar button small{line-height:1.1}.dash-refresh-btn{font-size:24px!important}
+
+@media(max-width:720px){
+  html,body{overflow-x:hidden!important}.role-home{overflow-x:hidden!important}.role-sheet{overflow:hidden!important}.role-card{overflow:hidden!important}.dashboard-capture{overflow:hidden!important}
+}
+@media(max-width:520px){
+  .role-logo-main{font-size:50px}.role-logo-sub{font-size:18px;letter-spacing:8px}.role-login-card{padding-left:24px;padding-right:24px}.role-red-head{min-height:235px;padding-left:18px;padding-right:18px}.role-red-head b{font-size:38px!important;letter-spacing:1px}.role-red-head span{font-size:16px!important;letter-spacing:5px}.role-red-head p{font-size:16px}.role-sheet{margin:-34px 10px 16px!important;padding:20px 14px!important;border-radius:26px!important}.role-sheet h2{font-size:24px!important}.hamb-mini,.home-mini{top:34px!important;font-size:30px!important}.role-admin-badge{top:26px!important;right:14px!important;font-size:15px!important;padding:8px 12px!important}
+  .admin-menu-grid{grid-template-columns:1fr 1fr!important}.role-menu-grid{gap:10px!important}.role-menu-grid button{min-height:124px!important;padding:10px 6px!important;border-radius:18px!important}.role-menu-grid button i{width:50px!important;height:50px!important;font-size:24px!important;margin-bottom:8px!important}.role-menu-grid button b{font-size:18px!important;line-height:1.08!important}.role-menu-grid button span{font-size:12px!important;line-height:1.25!important}.role-card{padding:14px!important;border-radius:18px!important;margin-top:14px!important}.role-card h3{font-size:18px!important;line-height:1.25!important}.role-card h3 button{font-size:12px!important}
+  .role-title-row,.role-count-head,.dash-title-row{align-items:center;margin-bottom:12px}.role-refresh-btn{font-size:12px!important;padding:8px 10px!important}
+  .count-summary-cards{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px!important;margin-bottom:12px!important}.count-summary-cards div{padding:12px 6px!important;border-radius:14px!important;min-width:0}.count-summary-cards small,.count-summary-cards span{font-size:11px!important;line-height:1.25!important}.count-summary-cards b{font-size:clamp(19px,7vw,28px)!important;line-height:1.05!important;word-break:break-word}
+  .customer-progress-line{grid-template-columns:70px minmax(0,1fr) auto!important;gap:8px!important;padding:10px 0!important}.customer-progress-line b{font-size:15px!important}.customer-progress-line i{height:10px!important}.customer-progress-line strong{font-size:clamp(15px,5vw,20px)!important;text-align:right}.customer-progress-line span{grid-column:1/-1!important;font-size:12px!important;line-height:1.35!important}.customer-progress-line span br{display:none}
+  .latest-table-mini th,.latest-table-mini td{padding:8px 6px!important;font-size:12px!important}.latest-table-mini th:nth-child(4),.latest-table-mini td:nth-child(4),.latest-table-mini th:nth-child(5),.latest-table-mini td:nth-child(5){display:none!important}.online-chip-list span{padding:6px 12px!important;font-size:12px!important}
+  .role-dashboard-page{padding-bottom:14px!important}.dashboard-red-bar{height:96px!important;grid-template-columns:46px 1fr 42px 52px!important;padding:12px 10px!important}.dashboard-red-bar button{min-height:42px!important;font-size:20px!important;border-radius:13px!important}.dashboard-red-bar h2{font-size:24px!important}.dashboard-red-bar small{font-size:9px!important}.dash-refresh-btn{font-size:18px!important}.dashboard-capture{padding:12px 9px!important}.dashboard-capture h3{font-size:18px!important;margin-bottom:10px!important}.dash-progress-card,.dash-alert-card{padding:14px!important;border-radius:18px!important}.dash-ring{width:118px!important;height:118px!important;margin:0 auto 12px!important}.dash-ring b{width:88px!important;height:88px!important;font-size:30px!important}.dash-kpis{grid-template-columns:1fr 1fr!important;gap:8px!important}.dash-kpis span{padding:10px 8px!important;border-radius:12px!important}.dash-kpis small{font-size:12px!important}.dash-kpis b{font-size:19px!important}.dash-customer-card{padding:14px 12px!important;border-radius:16px!important;grid-template-columns:minmax(0,1fr) auto!important}.dash-customer-card b{font-size:20px!important}.dash-customer-card strong{font-size:20px!important}.dash-customer-card p{font-size:16px!important}.dash-customer-card i{height:10px!important}.dash-customer-card small{font-size:12px!important}.check-row{padding:10px 0!important;font-size:14px!important;gap:10px!important}.check-row b{font-size:20px!important;text-align:right}.dash-online-count{font-size:26px!important}.download-dashboard-btn{min-height:56px!important;border-radius:16px!important;font-size:16px!important;padding:0 16px!important;text-align:center!important}.dash-update-time{font-size:13px!important;margin:14px 0 6px!important}
+}
+@media(max-width:380px){.role-menu-grid button b{font-size:16px!important}.count-summary-cards b{font-size:18px!important}.dash-customer-card b,.dash-customer-card strong{font-size:18px!important}.check-row b{font-size:18px!important}.role-red-head b{font-size:34px!important}.role-red-head span{letter-spacing:4px!important}}
+
+
+/* ===== Latest-only refresh cleanup ===== */
+#dashActiveUsers{display:none!important;}
+.role-card h3 button{display:none!important;}
+.dash-title-row{justify-content:flex-start!important;}
+.role-count-head{justify-content:flex-start!important;}
 </style>
+
+<style>
+/* ===== Final cleanup: no code leak + refresh buttons ===== */
+.role-title-row:has(h2:only-child){justify-content:flex-start!important;}
+.user-title-row{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+}
+.user-refresh-btn,
+.role-refresh-btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-height:38px!important;
+  border:0!important;
+  border-radius:999px!important;
+  background:#fff1f2!important;
+  color:#c70712!important;
+  font-weight:900!important;
+  padding:9px 14px!important;
+  white-space:nowrap!important;
+  box-shadow:inset 0 0 0 1px #ffd2d6!important;
+  font-size:14px!important;
+}
+.dashboard-red-bar{
+  grid-template-columns:58px 1fr 82px 64px!important;
+}
+.dashboard-red-bar .dash-refresh-btn{
+  font-size:14px!important;
+  font-weight:900!important;
+  min-width:76px!important;
+  padding:0 10px!important;
+  line-height:1!important;
+}
+.role-user-home .role-red-head p{display:none!important;}
+.toast{
+  padding-left:78px!important;
+  min-height:62px!important;
+  display:flex!important;
+  align-items:center!important;
+  line-height:1.35!important;
+}
+.toast::before{
+  left:18px!important;
+  flex:0 0 auto!important;
+}
+@media(max-width:520px){
+  .user-refresh-btn,.role-refresh-btn{
+    min-height:34px!important;
+    font-size:12px!important;
+    padding:8px 12px!important;
+  }
+  .dashboard-red-bar{
+    grid-template-columns:46px 1fr 68px 52px!important;
+  }
+  .dashboard-red-bar .dash-refresh-btn{
+    min-width:62px!important;
+    font-size:11px!important;
+    padding:0 6px!important;
+  }
+}
+</style>
+
+
+<style>
+/* ===== Final time/table overflow fix ===== */
+.latest-table-mini{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+}
+.latest-table-mini table{
+  width:100%!important;
+  max-width:100%!important;
+  min-width:0!important;
+  table-layout:fixed!important;
+  border-collapse:collapse!important;
+}
+.latest-table-mini th,
+.latest-table-mini td{
+  white-space:normal!important;
+  overflow-wrap:anywhere!important;
+  word-break:break-word!important;
+  line-height:1.25!important;
+  padding:8px 5px!important;
+  font-size:12px!important;
+}
+.latest-table-mini th:nth-child(1),
+.latest-table-mini td:nth-child(1){width:28%!important;}
+.latest-table-mini th:nth-child(2),
+.latest-table-mini td:nth-child(2){width:21%!important;}
+.latest-table-mini th:nth-child(3),
+.latest-table-mini td:nth-child(3){width:15%!important;text-align:center!important;}
+.latest-table-mini th:nth-child(4),
+.latest-table-mini td:nth-child(4){width:17%!important;text-align:center!important;}
+.latest-table-mini th:nth-child(5),
+.latest-table-mini td:nth-child(5){width:19%!important;text-align:center!important;}
+.role-card,.admin-sheet,.role-sheet,.dashboard-capture,.dash-alert-card{
+  max-width:100%!important;
+  overflow-x:hidden!important;
+}
+@media(max-width:520px){
+  .latest-table-mini th,
+  .latest-table-mini td{
+    font-size:10.5px!important;
+    padding:7px 3px!important;
+  }
+  .latest-table-mini th:nth-child(1),
+  .latest-table-mini td:nth-child(1){width:27%!important;}
+  .latest-table-mini th:nth-child(2),
+  .latest-table-mini td:nth-child(2){width:21%!important;}
+  .latest-table-mini th:nth-child(3),
+  .latest-table-mini td:nth-child(3){width:14%!important;}
+  .latest-table-mini th:nth-child(4),
+  .latest-table-mini td:nth-child(4){width:18%!important;}
+  .latest-table-mini th:nth-child(5),
+  .latest-table-mini td:nth-child(5){width:20%!important;}
+}
+</style>
+
+</body>
+</html>
