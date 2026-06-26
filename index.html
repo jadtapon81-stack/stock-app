@@ -2296,7 +2296,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=clean-loose-logo-v15').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=master-delete-v16').catch(() => {});
       });
     }
   </script>
@@ -6530,6 +6530,114 @@ window.addEventListener('DOMContentLoaded',()=>{
   color:#c70712!important;
 }
 </style>
+
+
+<!-- ===== FINAL PATCH: Delete Master Data button in edit modal ===== -->
+<style>
+.master-delete-btn{
+  background:#fee2e2!important;
+  color:#b91c1c!important;
+  border:1.5px solid #fecaca!important;
+  box-shadow:inset 0 0 0 1px rgba(185,28,28,.05)!important;
+}
+.master-delete-btn:active{transform:scale(.97)!important;}
+.master-edit-actions.has-delete{
+  grid-template-columns:1fr 1fr 1fr!important;
+}
+@media(max-width:720px){
+  .master-edit-actions.has-delete{
+    grid-template-columns:1fr!important;
+  }
+  .master-delete-btn{
+    order:3;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function ensureDeleteMasterButton(){
+    const actions = document.querySelector('#masterEditModal .master-edit-actions');
+    if(!actions) return;
+
+    actions.classList.add('has-delete');
+
+    if(!document.getElementById('masterDeleteBtn')){
+      actions.insertAdjacentHTML('afterbegin', `
+        <button type="button" id="masterDeleteBtn" class="master-delete-btn" onclick="deleteMasterData()">ลบข้อมูลนี้</button>
+      `);
+    }
+  }
+
+  function masterDeleteLabel(){
+    const item = document.getElementById('masterEditItem')?.value || '';
+    const code = document.getElementById('masterEditCode')?.value || '';
+    const assort = document.getElementById('masterEditAssort')?.value || '';
+    const location = document.getElementById('masterEditLocation')?.value || '';
+    const customer = document.getElementById('masterEditCustomer')?.value || '';
+    return [item, code, assort, location, customer].filter(Boolean).join(' ');
+  }
+
+  window.deleteMasterData = async function(){
+    const id = document.getElementById('masterEditId')?.value;
+    if(!id){
+      alert('ไม่พบ id ของข้อมูลที่จะลบ');
+      return;
+    }
+
+    const label = masterDeleteLabel() || 'รายการนี้';
+    const ok1 = confirm('ต้องการลบข้อมูลนี้ออกจาก Master Data ใช่ไหม?\n\n' + label);
+    if(!ok1) return;
+
+    const ok2 = confirm('ยืนยันอีกครั้ง: เมื่อลบแล้วข้อมูลจะหายจาก Master Data');
+    if(!ok2) return;
+
+    setLoading(true, 'กำลังลบข้อมูลจาก Master Data...');
+    try{
+      const { error } = await getSupabase()
+        .from(MASTER_TABLE)
+        .delete()
+        .eq('id', id);
+
+      if(error) throw error;
+
+      // ลบออกจากข้อมูลในหน้าเว็บทันที เพื่อไม่ต้องรอโหลดซ้ำ
+      if(Array.isArray(masterRows)){
+        masterRows = masterRows.filter(r => String(r.id) !== String(id));
+      }
+
+      if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows || []);
+      if(typeof closeMasterEditModal === 'function') closeMasterEditModal();
+      if(typeof renderMasterTable === 'function') renderMasterTable(masterRows || []);
+      if(typeof updateHomeStats === 'function') await updateHomeStats();
+
+      // โหลดซ้ำจาก Supabase เพื่อให้ข้อมูลล่าสุดตรงกัน
+      if(typeof loadMasterData === 'function'){
+        await loadMasterData();
+      }
+
+      showToast('ลบข้อมูล Master Data สำเร็จ');
+    }catch(err){
+      alert('ลบไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  const oldOpenMasterEditDelete = window.openMasterEdit;
+  if(typeof oldOpenMasterEditDelete === 'function'){
+    window.openMasterEdit = function(){
+      const result = oldOpenMasterEditDelete.apply(this, arguments);
+      setTimeout(ensureDeleteMasterButton, 0);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(ensureDeleteMasterButton, 300);
+  });
+})();
+</script>
 
 </body>
 </html>
