@@ -2947,6 +2947,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   text-decoration:none !important;
 }
 .home-top-btn small{display:none !important;}
+.hide-main-topbar main{padding-top:0 !important;}
+.hide-main-topbar .topbar + aside + #overlay + main, .hide-main-topbar .topbar + main{padding-top:0 !important;}
 #fgCustomer::placeholder{color:#9ca3af !important;}
 </style>
 
@@ -3360,9 +3362,437 @@ window.addEventListener('DOMContentLoaded',()=>{
 .home-top-btn span{font-size:27px !important;line-height:1 !important;font-weight:900 !important;}
 .home-top-btn b{display:block !important;font-size:10px !important;line-height:1.1 !important;letter-spacing:.8px !important;margin-top:3px !important;font-weight:900 !important;}
 .home-top-btn small{display:none !important;}
+.hide-main-topbar main{padding-top:0 !important;}
+.hide-main-topbar .topbar + aside + #overlay + main, .hide-main-topbar .topbar + main{padding-top:0 !important;}
 @media(max-width:420px){
   .home-top-btn{width:64px !important;height:48px !important;border-radius:17px !important;}
   .home-top-btn span{font-size:23px !important;}
   .home-top-btn b{font-size:9px !important;}
 }
+</style>
+
+
+<!-- ===== ROLE VERSION: USER / ADMIN + DASHBOARD ===== -->
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>
+(function(){
+  const USER_TABLE = 'app_users';
+  let adminMode = false;
+  let currentRole = localStorage.getItem('stock_role') || 'user';
+
+  function qs(id){ return document.getElementById(id); }
+  function num(n){ return Number(n||0).toLocaleString('th-TH'); }
+  function pct(a,b){ return b ? ((a/b)*100).toFixed(2) : '0.00'; }
+  function isAdmin(){ return String(currentRole||'user').toLowerCase()==='admin'; }
+  window.isAdminUser = isAdmin;
+  window.isMooUser = isAdmin;
+
+  function safeHtml(v){
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  function userCustomerFromRow(r){
+    const raw = String(r.customer ?? r.Customer ?? '').trim().toUpperCase();
+    const key = String(r.item_key ?? '').toUpperCase();
+    if(raw.includes('LOTUS') || key.endsWith('LOTUS')) return 'LOTUS';
+    if(raw.includes('BIG C') || raw.includes('BIGC') || key.endsWith('BIGC') || key.endsWith('BIG C')) return 'BIG C';
+    return raw || '-';
+  }
+
+  function renderLoginRoleUI(){
+    const login = qs('loginPage');
+    if(!login) return;
+    login.className = 'login-page role-login-page';
+    login.innerHTML = `
+      <div class="role-login-hero">
+        <div class="role-admin-switch">
+          <span>ลงชื่อผู้ดูแล</span>
+          <button id="adminModeSwitch" type="button" onclick="toggleAdminLogin()" aria-label="Admin mode"><i></i></button>
+        </div>
+        <div class="role-logo-mark">◇</div>
+        <div class="role-logo-main">GAMBOL</div>
+        <div class="role-logo-sub">MODERNTRADE</div>
+      </div>
+      <div class="role-login-card">
+        <div id="loginIcon" class="role-card-icon">⌂</div>
+        <h1 id="loginTitle">ลงชื่อเพื่อใช้งาน</h1>
+        <p id="loginSub">กรอกชื่อของคุณเพื่อเข้าใช้งาน</p>
+        <label id="loginUserLabel">ชื่อ</label>
+        <div class="role-input-wrap">
+          <span>👤</span>
+          <input id="loginName" placeholder="กรอกชื่อของคุณ" autocomplete="username" onkeydown="if(event.key==='Enter') login()">
+        </div>
+        <div id="adminPassBlock" class="admin-pass-block" style="display:none;">
+          <label>รหัสผ่าน</label>
+          <div class="role-input-wrap">
+            <span>🔒</span>
+            <input id="loginPassword" type="password" placeholder="กรอกรหัสผ่าน" autocomplete="current-password" onkeydown="if(event.key==='Enter') login()">
+            <button type="button" onclick="toggleLoginPassword()">👁</button>
+          </div>
+        </div>
+        <button id="loginSubmitBtn" class="role-login-btn" onclick="login()"><span>↪</span> เข้าใช้งาน</button>
+      </div>`;
+  }
+
+  window.toggleLoginPassword = function(){
+    const p = qs('loginPassword');
+    if(p) p.type = p.type === 'password' ? 'text' : 'password';
+  };
+
+  window.toggleAdminLogin = function(){
+    adminMode = !adminMode;
+    document.body.classList.toggle('role-admin-mode', adminMode);
+    const sw = qs('adminModeSwitch');
+    if(sw) sw.classList.toggle('on', adminMode);
+    qs('loginTitle').textContent = adminMode ? 'ลงชื่อผู้ดูแล' : 'ลงชื่อเพื่อใช้งาน';
+    qs('loginSub').textContent = adminMode ? 'สำหรับผู้ดูแลระบบ' : 'กรอกชื่อของคุณเพื่อเข้าใช้งาน';
+    qs('loginUserLabel').textContent = adminMode ? 'ชื่อผู้ดูแล' : 'ชื่อ';
+    qs('loginName').placeholder = adminMode ? 'กรอกชื่อผู้ดูแล' : 'กรอกชื่อของคุณ';
+    qs('loginIcon').textContent = adminMode ? '♜' : '⌂';
+    qs('loginSubmitBtn').innerHTML = adminMode ? '<span>🔒</span> เข้าสู่ระบบ' : '<span>↪</span> เข้าใช้งาน';
+    qs('adminPassBlock').style.display = adminMode ? 'block' : 'none';
+    setTimeout(()=>qs('loginName')?.focus(), 80);
+  };
+
+  async function verifyAdmin(username, password){
+    const { data, error } = await getSupabase()
+      .from(USER_TABLE)
+      .select('username,password,role,is_active')
+      .eq('username', username)
+      .eq('is_active', true)
+      .maybeSingle();
+    if(error) throw new Error('ยังไม่ได้สร้างตาราง app_users หรือ Policy ยังไม่พร้อม');
+    if(!data) return false;
+    return String(data.role||'').toLowerCase()==='admin' && String(data.password||'')===String(password||'');
+  }
+
+  window.login = async function(){
+    const name = (qs('loginName')?.value || '').trim();
+    if(!name){ alert('กรุณากรอกชื่อ'); return; }
+    try{
+      if(adminMode){
+        const pass = (qs('loginPassword')?.value || '').trim();
+        if(!pass){ alert('กรุณากรอกรหัสผ่านผู้ดูแล'); return; }
+        const ok = await verifyAdmin(name, pass);
+        if(!ok){ alert('ชื่อผู้ดูแลหรือรหัสผ่านไม่ถูกต้อง'); return; }
+        currentRole = 'admin';
+      }else{
+        currentRole = 'user';
+      }
+      localStorage.setItem('stock_user', name);
+      localStorage.setItem('stock_role', currentRole);
+      currentUser = name;
+      setText('userNameText', name);
+      setText('homeUserText', name);
+      setVal('countedBy', name);
+      showEl('loginPage', false);
+      showEl('appPage', true);
+      setupRolePages();
+      startPresence();
+      await loadMasterData();
+      showPage('home');
+    }catch(err){
+      alert(err?.message || String(err));
+    }
+  };
+
+  const oldLogout = window.logout;
+  window.logout = async function(){
+    localStorage.removeItem('stock_role');
+    if(typeof oldLogout==='function') return oldLogout();
+    localStorage.removeItem('stock_user');
+    location.reload();
+  };
+
+  function setupRolePages(){
+    renderSideMenuByRole();
+    renderHomeByRole();
+    ensureDashboardPage();
+    updateAdminFeatureVisibility();
+    refreshRoleDashboard();
+  }
+
+  function renderSideMenuByRole(){
+    const menu = qs('sideMenu');
+    if(!menu) return;
+    const admin = isAdmin();
+    menu.innerHTML = `
+      <div class="menu-head">
+        <div class="icon">G</div>
+        <b>${admin?'ผู้ดูแลระบบ':'ผู้ใช้งาน'}: <span id="userNameText">${safeHtml(currentUser||'')}</span></b>
+        <span>GAMBOL Modern Trade</span>
+        <span>ออนไลน์: <b id="activeUserCountMenu">0</b> คน</span>
+      </div>
+      <button id="btnHome" class="menu-btn" onclick="showPage('home')">🏠 Home</button>
+      <button id="btnFgIn" class="menu-btn" onclick="showFgPage('IN')">⬇ FG IN</button>
+      <button id="btnFgOut" class="menu-btn" onclick="showFgPage('OUT')">⬆ FG OUT</button>
+      <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
+      <button id="btnCountBigC" class="menu-btn" onclick="showCountPage('BIG C')">📝 Stock Count BIG C</button>
+      ${admin ? `
+        <button id="btnDashboard" class="menu-btn admin-only" onclick="showPage('dashboard')">📊 Dashboard</button>
+        <button id="btnMaster" class="menu-btn admin-only" onclick="showPage('master')">📦 Master Data</button>
+        <button class="menu-btn admin-only" onclick="runConnectionTest()">⚡ ทดสอบความเร็ว</button>
+        <button class="menu-btn admin-only" onclick="exportExcel()">📤 Export Data</button>` : ``}
+      <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>`;
+  }
+
+  function renderHomeByRole(){
+    const home = qs('homePage');
+    if(!home) return;
+    if(isAdmin()){
+      home.className = 'page-card role-home role-admin-home';
+      home.innerHTML = `
+        <div class="role-red-head">
+          <div><b>GAMBOL</b><span>MODERNTRADE</span></div>
+          <button class="role-admin-badge" onclick="showPage('dashboard')">Admin<br><small>ผู้ดูแลระบบ</small></button>
+        </div>
+        <section class="role-sheet admin-sheet">
+          <h2>แผงควบคุมผู้ดูแล</h2>
+          <div class="admin-summary-grid">
+            <div><small>จำนวนผู้ใช้งานอยู่ตอนนี้</small><b id="adminOnlineCount">0 คน</b></div>
+            <div><small>ทดสอบความเร็ว</small><b id="adminSpeedText">กดทดสอบ</b></div>
+            <div><small>บันทึกล่าสุด</small><b id="adminLastTime">--:--</b></div>
+            <button onclick="exportExcel()"><small>Export</small><b>ส่งออกข้อมูล</b></button>
+          </div>
+          <div class="role-menu-grid admin-menu-grid">
+            <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
+            <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
+            <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br>LOTUS</b><span>นับสต็อก โลตัส</span></button>
+            <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br>BIG C</b><span>นับสต็อก บิ๊กซี</span></button>
+            <button onclick="showPage('dashboard')"><i>📊</i><b>DASHBOARD</b><span>ภาพรวมข้อมูล</span></button>
+            <button onclick="runConnectionTest()"><i>⚡</i><b>SPEED TEST</b><span>ทดสอบความเร็ว</span></button>
+            <button onclick="exportExcel()"><i>📤</i><b>EXPORT DATA</b><span>ส่งออกข้อมูล</span></button>
+            <button onclick="showPage('dashboard')"><i>👥</i><b>ACTIVE USERS</b><span>ผู้ใช้งานปัจจุบัน</span></button>
+          </div>
+          <div class="role-card slim"><h3>ผู้ใช้งานที่กำลังใช้งาน <span id="adminOnlineNow">Online now: 0 คน</span></h3><div id="adminOnlineNames" class="online-chip-list">กำลังโหลด...</div></div>
+          <div class="role-card"><h3>ข้อมูลที่กรอกล่าสุด <button onclick="loadAdminLatestActivity()">ดูทั้งหมด ›</button></h3><div id="adminLatestActivity" class="latest-table-mini"></div></div>
+          <div id="webTestPanel" class="test-panel role-test-panel"><button id="webTestBtn" class="test-btn" onclick="runConnectionTest()">ทดสอบความเร็ว</button><div id="webTestResult" class="test-result">กดเพื่อทดสอบการอ่านข้อมูลพร้อมกัน</div></div>
+          <div id="adminCountOverview" class="role-card"></div>
+        </section>`;
+    }else{
+      home.className = 'page-card role-home role-user-home';
+      home.innerHTML = `
+        <div class="role-red-head user-head">
+          <button class="hamb-mini" onclick="toggleMenu()">☰</button>
+          <div><b>GAMBOL</b><span>MODERNTRADE</span></div>
+          <button class="home-mini" onclick="showPage('home')">⌂</button>
+          <p>ยินดีต้อนรับเข้าสู่ระบบคลังสินค้า</p>
+        </div>
+        <section class="role-sheet">
+          <h2>งานหลัก</h2>
+          <div class="role-menu-grid user-menu-grid">
+            <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
+            <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
+            <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br><em>LOTUS</em></b><span>นับสต็อก โลตัส</span></button>
+            <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br><em class="red">BIG C</em></b><span>นับสต็อก บิ๊กซี</span></button>
+          </div>
+          <div id="userCountOverview" class="role-card"></div>
+        </section>`;
+    }
+  }
+
+  function ensureDashboardPage(){
+    const main = document.querySelector('main');
+    if(!main || qs('dashboardPage')) return;
+    main.insertAdjacentHTML('beforeend', `
+      <section id="dashboardPage" class="page-card role-dashboard-page" style="display:none;">
+        <div class="dashboard-red-bar"><button onclick="toggleMenu()">☰</button><h2>Dashboard</h2><button onclick="showPage('home')">⌂<small>Home</small></button></div>
+        <div id="dashboardCapture" class="dashboard-capture">
+          <section class="dash-progress-card"><h3>ภาพรวมความคืบหน้า</h3><div id="dashMainProgress"></div></section>
+          <section><h3>แยกตาม Customer</h3><div id="dashCustomerCards"></div></section>
+          <section class="dash-alert-card"><h3>ข้อมูลที่ต้องตรวจสอบ</h3><div id="dashCheckList"></div></section>
+          <section class="dash-alert-card"><h3>ผู้ใช้งานปัจจุบัน</h3><div id="dashActiveUsers"></div></section>
+          <section class="dash-alert-card"><h3>ข้อมูลที่กรอกล่าสุด</h3><div id="dashLatestActivity"></div></section>
+          <button class="download-dashboard-btn" onclick="downloadDashboardImage()">▧ บันทึกหน้า Dashboard เป็นรูป</button>
+          <div class="dash-update-time">◷ อัปเดตล่าสุด <span id="dashUpdateTime">--/--/---- --:--</span></div>
+        </div>
+      </section>`);
+  }
+
+  const originalShowPage = window.showPage;
+
+  function updateTopbarVisibility(page){
+    const topbar = qs('appPage')?.querySelector('.topbar');
+    if(!topbar) return;
+    const hideOnPages = ['home','dashboard'];
+    topbar.style.display = hideOnPages.includes(page) ? 'none' : 'flex';
+    document.body.classList.toggle('hide-main-topbar', hideOnPages.includes(page));
+  }
+
+  window.showPage = function(page){
+    if(page==='dashboard' && !isAdmin()){
+      alert('หน้านี้สำหรับผู้ดูแลระบบเท่านั้น');
+      page='home';
+    }
+    ['homePage','masterPage','countPage','fgPage','dashboardPage'].forEach(id=>{ const el=qs(id); if(el) el.style.display='none'; });
+    updateTopbarVisibility(page);
+    if(page==='dashboard'){
+      qs('dashboardPage').style.display='block';
+      closeMenu();
+      refreshRoleDashboard();
+      window.scrollTo({top:0,behavior:'smooth'});
+      ['btnHome','btnMaster','btnCountBigC','btnCountLotus','btnFgIn','btnFgOut','btnDashboard'].forEach(id=>{ const el=qs(id); if(el) el.classList.toggle('active', id==='btnDashboard'); });
+      return;
+    }
+    if(typeof originalShowPage==='function') originalShowPage(page);
+    ['btnDashboard'].forEach(id=>{ const el=qs(id); if(el) el.classList.toggle('active', page==='dashboard'); });
+  };
+
+  function countStatsByCustomer(customer){
+    const master = (masterRows||[]).filter(r=> userCustomerFromRow(r)===customer);
+    const masterKeys = new Set(master.map(r=>String(r.item_key||'').trim()).filter(Boolean));
+    const countedRows = (countRows||[]).filter(r=>{
+      const key = String(r.item_key||'').trim();
+      if(key && masterKeys.has(key)) return true;
+      return userCustomerFromRow(r)===customer;
+    });
+    const countedKeys = new Set(countedRows.map(r=>String(r.item_key || r.master_id || [r.item,r.code,r.assort,r.location].join('|')).trim()));
+    const total = master.length || countedRows.length;
+    const counted = countedKeys.size;
+    const remaining = Math.max(total - counted, 0);
+    const diff = countedRows.filter(r=> Number(r.count_qty ?? r.Count_Qty ?? 0) !== Number(r.system_qty ?? r.System_Qty ?? r.Quantity ?? 0)).length;
+    return { total, counted, remaining, diff, progress: pct(counted,total) };
+  }
+
+  function combinedStats(){
+    const l = countStatsByCustomer('LOTUS');
+    const b = countStatsByCustomer('BIG C');
+    const total = l.total+b.total;
+    const counted = l.counted+b.counted;
+    const remaining = Math.max(total-counted,0);
+    const diff = l.diff+b.diff;
+    return {total,counted,remaining,diff,progress:pct(counted,total), lotus:l, bigc:b};
+  }
+
+  function renderCountOverview(){
+    const st = combinedStats();
+    const block = `
+      <h3>ความคืบหน้าการนับ</h3>
+      <div class="count-summary-cards"><div><small>นับแล้ว</small><b>${num(st.counted)}</b><span>หน่วย</span></div><div><small>ยังไม่นับ</small><b>${num(st.remaining)}</b><span>หน่วย</span></div><div><small>คิดเป็น %</small><b>${st.progress}%</b><span>ความคืบหน้า</span></div></div>
+      <div class="customer-progress-line"><b>LOTUS</b><i><em style="width:${Math.min(Number(st.lotus.progress),100)}%"></em></i><strong>${st.lotus.progress}%</strong><span>${num(st.lotus.counted)} / ${num(st.lotus.total)} หน่วย</span></div>
+      <div class="customer-progress-line bigc"><b>BIG C</b><i><em style="width:${Math.min(Number(st.bigc.progress),100)}%"></em></i><strong>${st.bigc.progress}%</strong><span>${num(st.bigc.counted)} / ${num(st.bigc.total)} หน่วย</span></div>`;
+    const userBox=qs('userCountOverview'); if(userBox) userBox.innerHTML=block;
+    const adminBox=qs('adminCountOverview'); if(adminBox) adminBox.innerHTML='<h3>ภาพรวมการนับ</h3>'+block;
+  }
+
+  async function loadOnlineUsersForDashboard(){
+    try{
+      const since = new Date(Date.now()-60*1000).toISOString();
+      const {data,error}=await getSupabase().from(ACTIVE_TABLE).select('session_id,user_name,last_seen').gte('last_seen', since).order('last_seen',{ascending:false});
+      if(error) throw error;
+      const count = data?.length || 0;
+      ['adminOnlineCount','adminOnlineNow'].forEach(id=>{ const el=qs(id); if(el) el.textContent = id==='adminOnlineCount'? count+' คน' : 'Online now: '+count+' คน'; });
+      const chips = (data||[]).map(u=>`<span>● ${safeHtml(u.user_name||'ไม่ระบุ')}</span>`).join('') || '<span>ไม่มีผู้ใช้งานออนไลน์</span>';
+      const names=qs('adminOnlineNames'); if(names) names.innerHTML=chips;
+      const dash=qs('dashActiveUsers'); if(dash) dash.innerHTML=`<div class="dash-online-count">${count} คน</div><div class="online-chip-list">${chips}</div>`;
+    }catch(e){ console.warn(e); }
+  }
+
+  window.loadAdminLatestActivity = async function(){
+    const rows=[];
+    async function pull(table,type){
+      try{
+        const {data,error}=await getSupabase().from(table).select('*').order('created_at',{ascending:false}).limit(8);
+        if(!error && data) data.forEach(r=>rows.push({...r,_type:type}));
+      }catch(e){}
+    }
+    await pull('fg_in','FG IN'); await pull('fg_out','FG OUT'); await pull(COUNT_TABLE,'COUNT');
+    rows.sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+    const html = `<table><thead><tr><th>ชื่อคนที่กรอก</th><th>ทำรายการ</th><th>จำนวน</th><th>Location</th><th>เวลา</th></tr></thead><tbody>`+
+      rows.slice(0,6).map(r=>`<tr><td>${safeHtml(r.created_by||r.counted_by||'-')}</td><td class="act-${String(r._type).replace(/\s+/g,'').toLowerCase()}">${safeHtml(r._type)}</td><td>${safeHtml(r.Quantity??r.quantity??r.count_qty??'-')}</td><td>${safeHtml(r.Location??r.location??'-')}</td><td>${new Date(r.created_at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})}</td></tr>`).join('')+'</tbody></table>';
+    const box=qs('adminLatestActivity'); if(box) box.innerHTML=html;
+    const dash=qs('dashLatestActivity'); if(dash) dash.innerHTML=html;
+    const last=qs('adminLastTime'); if(last && rows[0]) last.textContent = new Date(rows[0].created_at||Date.now()).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.';
+  };
+
+  window.refreshRoleDashboard = async function(){
+    renderCountOverview();
+    const st=combinedStats();
+    const now = new Date().toLocaleString('th-TH',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+    const up=qs('dashUpdateTime'); if(up) up.textContent=now;
+    const main=qs('dashMainProgress'); if(main) main.innerHTML=`<div class="dash-ring"><b>${Math.round(Number(st.progress))}%</b></div><div class="dash-kpis"><span><small>Counted</small><b>${num(st.counted)}</b></span><span><small>Remaining</small><b>${num(st.remaining)}</b></span><span><small>Diff</small><b>${num(st.diff)}</b></span><span><small>Total</small><b>${num(st.total)}</b></span></div>`;
+    const cust=qs('dashCustomerCards'); if(cust) cust.innerHTML=[['BIG C',st.bigc],['LOTUS',st.lotus]].map(([name,s])=>`<div class="dash-customer-card"><b>${name}</b><strong>${s.progress}%</strong><p><em>${num(s.counted)}</em> / ${num(s.total)}</p><i><span style="width:${Math.min(Number(s.progress),100)}%"></span></i><small>Diff ${num(s.diff)}</small></div>`).join('');
+    const check=qs('dashCheckList'); if(check) check.innerHTML=`<div class="check-row"><span>Count ไม่ตรงกับระบบ</span><b>${num(st.diff)} รายการ</b></div><div class="check-row"><span>ยังไม่นับ</span><b>${num(st.remaining)} รายการ</b></div>`;
+    if(isAdmin()){ await loadOnlineUsersForDashboard(); await loadAdminLatestActivity(); }
+  };
+
+  const oldUpdateHomeStats = window.updateHomeStats;
+  window.updateHomeStats = async function(){
+    if(typeof oldUpdateHomeStats==='function') await oldUpdateHomeStats();
+    renderCountOverview();
+    if(isAdmin()) refreshRoleDashboard();
+  };
+
+  window.updateAdminFeatureVisibility = function(){
+    const admin = isAdmin();
+    document.body.classList.toggle('is-admin', admin);
+    document.body.classList.toggle('is-user', !admin);
+    document.querySelectorAll('.admin-only').forEach(el=>el.style.display = admin ? '' : 'none');
+    const panel = qs('webTestPanel'); if(panel) panel.style.display = admin ? 'grid' : 'none';
+  };
+
+  window.downloadDashboardImage = async function(){
+    const target = qs('dashboardCapture') || qs('dashboardPage');
+    if(!target || !window.html2canvas){ alert('โหลดระบบบันทึกรูปไม่สำเร็จ'); return; }
+    const canvas = await html2canvas(target,{scale:2,backgroundColor:'#ffffff',useCORS:true});
+    const link=document.createElement('a');
+    link.download='dashboard_'+new Date().toISOString().slice(0,10)+'.png';
+    link.href=canvas.toDataURL('image/png');
+    link.click();
+  };
+
+  const oldRunTest = window.runConnectionTest;
+  window.runConnectionTest = async function(){
+    if(!isAdmin()){ alert('ฟังก์ชันทดสอบเว็บใช้ได้เฉพาะผู้ดูแลระบบ'); return; }
+    const t = performance.now();
+    if(typeof oldRunTest==='function') await oldRunTest();
+    const ms = ((performance.now()-t)/1000).toFixed(2)+' วินาที';
+    const el=qs('adminSpeedText'); if(el) el.textContent=ms;
+  };
+
+  window.addEventListener('DOMContentLoaded',()=>{
+    renderLoginRoleUI();
+    currentRole = localStorage.getItem('stock_role') || 'user';
+    if(localStorage.getItem('stock_user')){
+      setTimeout(setupRolePages, 120);
+    }
+  });
+})();
+</script>
+
+<style>
+/* ===== Role Login Fullscreen ===== */
+.role-login-page{min-height:100vh !important;padding:0 !important;display:flex;flex-direction:column;justify-content:flex-start;background:linear-gradient(180deg,#bd0711 0%,#e11922 46%,#f7f7f7 46%) !important;font-family:'Prompt',system-ui,sans-serif;overflow:auto;}
+.role-login-hero{position:relative;min-height:56vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;background:linear-gradient(rgba(160,0,8,.78),rgba(218,9,20,.86)),url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=60');background-size:cover;background-position:center;}
+.role-admin-switch{position:absolute;right:28px;top:calc(26px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;color:#fff;}
+.role-admin-switch button{width:66px;height:36px;border-radius:999px;border:2px solid rgba(255,255,255,.28);background:rgba(255,255,255,.2);padding:2px;transition:.2s;}
+.role-admin-switch button i{display:block;width:28px;height:28px;border-radius:50%;background:#fff;box-shadow:0 3px 10px rgba(0,0,0,.22);transition:.2s;}
+.role-admin-switch button.on{background:#c9101a;}
+.role-admin-switch button.on i{transform:translateX(28px);}
+.role-logo-mark{font-size:78px;font-weight:900;line-height:.7;margin-bottom:18px;filter:drop-shadow(0 8px 18px rgba(0,0,0,.15));}
+.role-logo-main{font-size:64px;font-weight:900;letter-spacing:3px;line-height:1;}
+.role-logo-sub{font-size:27px;letter-spacing:12px;margin-top:12px;font-weight:500;}
+.role-login-card{width:calc(100% - 28px);max-width:560px;margin:-62px auto 28px;background:#fff;border-radius:34px;padding:62px 28px 30px;box-shadow:0 24px 70px rgba(16,24,40,.16);position:relative;z-index:2;}
+.role-card-icon{width:126px;height:126px;border-radius:50%;background:#fff0f0;color:#c3111a;border:10px solid #fff;display:grid;place-items:center;font-size:64px;position:absolute;left:50%;top:-68px;transform:translateX(-50%);box-shadow:0 12px 30px rgba(185,0,0,.13);}
+.role-login-card h1{text-align:center;margin:8px 0 4px;color:#c3111a;font-size:38px;font-weight:900;}
+.role-login-card p{text-align:center;margin:0 0 22px;color:#7a7f8d;font-size:18px;font-weight:700;}
+.role-login-card label{display:block;font-size:17px;font-weight:900;color:#252936;margin:15px 0 8px;}
+.role-input-wrap{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;border:1.6px solid #d9dce3;border-radius:18px;background:#fff;overflow:hidden;}
+.role-input-wrap span{display:grid;place-items:center;color:#8b91a0;font-size:22px;}
+.role-input-wrap input{border:0 !important;box-shadow:none !important;border-radius:0 !important;padding:18px 8px !important;font-size:19px;background:transparent !important;}
+.role-input-wrap button{border:0;background:transparent;color:#8b91a0;font-size:20px;}
+.role-login-btn{width:100%;height:72px;margin-top:28px;border:0;border-radius:18px;background:linear-gradient(135deg,#e1222b,#bd0711);color:#fff;font-size:26px;font-weight:900;box-shadow:0 16px 28px rgba(198,0,11,.28);display:flex;align-items:center;justify-content:center;gap:16px;}
+.role-admin-mode .role-card-icon{content:'';}
+.admin-pass-block{animation:fadeRole .18s ease;}@keyframes fadeRole{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* ===== Role Home ===== */
+.role-home{padding:0 !important;margin:-18px -14px 0;background:#f7f7f7 !important;min-height:calc(100vh - 100px);}
+.role-red-head{position:relative;min-height:270px;padding:34px 28px 48px;color:#fff;text-align:center;background:linear-gradient(180deg,#bd0711,#e11922);border-radius:0 0 38px 38px;}
+.role-red-head b{display:block;font-size:54px;font-weight:900;letter-spacing:2px;line-height:1;}.role-red-head span{display:block;font-size:24px;letter-spacing:8px;margin-top:8px}.role-red-head p{font-size:20px;margin:26px 0 0;color:#fff;}.hamb-mini,.home-mini{position:absolute;top:44px;border:0;background:transparent;color:#fff;font-size:34px}.hamb-mini{left:28px}.home-mini{right:28px}.role-admin-badge{position:absolute;right:20px;top:34px;border:1px solid rgba(255,255,255,.35);border-radius:16px;color:#fff;background:rgba(255,255,255,.15);padding:10px 18px;font-weight:900;font-size:19px;}.role-admin-badge small{font-size:13px;color:#fff;}
+.role-sheet{position:relative;margin:-38px 14px 18px;background:#fff;border-radius:34px;padding:28px 20px;box-shadow:0 16px 45px rgba(16,24,40,.11);}.role-sheet h2{margin:0 0 20px;font-size:30px;font-weight:900;color:#20242f;}.role-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.role-menu-grid button{min-height:150px;border:0;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.10);border:1px solid #f0f1f4;color:#20242f;text-align:center;padding:14px 8px}.role-menu-grid button i{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:#fff0f0;color:#c9111b;font-size:30px;font-style:normal}.role-menu-grid button b{display:block;font-size:24px;font-weight:900;line-height:1.1}.role-menu-grid button span{display:block;color:#697180;font-size:15px;margin-top:5px}.role-menu-grid em{font-style:normal;color:#159447}.role-menu-grid em.red{color:#c9111b}.admin-menu-grid{grid-template-columns:repeat(4,1fr);}.admin-menu-grid button{min-height:138px}.admin-menu-grid button b{font-size:18px}.admin-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:18px;background:#fff;border-radius:18px;box-shadow:0 8px 24px rgba(16,24,40,.10);border:1px solid #f0f1f4;overflow:hidden}.admin-summary-grid>*{padding:18px 12px;border:0;background:#fff;border-right:1px solid #eef0f3;text-align:center}.admin-summary-grid small{display:block;color:#4b5563;font-size:14px;font-weight:700}.admin-summary-grid b{display:block;color:#0f8c3c;font-size:24px;margin-top:6px}.role-card{margin-top:18px;padding:18px;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.09);border:1px solid #f0f1f4}.role-card h3{margin:0 0 14px;font-size:22px}.role-card h3 button{float:right;border:0;background:transparent;color:#1264d8;font-weight:800}.online-chip-list{display:flex;flex-wrap:wrap;gap:9px}.online-chip-list span{padding:8px 18px;border-radius:999px;background:#edf9f0;color:#1f7a34;font-weight:900}.latest-table-mini{overflow:auto}.latest-table-mini table{min-width:520px;width:100%;border-collapse:collapse}.latest-table-mini th,.latest-table-mini td{padding:10px;border-bottom:1px solid #edf0f3;text-align:left}.act-fgin{color:#c9111b;font-weight:900}.act-fgout{color:#e46d00;font-weight:900}.act-count{color:#159447;font-weight:900}.count-summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.count-summary-cards div{padding:16px;border-radius:16px;text-align:center;background:#eefaf2}.count-summary-cards div:nth-child(2){background:#fff6e9}.count-summary-cards div:nth-child(3){background:#edf6ff}.count-summary-cards small,.count-summary-cards span{display:block;color:#667085}.count-summary-cards b{display:block;font-size:32px;color:#159447}.count-summary-cards div:nth-child(2) b{color:#d87300}.count-summary-cards div:nth-child(3) b{color:#1264a3}.customer-progress-line{display:grid;grid-template-columns:86px 1fr 76px;gap:10px;align-items:center;border-top:1px solid #eef0f3;padding:12px 0}.customer-progress-line i{height:12px;background:#e6e8ed;border-radius:999px;overflow:hidden}.customer-progress-line i em{display:block;height:100%;background:#54ba42;border-radius:999px}.customer-progress-line.bigc i em{background:#c9111b}.customer-progress-line span{grid-column:2/4;color:#667085;font-size:14px}.customer-progress-line strong{font-size:20px;color:#159447}.customer-progress-line.bigc strong{color:#c9111b}
+
+/* ===== Dashboard ===== */
+.role-dashboard-page{margin:-18px -14px 0 !important;background:#fafafa !important;padding-bottom:20px !important}.dashboard-red-bar{height:150px;background:linear-gradient(135deg,#d70512,#ef4b1d);color:#fff;display:grid;grid-template-columns:70px 1fr 80px;align-items:center;padding:18px 22px;border-radius:0 0 0 0}.dashboard-red-bar button{border:0;background:rgba(255,255,255,.17);color:#fff;border-radius:18px;min-height:58px;font-size:30px}.dashboard-red-bar h2{text-align:center;font-size:34px;margin:0}.dashboard-red-bar small{display:block;font-size:12px}.dashboard-capture{padding:20px 14px}.dashboard-capture section{margin-bottom:18px}.dashboard-capture h3{font-size:25px;margin:0 0 12px;color:#20242f}.dash-progress-card,.dash-alert-card{background:#fff;border-radius:24px;padding:20px;box-shadow:0 8px 24px rgba(16,24,40,.09);border:1px solid #f0f1f4}.dash-ring{width:170px;height:170px;border-radius:50%;margin:0 auto 15px;background:conic-gradient(#d70914 68%,#f4e6e7 0);display:grid;place-items:center}.dash-ring b{width:125px;height:125px;background:#fff;border-radius:50%;display:grid;place-items:center;font-size:42px;color:#c70712}.dash-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.dash-kpis span{display:block;padding:12px;border-radius:14px;text-align:center;background:#f7f8fb}.dash-kpis small{display:block;color:#667085}.dash-kpis b{font-size:22px;color:#c70712}.dash-customer-card{background:#fff;border:1px solid #f0f1f4;border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 8px 24px rgba(16,24,40,.08);display:grid;grid-template-columns:1fr 80px;gap:8px}.dash-customer-card b{font-size:28px}.dash-customer-card strong{font-size:28px;color:#c70712;text-align:right}.dash-customer-card p{margin:0;font-size:22px}.dash-customer-card p em{color:#c70712;font-style:normal;font-weight:900}.dash-customer-card i{grid-column:1/3;height:14px;background:#e6e8ed;border-radius:999px;overflow:hidden}.dash-customer-card i span{display:block;height:100%;background:linear-gradient(90deg,#d70914,#ff6b20)}.dash-customer-card small{grid-column:1/3;color:#667085;font-weight:800}.check-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #eef0f3;font-size:20px}.check-row b{font-size:28px;color:#d71920}.dash-online-count{font-size:34px;font-weight:900;color:#159447;margin-bottom:12px}.download-dashboard-btn{width:100%;min-height:72px;border:1.6px solid #ffd0cc;border-radius:22px;background:#fff7f5;color:#c70712;font-size:22px;font-weight:900;text-align:left;padding:0 24px}.dash-update-time{text-align:center;color:#6b7280;font-size:18px;margin:20px 0 8px}
+
+@media(max-width:520px){.role-logo-main{font-size:50px}.role-logo-sub{font-size:18px;letter-spacing:8px}.role-login-card{padding-left:24px;padding-right:24px}.role-red-head b{font-size:42px}.role-red-head span{font-size:18px;letter-spacing:6px}.admin-menu-grid{grid-template-columns:1fr 1fr}.admin-summary-grid{grid-template-columns:1fr 1fr}.dash-kpis{grid-template-columns:1fr 1fr}.role-menu-grid button b{font-size:21px}}
 </style>
