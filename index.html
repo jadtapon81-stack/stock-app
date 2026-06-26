@@ -2296,7 +2296,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=mobile-icon-online-v18').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=mobile-menu-no-overlap-v44').catch(() => {});
       });
     }
   </script>
@@ -7863,7 +7863,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if('serviceWorker' in navigator){
     window.addEventListener('load', () => {
       navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-      navigator.serviceWorker.register('/service-worker.js?v=mobile-icon-online-v18').catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=mobile-menu-no-overlap-v44').catch(() => {});
     });
   }
 })();
@@ -9561,6 +9561,408 @@ main{
   });
 })();
 </script>
+
+
+
+<!-- ===== FINAL PATCH: Clean mobile menu cards - text top, icon centered, no overlap ===== -->
+<style>
+/* แก้เฉพาะการ์ดเมนูหน้า Home บนมือถือ: ข้อความอยู่บน รูปอยู่กลาง ไม่ซ้อนทับ */
+@media (max-width: 720px){
+
+  #homePage .role-sheet{
+    width:calc(100% - 20px)!important;
+    max-width:760px!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    padding:22px 14px!important;
+    overflow:visible!important;
+  }
+
+  #homePage .role-menu-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2, minmax(0, 1fr))!important;
+    gap:12px!important;
+    align-items:stretch!important;
+    width:100%!important;
+  }
+
+  /* ทุกปุ่มแบบ 2 ช่อง */
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn){
+    min-width:0!important;
+    min-height:148px!important;
+    height:auto!important;
+    padding:12px 8px 13px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    text-align:center!important;
+    gap:6px!important;
+    overflow:hidden!important;
+    position:relative!important;
+  }
+
+  /* ข้อความหลักอยู่ด้านบนเสมอ */
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > b{
+    order:1!important;
+    display:block!important;
+    width:100%!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    color:#111827!important;
+    font-size:16px!important;
+    line-height:1.14!important;
+    font-weight:900!important;
+    text-align:center!important;
+    white-space:normal!important;
+    word-break:normal!important;
+    overflow-wrap:break-word!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  /* คำอธิบายสั้นอยู่ล่าง ไม่ให้เบียดโลโก้ */
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > span{
+    order:3!important;
+    display:block!important;
+    width:100%!important;
+    min-height:18px!important;
+    margin:0!important;
+    padding:0!important;
+    color:#6b7280!important;
+    font-size:12px!important;
+    line-height:1.2!important;
+    font-weight:700!important;
+    text-align:center!important;
+    white-space:normal!important;
+    overflow:hidden!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  /* ไอคอนอยู่ตรงกลางใต้หัวข้อ ห้ามลอยหรือทับข้อความ */
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > i,
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) .customer-menu-logo{
+    order:2!important;
+    display:grid!important;
+    place-items:center!important;
+    flex:0 0 52px!important;
+    width:52px!important;
+    height:52px!important;
+    min-width:52px!important;
+    min-height:52px!important;
+    max-width:52px!important;
+    max-height:52px!important;
+    margin:2px auto!important;
+    padding:0!important;
+    border-radius:16px!important;
+    position:relative!important;
+    left:auto!important;
+    right:auto!important;
+    top:auto!important;
+    bottom:auto!important;
+    inset:auto!important;
+    transform:none!important;
+    z-index:2!important;
+    overflow:hidden!important;
+    box-sizing:border-box!important;
+  }
+
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) .cust-logo,
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) .customer-menu-logo .cust-logo{
+    width:52px!important;
+    height:52px!important;
+    min-width:52px!important;
+    min-height:52px!important;
+    max-width:52px!important;
+    max-height:52px!important;
+    margin:0!important;
+    border-radius:16px!important;
+    border-width:2px!important;
+    position:relative!important;
+    transform:none!important;
+  }
+
+  #homePage .role-menu-grid .cust-logo.bigc::before{
+    font-size:13px!important;
+    left:6px!important;
+    top:7px!important;
+    -webkit-text-stroke:.8px #178000!important;
+  }
+
+  #homePage .role-menu-grid .cust-logo.bigc::after{
+    font-size:42px!important;
+    right:2px!important;
+    bottom:-7px!important;
+    -webkit-text-stroke:1.4px #fff200!important;
+  }
+
+  #homePage .role-menu-grid .cust-logo.lotus::before{
+    font-size:15px!important;
+    letter-spacing:-.4px!important;
+  }
+
+  #homePage .role-menu-grid .cust-logo.lotus::after{
+    font-size:9px!important;
+    top:15px!important;
+    right:8px!important;
+  }
+
+  /* ปุ่มงานเศษ ใช้ layout เดียวกัน ป้องกันโลโก้บังคำว่า LOTUS/BIG C */
+  #homePage .role-menu-grid > button.loose-count-btn{
+    grid-column:auto!important;
+    min-height:134px!important;
+    height:auto!important;
+    padding:11px 8px 12px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    text-align:center!important;
+    gap:5px!important;
+    overflow:hidden!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn > span{
+    display:contents!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn b{
+    order:1!important;
+    width:100%!important;
+    min-height:32px!important;
+    margin:0!important;
+    color:#c70712!important;
+    font-size:14px!important;
+    line-height:1.1!important;
+    text-align:center!important;
+    white-space:normal!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn span span{
+    order:3!important;
+    width:100%!important;
+    color:#6b7280!important;
+    font-size:11px!important;
+    line-height:1.15!important;
+    text-align:center!important;
+    margin:0!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn .customer-menu-logo,
+  #homePage .role-menu-grid > button.loose-count-btn .loose-work-icon{
+    order:2!important;
+    display:grid!important;
+    place-items:center!important;
+    flex:0 0 50px!important;
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    min-height:50px!important;
+    max-width:50px!important;
+    max-height:50px!important;
+    margin:2px auto!important;
+    padding:0!important;
+    position:relative!important;
+    inset:auto!important;
+    transform:none!important;
+    overflow:hidden!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn .cust-logo{
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    min-height:50px!important;
+    max-width:50px!important;
+    max-height:50px!important;
+    border-radius:15px!important;
+    border-width:2px!important;
+  }
+
+  /* Other customer เป็นปุ่มยาว ไม่ให้ไอคอนกินพื้นที่ข้อความ */
+  #homePage .role-menu-grid > button.other-customer-btn,
+  #homePage .role-menu-grid > button.other-customer-menu-btn,
+  #homePage .role-menu-grid > button[onclick*="Other"],
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"],
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"]{
+    grid-column:1 / -1!important;
+    min-height:84px!important;
+    padding:12px 18px!important;
+    display:grid!important;
+    grid-template-columns:54px minmax(0,1fr)!important;
+    align-items:center!important;
+    justify-content:initial!important;
+    gap:16px!important;
+    text-align:left!important;
+    overflow:hidden!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn i,
+  #homePage .role-menu-grid > button.other-customer-menu-btn i,
+  #homePage .role-menu-grid > button[onclick*="Other"] i,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] i,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] i{
+    grid-column:1!important;
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+    margin:0!important;
+    border-radius:15px!important;
+    font-size:14px!important;
+    position:relative!important;
+    inset:auto!important;
+    transform:none!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn b,
+  #homePage .role-menu-grid > button.other-customer-menu-btn b,
+  #homePage .role-menu-grid > button[onclick*="Other"] b,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] b,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] b{
+    grid-column:2!important;
+    font-size:22px!important;
+    line-height:1.15!important;
+    margin:0!important;
+    text-align:left!important;
+    white-space:normal!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+}
+
+@media (max-width: 390px){
+  #homePage .role-menu-grid{
+    gap:10px!important;
+  }
+
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn){
+    min-height:132px!important;
+    padding:10px 6px 11px!important;
+    gap:4px!important;
+  }
+
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > b{
+    min-height:34px!important;
+    font-size:14px!important;
+  }
+
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > span{
+    font-size:10.5px!important;
+  }
+
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > i,
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) .customer-menu-logo,
+  #homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) .cust-logo{
+    width:44px!important;
+    height:44px!important;
+    min-width:44px!important;
+    min-height:44px!important;
+    max-width:44px!important;
+    max-height:44px!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn{
+    min-height:122px!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn b{
+    font-size:12.5px!important;
+  }
+
+  #homePage .role-menu-grid > button.loose-count-btn .customer-menu-logo,
+  #homePage .role-menu-grid > button.loose-count-btn .cust-logo{
+    width:44px!important;
+    height:44px!important;
+    min-width:44px!important;
+    min-height:44px!important;
+    max-width:44px!important;
+    max-height:44px!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn,
+  #homePage .role-menu-grid > button.other-customer-menu-btn,
+  #homePage .role-menu-grid > button[onclick*="Other"],
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"],
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"]{
+    min-height:76px!important;
+    grid-template-columns:46px minmax(0,1fr)!important;
+    gap:13px!important;
+    padding:10px 14px!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn b,
+  #homePage .role-menu-grid > button.other-customer-menu-btn b,
+  #homePage .role-menu-grid > button[onclick*="Other"] b,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] b,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] b{
+    font-size:19px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function fixHomeMobileMenuLayout(){
+    const home = document.getElementById('homePage');
+    if(!home) return;
+
+    home.querySelectorAll('.role-menu-grid > button').forEach(btn => {
+      const txt = (btn.textContent || '').toUpperCase();
+      if(txt.includes('OTHER CUSTOMER')) btn.classList.add('other-customer-btn');
+
+      // บังคับเอา position/transform ที่อาจมาจากแพตช์เก่าออกจากไอคอนทุกครั้ง
+      btn.querySelectorAll('i,.customer-menu-logo,.cust-logo').forEach(el => {
+        el.style.position = 'relative';
+        el.style.left = 'auto';
+        el.style.right = 'auto';
+        el.style.top = 'auto';
+        el.style.bottom = 'auto';
+        el.style.transform = 'none';
+      });
+    });
+  }
+
+  const oldShowPageNoOverlap = window.showPage;
+  if(typeof oldShowPageNoOverlap === 'function'){
+    window.showPage = function(){
+      const result = oldShowPageNoOverlap.apply(this, arguments);
+      setTimeout(fixHomeMobileMenuLayout, 0);
+      setTimeout(fixHomeMobileMenuLayout, 250);
+      return result;
+    };
+  }
+
+  const oldRenderHomeNoOverlap = typeof window.renderHomeByRole === 'function' ? window.renderHomeByRole : null;
+  if(oldRenderHomeNoOverlap){
+    window.renderHomeByRole = function(){
+      const result = oldRenderHomeNoOverlap.apply(this, arguments);
+      setTimeout(fixHomeMobileMenuLayout, 0);
+      setTimeout(fixHomeMobileMenuLayout, 250);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(fixHomeMobileMenuLayout, 150);
+    setTimeout(fixHomeMobileMenuLayout, 700);
+    setTimeout(fixHomeMobileMenuLayout, 1600);
+  });
+
+  if(!window.__homeMobileMenuNoOverlapTimer){
+    window.__homeMobileMenuNoOverlapTimer = setInterval(fixHomeMobileMenuLayout, 2000);
+  }
+})();
+</script>
+
 
 </body>
 </html>
