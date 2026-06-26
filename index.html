@@ -9964,5 +9964,257 @@ main{
 </script>
 
 
+
+
+<!-- ===== FINAL PATCH: FG IN must create Master Data before movement ===== -->
+<script>
+(function(){
+  const FG_MASTER_PATCH_VERSION = 'fg-master-insert-v45';
+
+  function fgPatchText(id){
+    return String(document.getElementById(id)?.value ?? '').trim();
+  }
+
+  function fgPatchNumber(v){
+    const n = Number(String(v ?? '').replace(/,/g, '').trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function fgPatchCanonicalCustomer(value){
+    const raw = String(value || '').trim();
+    const n = raw.toLowerCase().replace(/\s+/g, '').replace(/-/g, '');
+    if(n === 'bigc' || n === 'bc' || n === 'big') return 'BIG C';
+    if(n === 'lotus' || n === 'lt' || n === 'โลตัส') return 'LOTUS';
+    if(n === 'villa' || n === 'villamarket' || n === 'vm') return 'Villa Market';
+    if(n === 'maxmart' || n === 'max') return 'Maxmart';
+    if(n === '711' || n === '7eleven' || n === 'seven' || n === '7') return '7-11';
+    if(n === 'ptt') return 'PTT';
+    if(n === 'cj') return 'CJ';
+    return raw;
+  }
+
+  function fgPatchCustomerOk(customer){
+    const c = fgPatchCanonicalCustomer(customer);
+    if(Array.isArray(window.STOCK_CUSTOMERS) && window.STOCK_CUSTOMERS.length){
+      return window.STOCK_CUSTOMERS.some(x => String(x.key || '').toUpperCase() === String(c).toUpperCase() || String(x.label || '').toUpperCase() === String(c).toUpperCase());
+    }
+    return ['LOTUS','BIG C','Villa Market','Maxmart','7-11','PTT','CJ'].some(x => x.toUpperCase() === String(c).toUpperCase());
+  }
+
+  function fgPatchItemKey(f){
+    if(typeof buildItemKey === 'function') return buildItemKey(f.item, f.code, f.assort, f.location, f.customer);
+    return String(f.item || '') + String(f.code || '').toUpperCase() + String(f.assort || '') + String(f.location || '') + String(f.customer || '');
+  }
+
+  function fgPatchGetValues(){
+    const customer = fgPatchCanonicalCustomer(fgPatchText('fgCustomer'));
+    const customerInput = document.getElementById('fgCustomer');
+    if(customerInput) customerInput.value = customer;
+    return {
+      item: fgPatchText('fgItem'),
+      code: fgPatchText('fgCode').toUpperCase(),
+      assort: fgPatchText('fgAssort'),
+      location: fgPatchText('fgLocation'),
+      customer
+    };
+  }
+
+  async function fgPatchFindMaster(itemKey){
+    const nk = typeof normalize === 'function' ? normalize(itemKey) : String(itemKey || '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+    const local = (window.masterRows || masterRows || []).find(r => {
+      const k = typeof normalize === 'function' ? normalize(r.item_key) : String(r.item_key || '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+      return k === nk;
+    });
+    if(local) return local;
+
+    try{
+      const { data, error } = await getSupabase()
+        .from(MASTER_TABLE)
+        .select('*')
+        .eq('item_key', itemKey)
+        .maybeSingle();
+      if(error) throw error;
+      return data || null;
+    }catch(e){
+      console.warn('เช็ค Master Data ด้วย item_key ไม่สำเร็จ', e);
+      return null;
+    }
+  }
+
+  async function fgPatchInsertMaster(f, qty, itemKey){
+    const exists = await fgPatchFindMaster(itemKey);
+    if(exists) return { inserted:false, row:exists };
+
+    const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+    const payload = {
+      Item: f.item,
+      CODE: f.code,
+      Assort: assortValue,
+      Location: f.location,
+      Quantity: qty,
+      customer: f.customer
+    };
+
+    const { data, error } = await getSupabase()
+      .from(MASTER_TABLE)
+      .insert(payload)
+      .select('*')
+      .single();
+
+    if(error){
+      if(error.code === '23505'){
+        const row = await fgPatchFindMaster(itemKey);
+        return { inserted:false, row };
+      }
+      throw new Error('เพิ่ม Master Data ไม่สำเร็จ: ' + (error.message || error));
+    }
+
+    const newRow = data || { ...payload, item_key:itemKey };
+    try{
+      masterRows = [newRow, ...(masterRows || [])];
+      window.masterRows = masterRows;
+      if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows);
+    }catch(e){}
+    return { inserted:true, row:newRow };
+  }
+
+  async function fgPatchInsertTransaction(f, movementType, qty, itemKey){
+    const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+    const payloads = [
+      {
+        item_key:itemKey,
+        Item:f.item,
+        CODE:f.code,
+        Assort:assortValue,
+        Location:f.location,
+        Quantity:qty,
+        customer:f.customer,
+        transaction_type:movementType,
+        movement_type:movementType,
+        created_by:currentUser || null
+      },
+      {
+        item_key:itemKey,
+        Item:f.item,
+        CODE:f.code,
+        Assort:assortValue,
+        Location:f.location,
+        Quantity:qty,
+        customer:f.customer,
+        movement_type:movementType,
+        created_by:currentUser || null
+      },
+      {
+        item_key:itemKey,
+        item:f.item,
+        code:f.code,
+        assort:assortValue,
+        location:f.location,
+        quantity:qty,
+        customer:f.customer,
+        movement_type:movementType,
+        created_by:currentUser || null
+      }
+    ];
+
+    let lastError = null;
+    for(const payload of payloads){
+      const { error } = await getSupabase().from('stock_transaction').insert(payload);
+      if(!error) return true;
+      lastError = error;
+    }
+    console.warn('เพิ่ม stock_transaction ไม่สำเร็จ แต่ FG บันทึกแล้ว', lastError);
+    return false;
+  }
+
+  window.saveFgMovement = async function(){
+    const rawQty = String(document.getElementById('fgMoveQty')?.value ?? '').trim();
+    const moveQty = fgPatchNumber(rawQty);
+
+    if(rawQty === '' || moveQty <= 0){
+      if(window.showFgPopup) showFgPopup('กรุณาใส่จำนวน', 'จำนวน CARTON ต้องมากกว่า 0', 'error');
+      else alert('กรุณาใส่จำนวน CARTON');
+      return;
+    }
+
+    const f = fgPatchGetValues();
+    if(!f.item || !f.code || !f.assort || !f.location || !f.customer){
+      if(window.showFgPopup) showFgPopup('ข้อมูลไม่ครบ', 'กรุณากรอก Item, CODE, Assort, Location และ Customer ให้ครบ', 'error');
+      else alert('กรุณากรอก Item, CODE, Assort, Location และ Customer ให้ครบ');
+      return;
+    }
+
+    if(!fgPatchCustomerOk(f.customer)){
+      if(window.showFgPopup) showFgPopup('Customer ไม่ถูกต้อง', 'เลือก Customer จากรายการที่กำหนด', 'error');
+      else alert('Customer ไม่ถูกต้อง');
+      return;
+    }
+
+    const movementType = currentFgMode === 'OUT' ? 'OUT' : 'IN';
+    const tableName = movementType === 'IN' ? 'fg_in' : 'fg_out';
+    const itemKey = fgPatchItemKey(f);
+
+    setLoading(true, movementType === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...');
+
+    try{
+      let masterInfo = { inserted:false, row:null };
+      if(movementType === 'IN'){
+        masterInfo = await fgPatchInsertMaster(f, moveQty, itemKey);
+      }
+
+      if(movementType === 'OUT'){
+        const exists = await fgPatchFindMaster(itemKey);
+        if(!exists){
+          throw new Error('ไม่พบข้อมูลใน Master Data สำหรับ FG OUT');
+        }
+      }
+
+      const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+      const movementPayload = {
+        item_key:itemKey,
+        Item:f.item,
+        CODE:f.code,
+        Assort:assortValue,
+        Location:f.location,
+        Quantity:moveQty,
+        customer:f.customer,
+        created_by:currentUser || null
+      };
+
+      const { error: moveError } = await getSupabase().from(tableName).insert(movementPayload);
+      if(moveError) throw moveError;
+
+      await fgPatchInsertTransaction(f, movementType, moveQty, itemKey);
+
+      try{ masterRows = await fetchAll(MASTER_TABLE); window.masterRows = masterRows; }catch(e){ console.warn('โหลด Master Data ใหม่ไม่สำเร็จ', e); }
+      try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('โหลด Available Stock ใหม่ไม่สำเร็จ', e); }
+      try{ if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows || []); }catch(e){}
+      try{ if(typeof renderMasterTable === 'function') renderMasterTable(masterRows || []); }catch(e){}
+      try{ if(typeof updateHomeStats === 'function') await updateHomeStats(); }catch(e){}
+
+      if(typeof clearFgForm === 'function') clearFgForm(false);
+
+      const masterMsg = movementType === 'IN'
+        ? (masterInfo.inserted ? 'เพิ่ม Master Data แล้ว' : 'มี Master Data อยู่แล้ว')
+        : 'บันทึก FG OUT แล้ว';
+
+      showToast(`${movementType === 'IN' ? 'เพิ่มข้อมูลเรียบร้อยแล้ว' : 'เบิกข้อมูลเรียบร้อยแล้ว'}\n${f.customer} ${moveQty.toLocaleString('th-TH')} CARTON\n${masterMsg}`);
+    }catch(err){
+      if(window.showFgPopup) showFgPopup('บันทึกไม่สำเร็จ', err?.message || String(err), 'error');
+      else alert('บันทึกไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=' + FG_MASTER_PATCH_VERSION).catch(() => {});
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
