@@ -18,9 +18,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <script>
 
-    /* =====================
-       1) ตั้งค่า Supabase
-       ===================== */
     const supabaseUrl = 'https://asslmgjcicpgrxwqaenx.supabase.co'
     const supabaseKey = 'sb_publishable_PLOIg4kX4r8PN9LXvXZVIQ_OiF-yj-K'
     let supabaseClient = null
@@ -98,9 +95,6 @@
       updateAdminFeatureVisibility()
     })
 
-    /* =====================
-       2) Login / Menu
-       ===================== */
     window.login = function () {
       const name = $('loginName').value.trim()
       if (!name) return alert('กรุณาใส่ชื่อผู้ใช้งาน')
@@ -170,9 +164,6 @@
     }
 
 
-    /* =====================
-       2.1) Active Users / Web Test
-       ===================== */
     function setActiveUserText(count, users = []) {
       const text = Number(count || 0).toLocaleString('th-TH')
       setText('activeUserCount', text)
@@ -300,9 +291,6 @@
       } catch (e) {}
     })
 
-    /* =====================
-       3) Load Master Data ทั้งหมด
-       ===================== */
     async function fetchAll(tableName) {
       let all = []
       let from = 0
@@ -589,9 +577,6 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
       $('countSearch').focus()
     }
 
-    /* =====================
-       4) Stock Count
-       ===================== */
     function closeCountSuggest() {
       const box = $('countSuggest')
       if (!box) return
@@ -784,9 +769,6 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
 
 
 
-    /* =====================
-       5) FG IN / FG OUT
-       ===================== */
     function uniqueValues(fieldNames) {
       const set = new Set()
       masterRows.forEach(r => {
@@ -1100,9 +1082,6 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
       }
     }
 
-    /* =====================
-       6) Scanner (ZXing - กล้องหลังเร็ว / อ่านเจออะไรเอาค่านั้น)
-       ===================== */
     let lastScanValue = ''
     let lastScanTime = 0
 
@@ -1352,7 +1331,6 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     }
     @media (max-width:390px){.ring-grid{grid-template-columns:repeat(4,1fr);gap:5px}.ring-stat span{width:51px;height:51px;font-size:15px;line-height:51px}.ring-stat small{font-size:10px}.mobile-card-grid,.result-grid,.fg-form-grid{grid-template-columns:1fr 1fr}.topbar:after{display:none}.brand b{font-size:20px}}
   
-    /* ===== GAMBOL MODERNTRADE RED THEME - Production UI ===== */
     :root{
       --gambol-red:#d90b16;
       --gambol-red-dark:#a80010;
@@ -1732,14 +1710,6 @@ body{
   font-family:Arial,sans-serif;
 }
 
-/* CSS เดิมทั้งหมดของคุณ */
-
-/* CSS เดิมทั้งหมดของคุณ */
-
-/* CSS เดิมทั้งหมดของคุณ */
-
-
-/* ===== Mobile Responsive ===== */
 @media (max-width:720px){
 
   main{
@@ -1776,7 +1746,6 @@ body{
   }
 }
 
-/* ===== MOBILE COUNT UI FIX ===== */
 @media screen and (max-width:768px){
   main{
     padding: 12px 10px 80px !important;
@@ -1950,7 +1919,6 @@ body{
   }
 }
 
-/* ===== COUNT DROPDOWN SEARCH FIX ===== */
 .count-search-wrap{
   position:relative;
 }
@@ -2015,7 +1983,6 @@ body{
 
 
 
-/* ===== FG IN / OUT MINIMAL PRODUCTION UI ===== */
 .fg-modern-page{max-width:720px !important;margin:0 auto !important;padding:0 !important;background:transparent !important;}
 .fg-modern-shell{width:100%;margin:0 auto;background:#fff;border-radius:24px;box-shadow:0 18px 50px rgba(16,24,40,.10);padding:18px;}
 .fg-modern-head{position:relative;display:flex;align-items:center;justify-content:center;margin-bottom:16px;min-height:48px;}
@@ -2067,7 +2034,6 @@ body{
 </head>
 
 <body>
-  <!-- Login -->
   <section id="loginPage" class="login-page">
     <div class="login-card">
       <div class="logo">👟</div>
@@ -2078,7 +2044,6 @@ body{
     </div>
   </section>
 
-  <!-- App -->
   <section id="appPage" class="app-page">
     <header class="topbar">
       <button class="hamburger" onclick="toggleMenu()">☰</button>
@@ -2109,7 +2074,6 @@ body{
     <div id="overlay" class="overlay" onclick="closeMenu()"></div>
 
     <main>
-      <!-- Home -->
       <section id="homePage" class="page-card home-screen">
         <div class="hero-glass">
           <div class="hero-top-brand">
@@ -2189,7 +2153,6 @@ body{
         </div>
       </section>
 
-      <!-- Master Data -->
       <section id="masterPage"  class="page-card">
         <h2 class="title">Master Data</h2>
         <div class="search-row">
@@ -2216,7 +2179,6 @@ body{
         <div id="masterCards" class="mobile-cards"></div>
       </section>
 
-      <!-- Stock Count -->
       <section id="countPage" class="page-card" style="display:none;">
         <h2 id="countTitle" class="title">Stock Count BIG C</h2>
         <input id="countedBy" type="hidden">
@@ -2232,7 +2194,6 @@ body{
         <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก BIG C</div>
       </section>
 
-      <!-- FG IN / FG OUT -->
       <section id="fgPage" class="page-card fg-modern-page fg-mode-in" style="display:none;">
         <div class="fg-modern-shell">
           <div class="fg-modern-head">
@@ -2335,13 +2296,12 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=loose-single-master-count-v14').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=clean-loose-logo-v15').catch(() => {});
       });
     }
   </script>
 
 <script>
-/* ===== FG MANUAL MODE / NO AUTO FILL / QUICK ±10 / EXPORT ALL EXCEPT USER ===== */
 function fgNowText(){
   const d = new Date();
   return d.toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -2417,7 +2377,6 @@ window.showFgPage = function(mode){
   showPage('fg');
 };
 
-/* ยกเลิก Auto Fill และ Dropdown ใน FG IN / FG OUT */
 window.handleFgInput = function(){
   updateFgAvailableFromManual();
 };
@@ -2531,7 +2490,6 @@ window.saveFgMovement = async function(){
   }
 };
 
-/* Export ทุกอย่าง ยกเว้น USER / active_users */
 window.exportExcel = async function(){
   try{
     setLoading(true, 'กำลัง Export Excel...');
@@ -2575,13 +2533,11 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 <style>
-/* ซ่อน Dropdown ของ FG IN / FG OUT ไม่ให้บังช่องถัดไป */
 #fgPage .fg-suggest,
 #fgPage .fg-suggest.show{
   display:none !important;
 }
 
-/* เหลือปุ่มลัดแค่ -10 / +10 */
 #fgPage .fg-quick-grid{
   grid-template-columns:1fr 1fr !important;
   gap:12px !important;
@@ -2590,7 +2546,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   display:none !important;
 }
 
-/* Toast เด้งกลางเกือบบน */
 .toast{
   position:fixed !important;
   left:50% !important;
@@ -2630,7 +2585,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   vertical-align:middle;
 }
 </style>
-<!-- ===== PATCH: FG manual input + keep Master Data dropdown + export excludes USER ===== -->
 <script>
 (function(){
   function fieldCfg(field){
@@ -2731,7 +2685,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 <style>
-/* เปิด dropdown FG กลับมา แต่ถ้าไม่พบข้อมูลจะไม่โชว์ */
 #fgPage .fg-suggest.show{
   display:block !important;
   position:absolute !important;
@@ -2769,7 +2722,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </style>
 
 
-<!-- ===== PATCH: Customer must be LOTUS / BIG C + top right Home button ===== -->
 <script>
 (function(){
   function canonicalCustomer(value){
@@ -2935,7 +2887,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 <style>
-/* Top right: Home button แทนระฆัง */
 .home-top-btn{
   display:grid !important;
   place-items:center !important;
@@ -2948,7 +2899,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 #fgCustomer::placeholder{color:#9ca3af !important;}
 </style>
 
-<!-- ===== FINAL PATCH: Require customer/qty popup + FG IN creates Master Data + Transaction + redesigned Home button ===== -->
 <script>
 (function(){
   const TRANSACTION_TABLE = 'stock_transaction';
@@ -3298,7 +3248,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 <style>
-/* Popup แจ้งเตือนแบบกลางบน ใช้แทน alert สำหรับ FG */
 .fg-popup-alert{
   position:fixed;
   left:50%;
@@ -3338,7 +3287,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 .fg-popup-alert b{display:block;font-size:17px;font-weight:900;margin-top:1px;}
 .fg-popup-alert p{margin:3px 0 0;color:#6b7280;font-size:14px;font-weight:700;line-height:1.45;}
 
-/* ปุ่ม Home มุมขวาแบบใหม่ */
 .home-top-btn{
   margin-left:auto !important;
   width:76px !important;
@@ -3368,7 +3316,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </style>
 
 
-<!-- ===== ROLE VERSION: USER / ADMIN + DASHBOARD ===== -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>
 (function(){
@@ -3960,7 +3907,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 <style>
-/* ===== Role Login Fullscreen ===== */
 .role-login-page{min-height:100vh !important;padding:0 !important;display:flex;flex-direction:column;justify-content:flex-start;background:linear-gradient(180deg,#bd0711 0%,#e11922 46%,#f7f7f7 46%) !important;font-family:'Prompt',system-ui,sans-serif;overflow:auto;}
 .role-login-hero{position:relative;min-height:56vh;width:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;text-align:center;background:linear-gradient(rgba(160,0,8,.78),rgba(218,9,20,.86)),url('https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?auto=format&fit=crop&w=1200&q=60');background-size:cover;background-position:center;}
 .role-admin-switch{position:absolute;right:28px;top:calc(26px + env(safe-area-inset-top));display:flex;align-items:center;gap:10px;font-weight:800;font-size:18px;color:#fff;}
@@ -3984,19 +3930,16 @@ window.addEventListener('DOMContentLoaded',()=>{
 .role-admin-mode .role-card-icon{content:'';}
 .admin-pass-block{animation:fadeRole .18s ease;}@keyframes fadeRole{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
 
-/* ===== Role Home ===== */
 .role-home{padding:0 !important;margin:-18px -14px 0;background:#f7f7f7 !important;min-height:calc(100vh - 100px);}
 .role-red-head{position:relative;min-height:270px;padding:34px 28px 48px;color:#fff;text-align:center;background:linear-gradient(180deg,#bd0711,#e11922);border-radius:0 0 38px 38px;}
 .role-red-head b{display:block;font-size:54px;font-weight:900;letter-spacing:2px;line-height:1;}.role-red-head span{display:block;font-size:24px;letter-spacing:8px;margin-top:8px}.role-red-head p{font-size:20px;margin:26px 0 0;color:#fff;}.hamb-mini,.home-mini{position:absolute;top:44px;border:0;background:transparent;color:#fff;font-size:34px}.hamb-mini{left:28px}.home-mini{right:28px}.role-admin-badge{position:absolute;right:20px;top:34px;border:1px solid rgba(255,255,255,.35);border-radius:16px;color:#fff;background:rgba(255,255,255,.15);padding:10px 18px;font-weight:900;font-size:19px;}.role-admin-badge small{font-size:13px;color:#fff;}
 .role-sheet{position:relative;margin:-38px 14px 18px;background:#fff;border-radius:34px;padding:28px 20px;box-shadow:0 16px 45px rgba(16,24,40,.11);}.role-sheet h2{margin:0 0 20px;font-size:30px;font-weight:900;color:#20242f;}.role-menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.role-menu-grid button{min-height:150px;border:0;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.10);border:1px solid #f0f1f4;color:#20242f;text-align:center;padding:14px 8px}.role-menu-grid button i{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;margin:0 auto 10px;background:#fff0f0;color:#c9111b;font-size:30px;font-style:normal}.role-menu-grid button b{display:block;font-size:24px;font-weight:900;line-height:1.1}.role-menu-grid button span{display:block;color:#697180;font-size:15px;margin-top:5px}.role-menu-grid em{font-style:normal;color:#159447}.role-menu-grid em.red{color:#c9111b}.admin-menu-grid{grid-template-columns:repeat(4,1fr);}.admin-menu-grid button{min-height:138px}.admin-menu-grid button b{font-size:18px}.admin-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin-bottom:18px;background:#fff;border-radius:18px;box-shadow:0 8px 24px rgba(16,24,40,.10);border:1px solid #f0f1f4;overflow:hidden}.admin-summary-grid>*{padding:18px 12px;border:0;background:#fff;border-right:1px solid #eef0f3;text-align:center}.admin-summary-grid small{display:block;color:#4b5563;font-size:14px;font-weight:700}.admin-summary-grid b{display:block;color:#0f8c3c;font-size:24px;margin-top:6px}.role-card{margin-top:18px;padding:18px;border-radius:20px;background:#fff;box-shadow:0 8px 24px rgba(16,24,40,.09);border:1px solid #f0f1f4}.role-card h3{margin:0 0 14px;font-size:22px}.role-card h3 button{float:right;border:0;background:transparent;color:#1264d8;font-weight:800}.online-chip-list{display:flex;flex-wrap:wrap;gap:9px}.online-chip-list span{padding:8px 18px;border-radius:999px;background:#edf9f0;color:#1f7a34;font-weight:900}.latest-table-mini{overflow:auto}.latest-table-mini table{min-width:520px;width:100%;border-collapse:collapse}.latest-table-mini th,.latest-table-mini td{padding:10px;border-bottom:1px solid #edf0f3;text-align:left}.act-fgin{color:#c9111b;font-weight:900}.act-fgout{color:#e46d00;font-weight:900}.act-count{color:#159447;font-weight:900}.count-summary-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}.count-summary-cards div{padding:16px;border-radius:16px;text-align:center;background:#eefaf2}.count-summary-cards div:nth-child(2){background:#fff6e9}.count-summary-cards div:nth-child(3){background:#edf6ff}.count-summary-cards small,.count-summary-cards span{display:block;color:#667085}.count-summary-cards b{display:block;font-size:32px;color:#159447}.count-summary-cards div:nth-child(2) b{color:#d87300}.count-summary-cards div:nth-child(3) b{color:#1264a3}.customer-progress-line{display:grid;grid-template-columns:86px 1fr 76px;gap:10px;align-items:center;border-top:1px solid #eef0f3;padding:12px 0}.customer-progress-line i{height:12px;background:#e6e8ed;border-radius:999px;overflow:hidden}.customer-progress-line i em{display:block;height:100%;background:#54ba42;border-radius:999px}.customer-progress-line.bigc i em{background:#c9111b}.customer-progress-line span{grid-column:2/4;color:#667085;font-size:14px}.customer-progress-line strong{font-size:20px;color:#159447}.customer-progress-line.bigc strong{color:#c9111b}
 
-/* ===== Dashboard ===== */
 .role-dashboard-page{margin:-18px -14px 0 !important;background:#fafafa !important;padding-bottom:20px !important}.dashboard-red-bar{height:150px;background:linear-gradient(135deg,#d70512,#ef4b1d);color:#fff;display:grid;grid-template-columns:70px 1fr 80px;align-items:center;padding:18px 22px;border-radius:0 0 0 0}.dashboard-red-bar button{border:0;background:rgba(255,255,255,.17);color:#fff;border-radius:18px;min-height:58px;font-size:30px}.dashboard-red-bar h2{text-align:center;font-size:34px;margin:0}.dashboard-red-bar small{display:block;font-size:12px}.dashboard-capture{padding:20px 14px}.dashboard-capture section{margin-bottom:18px}.dashboard-capture h3{font-size:25px;margin:0 0 12px;color:#20242f}.dash-progress-card,.dash-alert-card{background:#fff;border-radius:24px;padding:20px;box-shadow:0 8px 24px rgba(16,24,40,.09);border:1px solid #f0f1f4}.dash-ring{width:170px;height:170px;border-radius:50%;margin:0 auto 15px;background:conic-gradient(#d70914 68%,#f4e6e7 0);display:grid;place-items:center}.dash-ring b{width:125px;height:125px;background:#fff;border-radius:50%;display:grid;place-items:center;font-size:42px;color:#c70712}.dash-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.dash-kpis span{display:block;padding:12px;border-radius:14px;text-align:center;background:#f7f8fb}.dash-kpis small{display:block;color:#667085}.dash-kpis b{font-size:22px;color:#c70712}.dash-customer-card{background:#fff;border:1px solid #f0f1f4;border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 8px 24px rgba(16,24,40,.08);display:grid;grid-template-columns:1fr 80px;gap:8px}.dash-customer-card b{font-size:28px}.dash-customer-card strong{font-size:28px;color:#c70712;text-align:right}.dash-customer-card p{margin:0;font-size:22px}.dash-customer-card p em{color:#c70712;font-style:normal;font-weight:900}.dash-customer-card i{grid-column:1/3;height:14px;background:#e6e8ed;border-radius:999px;overflow:hidden}.dash-customer-card i span{display:block;height:100%;background:linear-gradient(90deg,#d70914,#ff6b20)}.dash-customer-card small{grid-column:1/3;color:#667085;font-weight:800}.check-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #eef0f3;font-size:20px}.check-row b{font-size:28px;color:#d71920}.dash-online-count{font-size:34px;font-weight:900;color:#159447;margin-bottom:12px}.download-dashboard-btn{width:100%;min-height:72px;border:1.6px solid #ffd0cc;border-radius:22px;background:#fff7f5;color:#c70712;font-size:22px;font-weight:900;text-align:left;padding:0 24px}.dash-update-time{text-align:center;color:#6b7280;font-size:18px;margin:20px 0 8px}
 
 @media(max-width:520px){.role-logo-main{font-size:50px}.role-logo-sub{font-size:18px;letter-spacing:8px}.role-login-card{padding-left:24px;padding-right:24px}.role-red-head b{font-size:42px}.role-red-head span{font-size:18px;letter-spacing:6px}.admin-menu-grid{grid-template-columns:1fr 1fr}.admin-summary-grid{grid-template-columns:1fr 1fr}.dash-kpis{grid-template-columns:1fr 1fr}.role-menu-grid button b{font-size:21px}}
 
 
-/* ===== Mobile fix + refresh button tuning ===== */
 .menu-test-result{margin:8px 4px 12px;padding:10px 12px;border-radius:14px;background:#fff8e8;color:#875400;font-size:12px;line-height:1.45;border:1px solid #f7e4b0}
 .role-title-row,.role-count-head,.dash-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}.role-title-row h2,.role-count-head h3,.dash-title-row h3{margin:0!important;min-width:0}.role-refresh-btn{border:0;border-radius:999px;background:#fff1f2;color:#c70712;font-weight:900;padding:9px 13px;white-space:nowrap;box-shadow:inset 0 0 0 1px #ffd2d6;font-size:14px}.role-refresh-btn:active{transform:scale(.97)}
 .latest-table-mini{overflow:auto;-webkit-overflow-scrolling:touch}.latest-table-mini table{min-width:0!important;width:100%;border-collapse:collapse;table-layout:fixed}.latest-table-mini th,.latest-table-mini td{padding:10px 8px;border-bottom:1px solid #edf0f3;text-align:left;word-break:break-word}.export-hide{ }
@@ -4017,7 +3960,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 @media(max-width:380px){.role-menu-grid button b{font-size:16px!important}.count-summary-cards b{font-size:18px!important}.dash-customer-card b,.dash-customer-card strong{font-size:18px!important}.check-row b{font-size:18px!important}.role-red-head b{font-size:34px!important}.role-red-head span{letter-spacing:4px!important}}
 
 
-/* ===== Latest-only refresh cleanup ===== */
 #dashActiveUsers{display:none!important;}
 .role-card h3 button{display:none!important;}
 .dash-title-row{justify-content:flex-start!important;}
@@ -4025,7 +3967,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </style>
 
 <style>
-/* ===== Final cleanup: no code leak + refresh buttons ===== */
 .role-title-row:has(h2:only-child){justify-content:flex-start!important;}
 .user-title-row{
   display:flex!important;
@@ -4090,7 +4031,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 
 <style>
-/* ===== Final time/table overflow fix ===== */
 .latest-table-mini{
   width:100%!important;
   max-width:100%!important;
@@ -4147,7 +4087,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 
 <style>
-/* ===== Download dashboard button fix ===== */
 .download-dashboard-btn,
 #dashboardDownloadBtn{
   position:relative!important;
@@ -4164,9 +4103,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 </style>
 
 
-<!-- ===== FINAL PATCH: Count dropdown ไม่บังปุ่มค้นหา ===== -->
 <style>
-/* ให้แถวค้นหา Stock Count อยู่บรรทัดเดียว และให้ dropdown ลงใต้แถวทั้งหมด */
 #countPage,
 #countPage .page-card,
 #countPage .search-row,
@@ -4217,7 +4154,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   white-space:nowrap!important;
 }
 
-/* dropdown ถูกย้ายมาเป็นลูกของ .count-search-row แล้ว จึงอยู่ใต้ทั้งแถว ไม่ทับปุ่ม */
 #countPage #countSuggest.count-suggest{
   position:absolute!important;
   left:0!important;
@@ -4310,7 +4246,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 
 <style>
-/* ===== FINAL PATCH: Latest table show Location + Time on mobile ===== */
 .latest-table-mini{
   width:100%!important;
   max-width:100%!important;
@@ -4412,7 +4347,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 
 
 <style>
-/* ===== FINAL PATCH: Dashboard latest table show Location + Time on mobile ===== */
 #dashLatestActivity,
 #dashLatestActivity table{
   width:100%!important;
@@ -4514,7 +4448,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </style>
 
 
-<!-- ===== FINAL PATCH: Edit Master Data from Web ===== -->
 <style>
 .master-edit-btn{
   border:0!important;
@@ -4911,7 +4844,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 
-<!-- ===== FINAL PATCH: Stock Count Filter counted / uncounted ===== -->
 <style>
 .count-title-bar{display:flex!important;align-items:center!important;justify-content:space-between!important;gap:12px!important;margin-bottom:16px!important;}
 .count-title-bar .title{margin:0!important;min-width:0!important;flex:1!important;}
@@ -5037,7 +4969,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 
-<!-- ===== FINAL PATCH: Designed customer logos for LOTUS / BIG C ===== -->
 <style>
 .customer-menu-logo{
   background:transparent!important;
@@ -5294,9 +5225,7 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 
-<!-- ===== FINAL PATCH: งานเศษแยกตาราง LOTUS / BIG C ===== -->
 <style>
-/* ปุ่มงานเศษ: เล็กกว่า ไม่เด่นเท่า STOCK COUNT */
 .role-menu-grid .loose-count-btn{
   min-height:86px!important;
   padding:10px 12px!important;
@@ -5649,7 +5578,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </script>
 
 
-<!-- ===== FINAL PATCH: งานเศษใช้ 1 Master + 1 Count เหมือนงานเต็ม ===== -->
 <script>
 (function(){
   const LOOSE_MASTER_TABLE_SINGLE = 'loose_master_data';
@@ -6013,6 +5941,132 @@ window.addEventListener('DOMContentLoaded',()=>{
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(addLooseSingleButtons, 400);
+  });
+})();
+</script>
+
+
+<style>
+.role-menu-grid .loose-count-btn{
+  min-height:88px!important;
+  grid-template-columns:72px 1fr!important;
+}
+.role-menu-grid .loose-count-btn .customer-menu-logo{
+  width:64px!important;
+  height:64px!important;
+  margin:0!important;
+  background:transparent!important;
+  box-shadow:none!important;
+}
+.role-menu-grid .loose-count-btn .customer-menu-logo .cust-logo{
+  width:64px!important;
+  height:64px!important;
+  border-radius:18px!important;
+}
+.role-menu-grid .loose-count-btn b{
+  font-size:17px!important;
+}
+.role-menu-grid .loose-count-btn span span{
+  font-size:12px!important;
+  color:#7b8191!important;
+}
+.count-unit-title{
+  display:none!important;
+}
+.count-mode-chip{
+  padding:6px 10px!important;
+  font-size:12px!important;
+}
+@media(max-width:520px){
+  .role-menu-grid .loose-count-btn{
+    min-height:76px!important;
+    grid-template-columns:56px 1fr!important;
+  }
+  .role-menu-grid .loose-count-btn .customer-menu-logo{
+    width:50px!important;
+    height:50px!important;
+  }
+  .role-menu-grid .loose-count-btn .customer-menu-logo .cust-logo{
+    width:50px!important;
+    height:50px!important;
+    border-radius:15px!important;
+  }
+  .role-menu-grid .loose-count-btn b{
+    font-size:14px!important;
+  }
+  .role-menu-grid .loose-count-btn span span{
+    font-size:10px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function looseLogo(name){
+    const isBig = String(name || '').toUpperCase().includes('BIG');
+    return `<i class="customer-menu-logo"><span class="cust-logo ${isBig ? 'bigc' : 'lotus'}"></span></i>`;
+  }
+
+  window.cleanLooseButtons = function(){
+    document.querySelectorAll('.loose-count-btn').forEach(btn => {
+      const txt = (btn.textContent || '').toUpperCase();
+      const isBig = txt.includes('BIG');
+      btn.innerHTML = `
+        ${looseLogo(isBig ? 'BIG C' : 'LOTUS')}
+        <span><b>งานเศษ ${isBig ? 'BIG C' : 'LOTUS'}</b><span>หน่วยคู่</span></span>
+      `;
+      btn.setAttribute('onclick', `showLooseCountPage('${isBig ? 'BIG C' : 'LOTUS'}')`);
+    });
+  };
+
+  function cleanCountEmptyText(){
+    const box = document.getElementById('countResult');
+    if(!box || !box.classList.contains('empty')) return;
+    const txt = box.textContent || '';
+    if(txt.includes('ค้นหารหัสสินค้า') || txt.includes('ยังไม่มีข้อมูล')){
+      box.innerHTML = '<div class="empty">ค้นหารหัสสินค้า หรือกดสแกน</div>';
+    }
+  }
+
+  const oldShowLooseCountPage = window.showLooseCountPage;
+  if(typeof oldShowLooseCountPage === 'function'){
+    window.showLooseCountPage = async function(customer){
+      const result = await oldShowLooseCountPage.apply(this, arguments);
+      setTimeout(() => {
+        cleanLooseButtons();
+        cleanCountEmptyText();
+      }, 0);
+      return result;
+    };
+  }
+
+  const oldShowCountPageClean = window.showCountPage;
+  if(typeof oldShowCountPageClean === 'function'){
+    window.showCountPage = async function(customer){
+      const result = await oldShowCountPageClean.apply(this, arguments);
+      setTimeout(() => {
+        cleanLooseButtons();
+        cleanCountEmptyText();
+      }, 0);
+      return result;
+    };
+  }
+
+  const oldShowPageClean = window.showPage;
+  if(typeof oldShowPageClean === 'function'){
+    window.showPage = function(page){
+      const result = oldShowPageClean.apply(this, arguments);
+      setTimeout(() => {
+        cleanLooseButtons();
+        cleanCountEmptyText();
+      }, 0);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(cleanLooseButtons, 500);
+    setTimeout(cleanLooseButtons, 1200);
   });
 })();
 </script>
