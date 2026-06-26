@@ -8942,5 +8942,625 @@ body.final-page-otherCustomer #otherCustomerPage{display:block!important;}
 })();
 </script>
 
+
+<!-- ===== FINAL PATCH: Mobile icon layout + online users stability ===== -->
+<style>
+/* Mobile-first cleanup: prevent customer icons from covering text */
+@media (max-width: 720px){
+  html, body{
+    max-width:100%!important;
+    overflow-x:hidden!important;
+  }
+
+  .role-home{
+    margin:0!important;
+    min-height:100vh!important;
+    overflow-x:hidden!important;
+    background:#f7f7f7!important;
+  }
+
+  .role-red-head{
+    min-height:165px!important;
+    padding:22px 18px 34px!important;
+    border-radius:0 0 28px 28px!important;
+  }
+
+  .role-red-head b{
+    font-size:32px!important;
+    line-height:1!important;
+    letter-spacing:1px!important;
+  }
+
+  .role-red-head span{
+    font-size:14px!important;
+    letter-spacing:4px!important;
+    margin-top:5px!important;
+  }
+
+  .hamb-mini,
+  .home-mini{
+    top:24px!important;
+    font-size:26px!important;
+  }
+
+  .hamb-mini{left:18px!important;}
+  .home-mini{right:18px!important;}
+
+  .role-sheet{
+    margin:-28px 10px 18px!important;
+    padding:22px 14px!important;
+    border-radius:26px!important;
+    overflow:visible!important;
+  }
+
+  .role-sheet h2{
+    font-size:28px!important;
+    line-height:1.15!important;
+    margin-bottom:18px!important;
+  }
+
+  .role-menu-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:12px!important;
+    align-items:stretch!important;
+  }
+
+  .role-menu-grid button{
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn){
+    min-height:128px!important;
+    padding:12px 8px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:6px!important;
+    text-align:center!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) > i,
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) .customer-menu-logo{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+    margin:0 auto 4px!important;
+    flex:0 0 48px!important;
+    position:relative!important;
+    inset:auto!important;
+    transform:none!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) .cust-logo{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+    border-radius:15px!important;
+    border-width:2px!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) b{
+    display:block!important;
+    width:100%!important;
+    font-size:17px!important;
+    line-height:1.08!important;
+    margin:0!important;
+    padding:0!important;
+    white-space:normal!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+    position:relative!important;
+    z-index:2!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) span{
+    display:block!important;
+    width:100%!important;
+    font-size:12px!important;
+    line-height:1.25!important;
+    margin:0!important;
+    color:#6b7280!important;
+    position:relative!important;
+    z-index:2!important;
+  }
+
+  .cust-logo.bigc::before{
+    font-size:12px!important;
+    left:6px!important;
+    top:6px!important;
+    -webkit-text-stroke:.8px #178000!important;
+  }
+
+  .cust-logo.bigc::after{
+    font-size:40px!important;
+    right:2px!important;
+    bottom:-7px!important;
+    -webkit-text-stroke:1.3px #fff200!important;
+  }
+
+  .cust-logo.lotus::before{
+    font-size:14px!important;
+    letter-spacing:-.4px!important;
+  }
+
+  .cust-logo.lotus::after{
+    font-size:9px!important;
+    top:14px!important;
+    right:7px!important;
+  }
+
+  /* งานเศษ: horizontal cards must keep icon and text separated */
+  .role-menu-grid .loose-count-btn{
+    min-height:74px!important;
+    padding:10px 10px!important;
+    display:grid!important;
+    grid-template-columns:52px minmax(0,1fr)!important;
+    gap:10px!important;
+    align-items:center!important;
+    text-align:left!important;
+  }
+
+  .role-menu-grid .loose-count-btn .customer-menu-logo,
+  .role-menu-grid .loose-count-btn .loose-work-icon{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    max-width:46px!important;
+    max-height:46px!important;
+    margin:0!important;
+    flex:0 0 46px!important;
+  }
+
+  .role-menu-grid .loose-count-btn .cust-logo{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    max-width:46px!important;
+    max-height:46px!important;
+    border-radius:14px!important;
+  }
+
+  .role-menu-grid .loose-count-btn > span{
+    min-width:0!important;
+    display:block!important;
+    overflow:hidden!important;
+  }
+
+  .role-menu-grid .loose-count-btn b{
+    font-size:14px!important;
+    line-height:1.12!important;
+    margin:0!important;
+    display:block!important;
+    white-space:normal!important;
+  }
+
+  .role-menu-grid .loose-count-btn span span{
+    font-size:11px!important;
+    line-height:1.2!important;
+    margin-top:3px!important;
+    display:block!important;
+  }
+
+  /* Other customer button: clean mobile horizontal layout */
+  .other-customer-btn,
+  .other-customer-menu-btn,
+  .role-menu-grid button[onclick*="Other"],
+  .role-menu-grid button[onclick*="otherCustomer"],
+  .role-menu-grid button[onclick*="showOtherCustomer"]{
+    min-height:86px!important;
+    grid-column:1 / -1!important;
+    display:grid!important;
+    grid-template-columns:58px minmax(0,1fr)!important;
+    gap:14px!important;
+    align-items:center!important;
+    padding:13px 16px!important;
+    text-align:left!important;
+  }
+
+  .other-customer-btn i,
+  .other-customer-menu-btn i,
+  .other-customer-btn .other-logo,
+  .other-customer-menu-btn .other-logo,
+  .role-menu-grid button[onclick*="Other"] i,
+  .role-menu-grid button[onclick*="otherCustomer"] i,
+  .role-menu-grid button[onclick*="showOtherCustomer"] i{
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    min-height:50px!important;
+    max-width:50px!important;
+    max-height:50px!important;
+    margin:0!important;
+    font-size:15px!important;
+    border-radius:15px!important;
+  }
+
+  .other-customer-btn b,
+  .other-customer-menu-btn b,
+  .role-menu-grid button[onclick*="Other"] b,
+  .role-menu-grid button[onclick*="otherCustomer"] b,
+  .role-menu-grid button[onclick*="showOtherCustomer"] b{
+    font-size:22px!important;
+    line-height:1.15!important;
+    margin:0!important;
+    white-space:normal!important;
+  }
+
+  /* Dashboard/Master/Export/Latest icons remain proportional */
+  .admin-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) > i{
+    background:#fff0f0!important;
+    color:#c9111b!important;
+    font-size:23px!important;
+  }
+
+  .online-chip-list{
+    min-height:26px!important;
+  }
+
+  .online-chip-list span{
+    font-size:12px!important;
+    padding:6px 10px!important;
+  }
+}
+
+@media (max-width: 390px){
+  .role-red-head{
+    min-height:150px!important;
+    padding-top:18px!important;
+  }
+
+  .role-sheet{
+    margin-top:-24px!important;
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+
+  .role-sheet h2{
+    font-size:24px!important;
+  }
+
+  .role-menu-grid{
+    gap:10px!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn){
+    min-height:118px!important;
+    padding:10px 6px!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) > i,
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) .customer-menu-logo,
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) .cust-logo{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    max-width:42px!important;
+    max-height:42px!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) b{
+    font-size:15px!important;
+  }
+
+  .role-menu-grid button:not(.loose-count-btn):not(.other-customer-btn) span{
+    font-size:11px!important;
+  }
+
+  .role-menu-grid .loose-count-btn{
+    grid-template-columns:46px minmax(0,1fr)!important;
+    min-height:68px!important;
+    gap:8px!important;
+  }
+
+  .role-menu-grid .loose-count-btn .customer-menu-logo,
+  .role-menu-grid .loose-count-btn .loose-work-icon,
+  .role-menu-grid .loose-count-btn .cust-logo{
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    min-height:40px!important;
+    max-width:40px!important;
+    max-height:40px!important;
+  }
+
+  .role-menu-grid .loose-count-btn b{
+    font-size:12.5px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function safeName(v){
+    return String(v || '').trim() || 'ผู้ใช้งาน';
+  }
+
+  function getCurrentUserName(){
+    try{
+      return safeName(window.currentUser || localStorage.getItem('stock_user') || '');
+    }catch(e){
+      return 'ผู้ใช้งาน';
+    }
+  }
+
+  function renderOnlineMobileFixed(users){
+    const list = Array.isArray(users) ? users : [];
+    const fallbackName = getCurrentUserName();
+    const finalUsers = list.length ? list : (fallbackName ? [{ user_name:fallbackName }] : []);
+    const count = finalUsers.length;
+    const countText = count.toLocaleString('th-TH') + ' คน';
+    const chips = finalUsers.slice(0, 12).map(u => `<span>● ${String(u.user_name || fallbackName).replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}</span>`).join('');
+
+    ['activeUserCount','activeUserCountMenu','activeUserCountHome','activeUserCountHomeCircle'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = String(count);
+    });
+
+    const activeList = document.getElementById('activeUserList');
+    if(activeList) activeList.textContent = finalUsers.map(u => u.user_name || fallbackName).join(', ');
+
+    const adminNow = document.getElementById('adminOnlineNow');
+    if(adminNow) adminNow.textContent = 'Online now: ' + countText;
+
+    const adminCount = document.getElementById('adminOnlineCount');
+    if(adminCount) adminCount.textContent = countText;
+
+    const adminNames = document.getElementById('adminOnlineNames');
+    if(adminNames) adminNames.innerHTML = chips || '<span>● '+fallbackName+'</span>';
+
+    const dashActive = document.getElementById('dashActiveUsers');
+    if(dashActive) dashActive.innerHTML = `<div class="dash-online-count">${countText}</div><div class="online-chip-list">${chips}</div>`;
+  }
+
+  async function loadOnlineMobileFixed(){
+    const fallbackName = getCurrentUserName();
+    try{
+      if(typeof window.getSupabase !== 'function' && typeof getSupabase !== 'function') throw new Error('Supabase not ready');
+      const client = (typeof getSupabase === 'function') ? getSupabase() : window.getSupabase();
+
+      // upsert ตัวเองก่อน เพื่อให้มือถือเห็นผู้ใช้งานทันที
+      try{
+        const sid = localStorage.getItem('stock_session_id') || ('s_' + Date.now());
+        localStorage.setItem('stock_session_id', sid);
+        await client.from('active_users').upsert({
+          session_id: sid,
+          user_name: fallbackName,
+          last_seen: new Date().toISOString(),
+          page_url: location.pathname
+        }, { onConflict:'session_id' });
+      }catch(e){}
+
+      const since = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const { data, error } = await client
+        .from('active_users')
+        .select('session_id,user_name,last_seen')
+        .gte('last_seen', since)
+        .order('last_seen', { ascending:false });
+
+      if(error) throw error;
+      renderOnlineMobileFixed(data || []);
+      return data || [];
+    }catch(err){
+      console.warn('mobile online users fallback', err);
+      renderOnlineMobileFixed(fallbackName ? [{ user_name:fallbackName }] : []);
+      return [];
+    }
+  }
+
+  window.refreshActiveUsers = loadOnlineMobileFixed;
+  window.loadOnlineUsersForDashboard = loadOnlineMobileFixed;
+  window.renderOnlineMobileFixed = renderOnlineMobileFixed;
+
+  function runMobileFixes(){
+    loadOnlineMobileFixed();
+    // บังคับจัดปุ่มใหม่หลัง render menu แบบ role
+    document.querySelectorAll('.role-menu-grid button').forEach(btn => {
+      const text = (btn.textContent || '').toUpperCase();
+      if(text.includes('OTHER CUSTOMER')){
+        btn.classList.add('other-customer-btn');
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(runMobileFixes, 250);
+    setTimeout(runMobileFixes, 900);
+    setTimeout(runMobileFixes, 1800);
+  });
+
+  if(!window.__mobileOnlineAndIconFixTimer){
+    window.__mobileOnlineAndIconFixTimer = setInterval(runMobileFixes, 15000);
+  }
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH: Mobile center alignment / no left leaning ===== -->
+<style>
+/* แก้หน้าเอียงซ้ายบนมือถือ: ตัด margin ติดลบและบังคับทุกหน้าให้อยู่กึ่งกลาง */
+html,
+body{
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:hidden!important;
+  margin:0!important;
+}
+
+#appPage,
+.app-page,
+main{
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  overflow-x:hidden!important;
+}
+
+main{
+  padding-left:12px!important;
+  padding-right:12px!important;
+}
+
+.role-home,
+.role-dashboard-page,
+.other-customer-page,
+#homePage.role-home,
+#otherCustomerPage,
+#dashboardPage.role-dashboard-page{
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+  left:auto!important;
+  right:auto!important;
+  transform:none!important;
+  overflow-x:hidden!important;
+}
+
+.role-red-head,
+.other-red-head,
+.dashboard-red-bar,
+.role-sheet,
+.other-customer-sheet,
+.dashboard-capture,
+.page-card,
+.role-card{
+  max-width:100%!important;
+  box-sizing:border-box!important;
+}
+
+.role-red-head,
+.other-red-head{
+  width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+}
+
+.role-sheet,
+.other-customer-sheet{
+  width:calc(100% - 24px)!important;
+  max-width:760px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+.role-menu-grid,
+.other-customer-grid,
+.admin-menu-grid,
+.user-menu-grid{
+  width:100%!important;
+  max-width:100%!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+
+/* iPhone Safari/PWA: กันคอนเทนต์ไหลซ้ายเพราะ safe-area */
+@supports (padding: max(0px)){
+  main{
+    padding-left:max(12px, env(safe-area-inset-left))!important;
+    padding-right:max(12px, env(safe-area-inset-right))!important;
+  }
+}
+
+@media(max-width:720px){
+  main{
+    padding-left:10px!important;
+    padding-right:10px!important;
+  }
+
+  #homePage.role-home,
+  .role-home,
+  #otherCustomerPage,
+  .other-customer-page,
+  #dashboardPage.role-dashboard-page,
+  .role-dashboard-page{
+    margin-top:0!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+
+  .role-red-head,
+  .other-red-head,
+  .dashboard-red-bar{
+    width:100%!important;
+    margin-left:0!important;
+    margin-right:0!important;
+    border-radius:0 0 32px 32px!important;
+  }
+
+  .role-sheet,
+  .other-customer-sheet{
+    width:calc(100% - 20px)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+}
+
+@media(max-width:390px){
+  main{
+    padding-left:8px!important;
+    padding-right:8px!important;
+  }
+
+  .role-sheet,
+  .other-customer-sheet{
+    width:calc(100% - 16px)!important;
+    margin-left:auto!important;
+    margin-right:auto!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function centerMobilePages(){
+    document.documentElement.style.overflowX = 'hidden';
+    document.body.style.overflowX = 'hidden';
+
+    ['homePage','otherCustomerPage','dashboardPage'].forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.style.marginLeft = 'auto';
+      el.style.marginRight = 'auto';
+      el.style.left = 'auto';
+      el.style.right = 'auto';
+      el.style.transform = 'none';
+      el.style.maxWidth = '100%';
+      el.style.overflowX = 'hidden';
+    });
+  }
+
+  const oldShowPageCenter = window.showPage;
+  if(typeof oldShowPageCenter === 'function'){
+    window.showPage = function(){
+      const result = oldShowPageCenter.apply(this, arguments);
+      setTimeout(centerMobilePages, 0);
+      setTimeout(centerMobilePages, 250);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(centerMobilePages, 100);
+    setTimeout(centerMobilePages, 600);
+    setTimeout(centerMobilePages, 1500);
+  });
+})();
+</script>
+
 </body>
 </html>
