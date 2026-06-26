@@ -2335,7 +2335,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=dashboard-latest-full-v8').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=master-edit-v9').catch(() => {});
       });
     }
   </script>
@@ -4512,6 +4512,403 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 }
 </style>
+
+
+<!-- ===== FINAL PATCH: Edit Master Data from Web ===== -->
+<style>
+.master-edit-btn{
+  border:0!important;
+  border-radius:12px!important;
+  background:#fff1f2!important;
+  color:#c70712!important;
+  font-weight:900!important;
+  padding:8px 12px!important;
+  min-width:64px!important;
+  cursor:pointer!important;
+}
+.master-edit-btn:active{transform:scale(.97)!important;}
+.master-actions-col{width:90px!important;text-align:center!important;}
+.master-edit-modal{
+  position:fixed;
+  inset:0;
+  z-index:9000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
+  background:rgba(15,23,42,.55);
+  backdrop-filter:blur(6px);
+}
+.master-edit-modal.show{display:flex;}
+.master-edit-box{
+  width:min(96vw,520px);
+  max-height:92vh;
+  overflow:auto;
+  background:#fff;
+  border-radius:26px;
+  box-shadow:0 24px 80px rgba(0,0,0,.28);
+  padding:22px;
+}
+.master-edit-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:14px;
+}
+.master-edit-head h3{
+  margin:0;
+  font-size:24px;
+  font-weight:900;
+  color:#111827;
+}
+.master-edit-close{
+  border:0;
+  background:#f3f4f6;
+  color:#6b7280;
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  font-size:24px;
+  font-weight:900;
+}
+.master-edit-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+.master-edit-grid label{
+  display:block;
+  font-size:13px;
+  color:#6b7280;
+  font-weight:900;
+  margin-bottom:6px;
+}
+.master-edit-grid input,
+.master-edit-grid select{
+  width:100%;
+  border:1.5px solid #e5e7eb;
+  border-radius:15px;
+  min-height:48px;
+  padding:0 13px;
+  font-size:16px;
+  outline:none;
+  background:#fff;
+}
+.master-edit-grid input:focus,
+.master-edit-grid select:focus{
+  border-color:#d90b16;
+  box-shadow:0 0 0 4px rgba(217,11,22,.11);
+}
+.master-edit-grid .full{grid-column:1/-1;}
+.master-key-note{
+  margin:12px 0 0;
+  padding:10px 12px;
+  border-radius:14px;
+  background:#f9fafb;
+  color:#6b7280;
+  font-size:12px;
+  line-height:1.45;
+}
+.master-edit-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:16px;
+}
+.master-edit-actions button{
+  border:0;
+  border-radius:16px;
+  min-height:54px;
+  font-size:17px;
+  font-weight:900;
+}
+.master-save-btn{
+  background:linear-gradient(135deg,#d90b16,#a80010);
+  color:#fff;
+}
+.master-cancel-btn{
+  background:#f3f4f6;
+  color:#374151;
+}
+.mobile-master-edit{
+  margin-top:12px;
+  width:100%;
+}
+@media(max-width:720px){
+  .master-edit-box{padding:18px;border-radius:22px;}
+  .master-edit-head h3{font-size:21px;}
+  .master-edit-grid{grid-template-columns:1fr;}
+  .master-edit-actions{grid-template-columns:1fr;}
+}
+</style>
+
+<script>
+(function(){
+  let editingMasterId = null;
+
+  function esc(v){
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({
+      '&':'&amp;', '<':'&lt;', '>':'&gt;', "'":'&#39;', '"':'&quot;'
+    }[c]));
+  }
+
+  function js(v){
+    return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');
+  }
+
+  function getRowVal(r, names){
+    for(const n of names){
+      if(r && r[n] !== undefined && r[n] !== null) return r[n];
+    }
+    return '';
+  }
+
+  function ensureMasterEditModal(){
+    if(document.getElementById('masterEditModal')) return;
+    document.body.insertAdjacentHTML('beforeend', `
+      <div id="masterEditModal" class="master-edit-modal">
+        <div class="master-edit-box">
+          <div class="master-edit-head">
+            <h3>แก้ไข Master Data</h3>
+            <button type="button" class="master-edit-close" onclick="closeMasterEditModal()">×</button>
+          </div>
+
+          <input id="masterEditId" type="hidden">
+
+          <div class="master-edit-grid">
+            <div>
+              <label>Item</label>
+              <input id="masterEditItem" autocomplete="off">
+            </div>
+            <div>
+              <label>CODE</label>
+              <input id="masterEditCode" autocomplete="off">
+            </div>
+            <div>
+              <label>Assort</label>
+              <input id="masterEditAssort" autocomplete="off">
+            </div>
+            <div>
+              <label>Location</label>
+              <input id="masterEditLocation" autocomplete="off">
+            </div>
+            <div>
+              <label>Quantity</label>
+              <input id="masterEditQty" type="number" inputmode="decimal">
+            </div>
+            <div>
+              <label>Customer</label>
+              <select id="masterEditCustomer">
+                <option value="">ไม่ระบุ</option>
+                <option value="LOTUS">LOTUS</option>
+                <option value="BIG C">BIG C</option>
+              </select>
+            </div>
+            <div class="full">
+              <label>item_key</label>
+              <input id="masterEditKey" readonly>
+            </div>
+          </div>
+
+          <div class="master-key-note">
+            item_key ไม่ต้องแก้เอง ถ้าใน Supabase ตั้งเป็น Generated Column ระบบจะสร้างให้อัตโนมัติหลังบันทึก
+          </div>
+
+          <div class="master-edit-actions">
+            <button type="button" class="master-cancel-btn" onclick="closeMasterEditModal()">ยกเลิก</button>
+            <button type="button" class="master-save-btn" onclick="saveMasterEdit()">บันทึกการแก้ไข</button>
+          </div>
+        </div>
+      </div>
+    `);
+  }
+
+  window.closeMasterEditModal = function(){
+    const modal = document.getElementById('masterEditModal');
+    if(modal) modal.classList.remove('show');
+    editingMasterId = null;
+  };
+
+  window.openMasterEdit = function(id){
+    ensureMasterEditModal();
+
+    const row = (window.masterRows || masterRows || []).find(r => String(r.id) === String(id));
+    if(!row){
+      alert('ไม่พบข้อมูลแถวนี้');
+      return;
+    }
+
+    editingMasterId = row.id;
+    document.getElementById('masterEditId').value = row.id ?? '';
+    document.getElementById('masterEditItem').value = getRowVal(row, ['Item','item']);
+    document.getElementById('masterEditCode').value = getRowVal(row, ['CODE','code']);
+    document.getElementById('masterEditAssort').value = getRowVal(row, ['Assort','assort']);
+    document.getElementById('masterEditLocation').value = getRowVal(row, ['Location','location']);
+    document.getElementById('masterEditQty').value = getRowVal(row, ['Quantity','quantity']);
+    document.getElementById('masterEditCustomer').value = getRowVal(row, ['customer','Customer']) || '';
+    document.getElementById('masterEditKey').value = getRowVal(row, ['item_key','Item_Key']);
+
+    document.getElementById('masterEditModal').classList.add('show');
+    setTimeout(() => document.getElementById('masterEditItem')?.focus(), 80);
+  };
+
+  window.saveMasterEdit = async function(){
+    const id = editingMasterId || document.getElementById('masterEditId')?.value;
+    if(!id){
+      alert('ไม่พบ id ของข้อมูล');
+      return;
+    }
+
+    const item = document.getElementById('masterEditItem').value.trim();
+    const code = document.getElementById('masterEditCode').value.trim();
+    const assortRaw = document.getElementById('masterEditAssort').value.trim();
+    const location = document.getElementById('masterEditLocation').value.trim();
+    const qtyRaw = document.getElementById('masterEditQty').value;
+    const customer = document.getElementById('masterEditCustomer').value.trim();
+
+    if(!item || !code || !assortRaw || !location || qtyRaw === ''){
+      alert('กรุณากรอก Item, CODE, Assort, Location, Quantity ให้ครบ');
+      return;
+    }
+
+    const qty = Number(qtyRaw);
+    if(Number.isNaN(qty)){
+      alert('Quantity ต้องเป็นตัวเลข');
+      return;
+    }
+
+    const assortNum = Number(assortRaw);
+    const payload = {
+      Item: item,
+      CODE: code,
+      Assort: Number.isNaN(assortNum) ? assortRaw : assortNum,
+      Location: location,
+      Quantity: qty,
+      customer: customer || null
+    };
+
+    setLoading(true, 'กำลังบันทึก Master Data...');
+    try{
+      let { error } = await getSupabase()
+        .from(MASTER_TABLE)
+        .update(payload)
+        .eq('id', id);
+
+      if(error && /customer/i.test(error.message || '')){
+        const { customer, ...noCustomerPayload } = payload;
+        const retry = await getSupabase()
+          .from(MASTER_TABLE)
+          .update(noCustomerPayload)
+          .eq('id', id);
+        error = retry.error;
+      }
+
+      if(error) throw error;
+
+      closeMasterEditModal();
+      showToast('แก้ไข Master Data สำเร็จ');
+
+      if(typeof loadMasterData === 'function'){
+        await loadMasterData();
+      }else{
+        const row = (masterRows || []).find(r => String(r.id) === String(id));
+        if(row) Object.assign(row, payload);
+        renderMasterTable(masterRows || []);
+      }
+    }catch(err){
+      alert('บันทึกไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  const oldRenderMasterTable = window.renderMasterTable;
+  window.renderMasterTable = function(rows){
+    const masterCount = document.getElementById('masterCount');
+    const body = document.getElementById('masterBody');
+    const cards = document.getElementById('masterCards');
+    if(!body || !cards){
+      if(typeof oldRenderMasterTable === 'function') return oldRenderMasterTable(rows);
+      return;
+    }
+
+    if(masterCount) masterCount.textContent = (rows || []).length.toLocaleString('th-TH');
+
+    const headRow = document.querySelector('#masterPage thead tr');
+    if(headRow){
+      headRow.innerHTML = `
+        <th>Item</th>
+        <th>CODE</th>
+        <th>Assort</th>
+        <th>Location</th>
+        <th>Quantity</th>
+        <th>item_key</th>
+        <th class="master-actions-col">แก้ไข</th>
+      `;
+    }
+
+    body.innerHTML = '';
+    cards.innerHTML = '';
+
+    (rows || []).forEach(r => {
+      const id = getRowVal(r, ['id']);
+      const item = getRowVal(r, ['Item','item']);
+      const code = getRowVal(r, ['CODE','code']);
+      const assort = getRowVal(r, ['Assort','assort']);
+      const location = getRowVal(r, ['Location','location']);
+      const qty = getRowVal(r, ['Quantity','quantity']);
+      const key = getRowVal(r, ['item_key','Item_Key']);
+
+      body.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${esc(item)}</td>
+          <td>${esc(code)}</td>
+          <td>${esc(assort)}</td>
+          <td>${esc(location)}</td>
+          <td>${esc(qty)}</td>
+          <td>${esc(key)}</td>
+          <td class="master-actions-col">
+            <button type="button" class="master-edit-btn" onclick="openMasterEdit('${js(id)}')">แก้ไข</button>
+          </td>
+        </tr>
+      `);
+
+      cards.insertAdjacentHTML('beforeend', `
+        <article class="mobile-item-card">
+          <div class="mobile-card-top">
+            <div>
+              <b>${esc(item)}</b>
+              <span>${esc(key || '-')}</span>
+            </div>
+            <strong>${esc(qty)}</strong>
+          </div>
+          <div class="mobile-card-grid">
+            <div><small>CODE</small><p>${esc(code)}</p></div>
+            <div><small>Assort</small><p>${esc(assort)}</p></div>
+            <div><small>Location</small><p>${esc(location)}</p></div>
+          </div>
+          <button type="button" class="master-edit-btn mobile-master-edit" onclick="openMasterEdit('${js(id)}')">แก้ไขข้อมูลนี้</button>
+        </article>
+      `);
+    });
+  };
+
+  // ถ้ามีข้อมูลอยู่แล้ว ให้ render ใหม่เพื่อเพิ่มปุ่มแก้ไขทันที
+  document.addEventListener('DOMContentLoaded', () => {
+    ensureMasterEditModal();
+    setTimeout(() => {
+      try{
+        if(Array.isArray(masterRows) && masterRows.length){
+          const keyword = document.getElementById('masterSearch')?.value || '';
+          const rows = keyword && typeof searchRows === 'function' ? searchRows(masterRows, keyword) : masterRows;
+          window.renderMasterTable(rows);
+        }
+      }catch(e){}
+    }, 400);
+  });
+})();
+</script>
 
 </body>
 </html>
