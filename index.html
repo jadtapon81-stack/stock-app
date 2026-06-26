@@ -2296,7 +2296,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=thai-time-only-v22').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=mobile-icon-online-v18').catch(() => {});
       });
     }
   </script>
@@ -7863,7 +7863,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if('serviceWorker' in navigator){
     window.addEventListener('load', () => {
       navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-      navigator.serviceWorker.register('/service-worker.js?v=thai-time-only-v22').catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=mobile-icon-online-v18').catch(() => {});
     });
   }
 })();
@@ -8741,6 +8741,204 @@ body.final-page-otherCustomer #otherCustomerPage{display:block!important;}
         .catch(() => {});
     });
   }
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH: mobile icon size + online users fix only ===== -->
+<style>
+/* แก้เฉพาะไอคอนเมนูบนมือถือ ไม่แตะฟังก์ชันอื่น */
+@media(max-width:720px){
+  .role-menu-grid button .customer-menu-logo,
+  .role-menu-grid .loose-count-btn .customer-menu-logo,
+  .role-menu-grid .other-customer-btn i,
+  .role-menu-grid button > i.customer-menu-logo{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    margin:0 auto 6px!important;
+    border-radius:14px!important;
+    transform:none!important;
+  }
+
+  .role-menu-grid button .cust-logo,
+  .role-menu-grid .loose-count-btn .customer-menu-logo .cust-logo,
+  .role-menu-grid button > i.customer-menu-logo .cust-logo{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    border-radius:14px!important;
+    border-width:2px!important;
+    box-shadow:0 7px 16px rgba(16,24,40,.12)!important;
+  }
+
+  .role-menu-grid button .cust-logo.bigc::before{
+    font-size:11px!important;
+    left:5px!important;
+    top:5px!important;
+    -webkit-text-stroke:.8px #178000!important;
+  }
+  .role-menu-grid button .cust-logo.bigc::after{
+    font-size:36px!important;
+    right:2px!important;
+    bottom:-6px!important;
+    -webkit-text-stroke:1.4px #fff200!important;
+  }
+  .role-menu-grid button .cust-logo.lotus::before{
+    font-size:13px!important;
+    letter-spacing:-.5px!important;
+  }
+  .role-menu-grid button .cust-logo.lotus::after{
+    font-size:8px!important;
+    right:7px!important;
+    top:13px!important;
+  }
+
+  .role-menu-grid button:not(.other-customer-btn):not(.loose-count-btn){
+    min-height:116px!important;
+    padding:9px 6px!important;
+    overflow:hidden!important;
+  }
+  .role-menu-grid button:not(.other-customer-btn):not(.loose-count-btn) b{
+    font-size:16px!important;
+    line-height:1.08!important;
+    margin-top:0!important;
+  }
+  .role-menu-grid button:not(.other-customer-btn):not(.loose-count-btn) span{
+    font-size:11px!important;
+    line-height:1.2!important;
+    margin-top:4px!important;
+  }
+
+  .role-menu-grid .loose-count-btn{
+    min-height:70px!important;
+    grid-template-columns:50px 1fr!important;
+    gap:8px!important;
+    padding:8px 10px!important;
+  }
+  .role-menu-grid .loose-count-btn .customer-menu-logo{
+    margin:0!important;
+  }
+  .role-menu-grid .loose-count-btn b{
+    font-size:13px!important;
+    line-height:1.08!important;
+  }
+  .role-menu-grid .loose-count-btn span span{
+    font-size:10px!important;
+    line-height:1.15!important;
+  }
+}
+
+@media(max-width:390px){
+  .role-menu-grid button .customer-menu-logo,
+  .role-menu-grid button .cust-logo,
+  .role-menu-grid button > i.customer-menu-logo .cust-logo{
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+  }
+  .role-menu-grid button:not(.other-customer-btn):not(.loose-count-btn) b{
+    font-size:15px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function thaiNowLimit(){
+    return Date.now() - (2 * 60 * 1000);
+  }
+  function parseAnyTime(v){
+    if(!v) return 0;
+    const d = new Date(v);
+    return Number.isNaN(d.getTime()) ? 0 : d.getTime();
+  }
+  function uniqueSessions(rows){
+    const seen = new Set();
+    return (rows || []).filter(r => {
+      const key = String(r.session_id || r.user_name || Math.random());
+      if(seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }
+  function renderOnlineUsersFixed(rows){
+    const list = uniqueSessions(rows);
+    const count = list.length;
+    const chips = count
+      ? list.slice(0, 12).map(u => `<span>● ${safe(u.user_name || 'ไม่ระบุชื่อ')}</span>`).join('')
+      : '<span>ไม่มีผู้ใช้งานออนไลน์</span>';
+
+    ['activeUserCount','activeUserCountMenu','activeUserCountHome','activeUserCountHomeCircle'].forEach(id => {
+      const el = document.getElementById(id);
+      if(el) el.textContent = count.toLocaleString('th-TH');
+    });
+    const listEl = document.getElementById('activeUserList');
+    if(listEl) listEl.textContent = count ? list.map(u => u.user_name || 'ไม่ระบุชื่อ').join(', ') : 'ไม่มีผู้ใช้งานออนไลน์';
+
+    const nowEl = document.getElementById('adminOnlineNow');
+    if(nowEl) nowEl.textContent = 'Online now: ' + count.toLocaleString('th-TH') + ' คน';
+    const namesEl = document.getElementById('adminOnlineNames');
+    if(namesEl) namesEl.innerHTML = chips;
+
+    const dash = document.getElementById('dashActiveUsers');
+    if(dash) dash.innerHTML = `<div class="dash-online-count">${count.toLocaleString('th-TH')} คน</div><div class="online-chip-list">${chips}</div>`;
+  }
+
+  window.loadOnlineUsersForDashboard = async function(){
+    try{
+      const sinceIso = new Date(thaiNowLimit()).toISOString();
+      let { data, error } = await getSupabase()
+        .from(ACTIVE_TABLE)
+        .select('session_id,user_name,last_seen,page_url')
+        .gte('last_seen', sinceIso)
+        .order('last_seen', { ascending:false })
+        .limit(50);
+
+      if(error || !data || !data.length){
+        const retry = await getSupabase()
+          .from(ACTIVE_TABLE)
+          .select('session_id,user_name,last_seen,page_url')
+          .order('last_seen', { ascending:false })
+          .limit(50);
+        if(retry.error) throw retry.error;
+        data = (retry.data || []).filter(r => {
+          const t = parseAnyTime(r.last_seen);
+          return !t || t >= thaiNowLimit();
+        });
+      }
+      renderOnlineUsersFixed(data || []);
+      return data || [];
+    }catch(err){
+      console.warn('โหลดผู้ใช้งานออนไลน์ไม่สำเร็จ', err);
+      renderOnlineUsersFixed([]);
+      return [];
+    }
+  };
+
+  const oldRefreshActiveUsers = window.refreshActiveUsers;
+  window.refreshActiveUsers = async function(){
+    if(typeof window.loadOnlineUsersForDashboard === 'function'){
+      await window.loadOnlineUsersForDashboard();
+      return;
+    }
+    if(typeof oldRefreshActiveUsers === 'function') return oldRefreshActiveUsers.apply(this, arguments);
+  };
+
+  function runOnlineFix(){
+    if(typeof window.loadOnlineUsersForDashboard === 'function') window.loadOnlineUsersForDashboard();
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(runOnlineFix, 600);
+    setTimeout(runOnlineFix, 1800);
+    if(!window.__onlineFixTimer){
+      window.__onlineFixTimer = setInterval(runOnlineFix, 15000);
+    }
+  });
 })();
 </script>
 
