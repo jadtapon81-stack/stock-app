@@ -2335,7 +2335,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=role-refresh-clean-v3').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=count-dropdown-fixed-v5').catch(() => {});
       });
     }
   </script>
@@ -3616,7 +3616,7 @@ window.addEventListener('DOMContentLoaded',()=>{
           <section><h3>แยกตาม Customer</h3><div id="dashCustomerCards"></div></section>
           <section class="dash-alert-card"><h3>ข้อมูลที่ต้องตรวจสอบ</h3><div id="dashCheckList"></div></section>
           <section class="dash-alert-card export-hide"><h3>ข้อมูลที่กรอกล่าสุด</h3><div id="dashLatestActivity"></div></section>
-          <button class="download-dashboard-btn export-hide" onclick="downloadDashboardImage()">▧ บันทึกหน้า Dashboard เป็นรูป</button>
+          <button id="dashboardDownloadBtn" type="button" class="download-dashboard-btn export-hide" onclick="downloadDashboardImage(event)">▧ บันทึกหน้า Dashboard เป็นรูป</button>
           <div class="dash-update-time">◷ อัปเดตล่าสุด <span id="dashUpdateTime">--/--/---- --:--</span></div>
         </div>
       </section>`);
@@ -3769,37 +3769,140 @@ window.addEventListener('DOMContentLoaded',()=>{
     const sideBtn = qs('webTestBtn'); if(sideBtn) sideBtn.style.display = admin ? '' : 'none'; const testResult = qs('webTestResult'); if(testResult) testResult.style.display = admin ? 'block' : 'none';
   };
 
-  window.downloadDashboardImage = async function(){
+  async function ensureHtml2CanvasLoaded(){
+    if(window.html2canvas) return window.html2canvas;
+    await new Promise((resolve, reject) => {
+      const old = document.querySelector('script[data-html2canvas-loader="1"]');
+      if(old){
+        old.addEventListener('load', resolve, { once:true });
+        old.addEventListener('error', reject, { once:true });
+        return;
+      }
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js';
+      s.async = true;
+      s.dataset.html2canvasLoader = '1';
+      s.onload = resolve;
+      s.onerror = () => reject(new Error('โหลด html2canvas ไม่สำเร็จ'));
+      document.head.appendChild(s);
+    });
+    return window.html2canvas;
+  }
+
+  async function saveCanvasPng(canvas, filename){
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png', 0.95));
+    if(!blob) throw new Error('สร้างรูปไม่สำเร็จ');
+
+    const file = new File([blob], filename, { type:'image/png' });
+
+    // มือถือ iPhone/Android: เปิด Share Sheet เพื่อบันทึกเข้ารูปภาพได้ง่ายกว่า download ตรง ๆ
+    if(navigator.canShare && navigator.canShare({ files:[file] }) && navigator.share){
+      try{
+        await navigator.share({
+          files:[file],
+          title:'Dashboard',
+          text:'Dashboard GAMBOL MODERNTRADE'
+        });
+        return;
+      }catch(e){
+        // ถ้าผู้ใช้ยกเลิก หรือ browser ไม่อนุญาต ให้ไป fallback ด้านล่าง
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+
+    // iOS Safari บางเวอร์ชันไม่ยอม download ให้เปิดรูปแทน
+    setTimeout(() => {
+      if(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream){
+        const w = window.open(url, '_blank');
+        if(!w) location.href = url;
+      }
+    }, 350);
+  }
+
+  window.downloadDashboardImage = async function(event){
+    if(event && event.preventDefault) event.preventDefault();
+
     const source = qs('dashboardCapture') || qs('dashboardPage');
-    if(!source || !window.html2canvas){ alert('โหลดระบบบันทึกรูปไม่สำเร็จ'); return; }
+    if(!source){
+      alert('ไม่พบหน้า Dashboard สำหรับบันทึกรูป');
+      return;
+    }
+
+    const btn = qs('dashboardDownloadBtn') || event?.currentTarget;
+    const oldText = btn ? btn.innerHTML : '';
+    if(btn){
+      btn.disabled = true;
+      btn.innerHTML = 'กำลังสร้างรูป...';
+      btn.style.pointerEvents = 'none';
+    }
 
     const holder = document.createElement('div');
     holder.style.position = 'fixed';
-    holder.style.left = '-10000px';
+    holder.style.left = '0';
     holder.style.top = '0';
     holder.style.width = '430px';
     holder.style.maxWidth = '430px';
     holder.style.padding = '0';
+    holder.style.margin = '0';
     holder.style.background = '#fafafa';
     holder.style.zIndex = '-1';
-
-    const clone = source.cloneNode(true);
-    clone.style.width = '430px';
-    clone.style.maxWidth = '430px';
-    clone.style.margin = '0 auto';
-    clone.querySelectorAll('.export-hide').forEach(el => el.remove());
-
-    holder.appendChild(clone);
-    document.body.appendChild(holder);
+    holder.style.opacity = '0';
+    holder.style.pointerEvents = 'none';
+    holder.style.transform = 'translateX(-200vw)';
 
     try{
-      const canvas = await html2canvas(clone,{scale:2,backgroundColor:'#ffffff',useCORS:true,windowWidth:430,width:430,scrollX:0,scrollY:0});
-      const link=document.createElement('a');
-      link.download='dashboard_'+formatThaiDateForFile()+'.png';
-      link.href=canvas.toDataURL('image/png');
-      link.click();
-    } finally {
-      document.body.removeChild(holder);
+      const h2c = await ensureHtml2CanvasLoaded();
+
+      // อัปเดตตัวเลขก่อนจับภาพ
+      if(typeof refreshRoleDashboard === 'function'){
+        try{ await refreshRoleDashboard(); }catch(e){}
+      }
+
+      const clone = source.cloneNode(true);
+      clone.style.width = '430px';
+      clone.style.maxWidth = '430px';
+      clone.style.margin = '0';
+      clone.style.background = '#fafafa';
+      clone.querySelectorAll('.export-hide').forEach(el => el.remove());
+      clone.querySelectorAll('button').forEach(el => el.remove());
+
+      holder.appendChild(clone);
+      document.body.appendChild(holder);
+
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+      const canvas = await h2c(clone,{
+        scale: 2,
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        allowTaint: true,
+        width: 430,
+        windowWidth: 430,
+        scrollX: 0,
+        scrollY: 0
+      });
+
+      await saveCanvasPng(canvas, 'dashboard_' + formatThaiDateForFile() + '.png');
+      showToast('สร้างรูป Dashboard แล้ว');
+    }catch(err){
+      alert('บันทึกรูปไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      if(holder.parentNode) holder.parentNode.removeChild(holder);
+      if(btn){
+        btn.disabled = false;
+        btn.innerHTML = oldText || '▧ บันทึกหน้า Dashboard เป็นรูป';
+        btn.style.pointerEvents = '';
+      }
     }
   };
 
@@ -4035,6 +4138,169 @@ window.addEventListener('DOMContentLoaded',()=>{
   .latest-table-mini td:nth-child(5){width:20%!important;}
 }
 </style>
+
+
+<style>
+/* ===== Download dashboard button fix ===== */
+.download-dashboard-btn,
+#dashboardDownloadBtn{
+  position:relative!important;
+  z-index:10!important;
+  pointer-events:auto!important;
+  touch-action:manipulation!important;
+  cursor:pointer!important;
+}
+.download-dashboard-btn:disabled,
+#dashboardDownloadBtn:disabled{
+  opacity:.72!important;
+  cursor:wait!important;
+}
+</style>
+
+
+<!-- ===== FINAL PATCH: Count dropdown ไม่บังปุ่มค้นหา ===== -->
+<style>
+/* ให้แถวค้นหา Stock Count อยู่บรรทัดเดียว และให้ dropdown ลงใต้แถวทั้งหมด */
+#countPage,
+#countPage .page-card,
+#countPage .search-row,
+#countPage .count-search-row,
+#countPage .count-search-wrap{
+  overflow:visible!important;
+}
+
+#countPage .count-search-row{
+  position:relative!important;
+  display:grid!important;
+  grid-template-columns:minmax(0,1fr) 76px 68px!important;
+  gap:7px!important;
+  align-items:center!important;
+  margin-bottom:12px!important;
+  z-index:50!important;
+}
+
+#countPage .count-search-wrap{
+  position:relative!important;
+  min-width:0!important;
+}
+
+#countPage #countSearch{
+  width:100%!important;
+  min-width:0!important;
+  height:48px!important;
+  font-size:14px!important;
+  padding:0 44px 0 14px!important;
+}
+
+#countPage .clear-search{
+  right:10px!important;
+  width:28px!important;
+  height:28px!important;
+  z-index:2!important;
+}
+
+#countPage .count-search-row > button{
+  width:100%!important;
+  min-width:0!important;
+  height:48px!important;
+  min-height:48px!important;
+  padding:0 6px!important;
+  border-radius:15px!important;
+  font-size:13px!important;
+  font-weight:900!important;
+  white-space:nowrap!important;
+}
+
+/* dropdown ถูกย้ายมาเป็นลูกของ .count-search-row แล้ว จึงอยู่ใต้ทั้งแถว ไม่ทับปุ่ม */
+#countPage #countSuggest.count-suggest{
+  position:absolute!important;
+  left:0!important;
+  right:0!important;
+  top:calc(100% + 8px)!important;
+  width:100%!important;
+  max-width:100%!important;
+  max-height:min(42vh,260px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  z-index:9999!important;
+  box-sizing:border-box!important;
+  margin:0!important;
+  border-radius:16px!important;
+  box-shadow:0 16px 38px rgba(16,24,40,.18)!important;
+}
+
+#countPage #countSuggest.count-suggest button{
+  width:100%!important;
+  text-align:left!important;
+  white-space:normal!important;
+  word-break:break-word!important;
+  overflow-wrap:anywhere!important;
+  font-size:13px!important;
+  line-height:1.3!important;
+  padding:12px 13px!important;
+  margin-bottom:6px!important;
+  border-radius:12px!important;
+}
+
+#countPage #countSuggest.count-suggest button:last-child{
+  margin-bottom:0!important;
+}
+
+@media(max-width:390px){
+  #countPage .count-search-row{
+    grid-template-columns:minmax(0,1fr) 66px 58px!important;
+    gap:5px!important;
+  }
+  #countPage .count-search-row > button{
+    font-size:12px!important;
+    padding:0 4px!important;
+  }
+  #countPage #countSearch{
+    font-size:13px!important;
+    padding-left:12px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function moveCountSuggestUnderWholeRow(){
+    const row = document.querySelector('#countPage .count-search-row');
+    const box = document.getElementById('countSuggest');
+    if(row && box && box.parentElement !== row){
+      row.appendChild(box);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', moveCountSuggestUnderWholeRow);
+
+  const oldShowCountSuggest = window.showCountSuggest;
+  window.showCountSuggest = function(){
+    moveCountSuggestUnderWholeRow();
+    if(typeof oldShowCountSuggest === 'function'){
+      return oldShowCountSuggest.apply(this, arguments);
+    }
+  };
+
+  const oldShowCountPage = window.showCountPage;
+  window.showCountPage = function(customer){
+    const result = typeof oldShowCountPage === 'function'
+      ? oldShowCountPage.apply(this, arguments)
+      : undefined;
+    setTimeout(moveCountSuggestUnderWholeRow, 0);
+    return result;
+  };
+
+  const oldShowPage = window.showPage;
+  window.showPage = function(page){
+    const result = typeof oldShowPage === 'function'
+      ? oldShowPage.apply(this, arguments)
+      : undefined;
+    if(page === 'count') setTimeout(moveCountSuggestUnderWholeRow, 0);
+    return result;
+  };
+})();
+</script>
 
 </body>
 </html>
