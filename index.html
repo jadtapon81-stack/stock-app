@@ -2335,7 +2335,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=loose-separate-tables-v12').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=loose-single-master-count-v14').catch(() => {});
       });
     }
   </script>
@@ -5644,6 +5644,375 @@ window.addEventListener('DOMContentLoaded',()=>{
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(addLooseButtons, 500);
     setTimeout(updateCountModeTitle, 500);
+  });
+})();
+</script>
+
+
+<!-- ===== FINAL PATCH: งานเศษใช้ 1 Master + 1 Count เหมือนงานเต็ม ===== -->
+<script>
+(function(){
+  const LOOSE_MASTER_TABLE_SINGLE = 'loose_master_data';
+  const LOOSE_COUNT_TABLE_SINGLE = 'stock_count_loose';
+
+  window.looseMasterRows = window.looseMasterRows || [];
+  window.currentCountWorkType = window.currentCountWorkType || 'FULL_BOX';
+
+  function isLooseSingle(){
+    return window.currentCountWorkType === 'LOOSE';
+  }
+
+  function unitSingle(){
+    return isLooseSingle() ? 'คู่' : 'กล่อง';
+  }
+
+  function countTableSingle(){
+    return isLooseSingle() ? LOOSE_COUNT_TABLE_SINGLE : COUNT_TABLE;
+  }
+
+  function activeMasterSingle(){
+    return isLooseSingle() ? (window.looseMasterRows || []) : (masterRows || []);
+  }
+
+  function activeRowsByCustomerSingle(){
+    const rows = activeMasterSingle();
+    return rows.filter(r => isCustomerRow(r, currentCountCustomer));
+  }
+
+  async function loadActiveCountHistorySingle(){
+    try{
+      let rows = await fetchAll(countTableSingle());
+      if(isLooseSingle()){
+        rows = rows.filter(r => isCustomerRow(r, currentCountCustomer));
+      }
+      countRows = rows;
+      savedKeys = new Set(countRows.map(makeSavedKey));
+    }catch(err){
+      console.warn('โหลดผลนับไม่สำเร็จ', countTableSingle(), err);
+      countRows = [];
+      savedKeys = new Set();
+    }
+  }
+
+  async function loadLooseMasterSingle(customer){
+    currentCountCustomer = customer;
+    window.currentCountWorkType = 'LOOSE';
+
+    try{
+      const rows = await fetchAll(LOOSE_MASTER_TABLE_SINGLE);
+      window.looseMasterRows = (rows || []).filter(r => isCustomerRow(r, customer));
+    }catch(err){
+      console.warn('โหลด loose_master_data ไม่สำเร็จ', err);
+      window.looseMasterRows = [];
+      alert('โหลด loose_master_data ไม่สำเร็จ: ' + (err?.message || err));
+    }
+
+    await loadActiveCountHistorySingle();
+  }
+
+  function updateCountHeaderSingle(){
+    const title = $('countTitle');
+    if(title){
+      const customer = currentCountCustomer === 'BIG C' ? 'BIG C' : 'LOTUS';
+      title.innerHTML = `Stock Count ${safe(customer)} <span class="count-mode-chip ${isLooseSingle() ? '' : 'full'}">${isLooseSingle() ? 'งานเศษ' : 'เต็มกล่อง'} · หน่วย ${safe(unitSingle())}</span>`;
+    }
+
+    const summary = $('countFilterSummary');
+    if(summary){
+      const rows = activeRowsByCustomerSingle();
+      const counted = rows.filter(r => isSaved(r)).length;
+      const total = rows.length;
+      const remain = Math.max(total - counted, 0);
+      summary.innerHTML = `ฟิลเตอร์: <b>ทั้งหมด</b> | แสดง ${total.toLocaleString('th-TH')} รายการ | นับแล้ว ${counted.toLocaleString('th-TH')} | ยังไม่นับ ${remain.toLocaleString('th-TH')}`;
+    }
+  }
+
+  function searchOfflineRowsSingle(keyword, customer = currentCountCustomer){
+    const q = normalize(keyword);
+    if(!q) return [];
+
+    const rows = activeMasterSingle().filter(r => isCustomerRow(r, customer));
+
+    const exactComposite = rows.filter(r => {
+      const item = normalize(r.Item ?? r.item);
+      const code = normalize(r.CODE ?? r.code);
+      const assort = normalize(r.Assort ?? r.assort);
+      const location = normalize(r.Location ?? r.location);
+      const itemKey = normalize(r.item_key);
+
+      const itemCodeAssort = item + code + assort;
+      const itemCodeAssortLocation = item + code + assort + location;
+
+      return q === itemCodeAssort || q === itemCodeAssortLocation || q === itemKey;
+    });
+
+    if(exactComposite.length) return exactComposite;
+
+    return rows.filter(r => {
+      const fields = [
+        r.item_key,
+        r.CODE ?? r.code,
+        r.Item ?? r.item,
+        r.Location ?? r.location,
+        r.Assort ?? r.assort,
+        r.customer ?? r.Customer
+      ].map(normalize);
+      return fields.some(v => v && v.includes(q));
+    });
+  }
+
+  // override global function used by scan/search
+  window.searchOfflineRows = searchOfflineRowsSingle;
+  try{ searchOfflineRows = searchOfflineRowsSingle; }catch(e){}
+
+  window.showLooseCountPage = async function(customer){
+    setLoading(true, 'กำลังโหลดงานเศษ ' + customer + '...');
+    try{
+      await loadLooseMasterSingle(customer);
+      if($('countSearch')) $('countSearch').value = '';
+      if(typeof closeCountSuggest === 'function') closeCountSuggest();
+      showPage('count');
+      updateCountHeaderSingle();
+
+      const total = activeRowsByCustomerSingle().length;
+      const box = $('countResult');
+      if(box){
+        box.className = 'empty';
+        box.innerHTML = total
+          ? `ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับงานเศษ ${safe(customer)}<div class="count-unit-title">งานเศษ / ไม่เต็มกล่อง | หน่วย คู่</div>`
+          : `ยังไม่มีข้อมูลใน loose_master_data ของ ${safe(customer)}<div class="count-unit-title">Import งานเศษเข้า loose_master_data ก่อน</div>`;
+      }
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  const prevShowCountPageSingle = window.showCountPage;
+  window.showCountPage = async function(customer){
+    window.currentCountWorkType = 'FULL_BOX';
+    currentCountCustomer = customer;
+    window.looseMasterRows = [];
+    await loadActiveCountHistorySingle();
+    if(typeof prevShowCountPageSingle === 'function'){
+      prevShowCountPageSingle.call(this, customer);
+    }else{
+      showPage('count');
+    }
+    updateCountHeaderSingle();
+  };
+
+  window.showCountSuggest = function(){
+    const input = $('countSearch');
+    const box = $('countSuggest');
+    if(!input || !box) return;
+
+    const q = normalize(input.value);
+    if(q.length < 2){
+      closeCountSuggest();
+      return;
+    }
+
+    const rows = searchOfflineRowsSingle(input.value, currentCountCustomer).slice(0, 50);
+
+    if(!rows.length){
+      box.innerHTML = `<div class="count-suggest-empty">ไม่พบข้อมูล</div>`;
+      box.classList.add('show');
+      return;
+    }
+
+    box.innerHTML = rows.map(r => {
+      const item = r.Item ?? r.item ?? '';
+      const code = r.CODE ?? r.code ?? '';
+      const assort = r.Assort ?? r.assort ?? '';
+      const location = r.Location ?? r.location ?? '';
+      const qty = r.Quantity ?? r.quantity ?? 0;
+      const value = `${item}${code}${assort}`;
+      const text = `${item}${code}${assort} | ${location} | Qty ${qty} ${unitSingle()}`;
+
+      return `
+        <button type="button" onclick="selectCountSuggest('${safeForJs(value)}')">
+          ${safe(text)}
+        </button>
+      `;
+    }).join('');
+
+    box.classList.add('show');
+  };
+
+  window.searchForCount = function(){
+    if(typeof closeCountSuggest === 'function') closeCountSuggest();
+    const keyword = $('countSearch').value;
+    const box = $('countResult');
+
+    if(!keyword.trim()){
+      box.className = 'empty';
+      box.innerHTML = `<div class="empty">กรุณากรอกข้อมูลเพื่อค้นหา</div>`;
+      return;
+    }
+
+    const result = searchOfflineRowsSingle(keyword, currentCountCustomer);
+
+    if(result.length === 0){
+      box.className = 'empty';
+      box.innerHTML = `<div class="empty">ไม่มีข้อมูลที่ตรงกับ: ${safe(keyword)}</div>`;
+      return;
+    }
+
+    renderCountResult(result);
+    updateCountHeaderSingle();
+  };
+
+  window.renderCountResult = function(result){
+    const box = $('countResult');
+    box.className = '';
+    box.innerHTML = '';
+
+    result.forEach(r => {
+      const item = r.Item ?? r.item ?? '';
+      const code = r.CODE ?? r.code ?? '';
+      const assort = r.Assort ?? r.assort ?? '';
+      const location = r.Location ?? r.location ?? '';
+      const qty = r.Quantity ?? r.quantity ?? 0;
+
+      const savedRow = getSavedRow(r);
+      const saved = !!savedRow;
+      const savedQty = savedRow?.count_qty ?? '';
+
+      box.insertAdjacentHTML('beforeend', `
+        <div class="result-card ${saved ? 'saved-card' : ''} ${isLooseSingle() ? 'loose-count-card' : ''}" id="card_${safe(r.id)}">
+          <div class="shoe-badge">${isLooseSingle() ? 'คู่' : '👟'}</div>
+          ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
+          <div class="result-grid count-result-grid">
+            <div class="system-qty-card"><b>System Qty <span class="unit-badge-count">${safe(unitSingle())}</span></b><span>${safe(qty)}</span></div>
+            <div><b>Item</b><span>${safe(item)}</span></div>
+            <div><b>CODE</b><span>${safe(code)}</span></div>
+            <div><b>Assort</b><span>${safe(assort)}</span></div>
+            <div><b>Location</b><span>${safe(location)}</span></div>
+          </div>
+          <div class="count-form">
+            <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้ (${safe(unitSingle())})" id="count_${safe(r.id)}" value="${safe(savedQty)}">
+            <button class="save-btn" id="save_${safe(r.id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>${saved ? 'อัปเดต' : 'บันทึก'}</button>
+            <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
+          </div>
+        </div>
+      `);
+    });
+  };
+
+  window.saveCount = async function(r){
+    const input = $('count_' + r.id);
+    const countQty = Number(input.value);
+    if(input.value === '') return alert('กรุณาใส่จำนวนที่นับได้');
+    if(countQty < 0) return alert('จำนวนต้องไม่ติดลบ');
+
+    const payload = {
+      master_id: r.id,
+      item_key: r.item_key ?? null,
+      item: r.Item ?? r.item ?? null,
+      code: r.CODE ?? r.code ?? null,
+      assort: r.Assort ?? r.assort ?? null,
+      location: r.Location ?? r.location ?? null,
+      system_qty: Number(r.Quantity ?? r.quantity ?? 0),
+      count_qty: countQty,
+      counted_by: currentUser
+    };
+
+    if(isLooseSingle()){
+      payload.customer = currentCountCustomer;
+      payload.count_type = 'LOOSE';
+    }
+
+    const oldRow = getSavedRow(r);
+    const tableName = countTableSingle();
+
+    if(oldRow){
+      let query = getSupabase().from(tableName).update(payload);
+      if(oldRow.id) query = query.eq('id', oldRow.id);
+      else query = query.eq('master_id', r.id).eq('item_key', payload.item_key);
+
+      const { error } = await query;
+      if(error) return alert('อัปเดตไม่สำเร็จ: ' + error.message);
+
+      countRows = countRows.map(row => makeSavedKey(row) === makeSavedKey(r) ? { ...row, ...payload } : row);
+      const saveBtn = $('save_' + r.id);
+      if(saveBtn) saveBtn.textContent = 'อัปเดต';
+      const card = $('card_' + r.id);
+      if(card){
+        card.classList.add('saved-card');
+        if(!card.querySelector('.saved-status')) card.insertAdjacentHTML('afterbegin','<div class="saved-status">บันทึกแล้ว</div>');
+      }
+      showToast('อัปเดตสำเร็จ');
+      updateCountHeaderSingle();
+      return;
+    }
+
+    const { data, error } = await getSupabase().from(tableName).insert(payload).select('*').single();
+    if(error) return alert('บันทึกไม่สำเร็จ: ' + error.message);
+
+    countRows.push(data || payload);
+    savedKeys.add(makeSavedKey(r));
+
+    const saveBtn = $('save_' + r.id);
+    if(saveBtn) saveBtn.textContent = 'อัปเดต';
+    const card = $('card_' + r.id);
+    if(card){
+      card.classList.add('saved-card');
+      if(!card.querySelector('.saved-status')) card.insertAdjacentHTML('afterbegin','<div class="saved-status">บันทึกแล้ว</div>');
+    }
+    showToast('บันทึกสำเร็จ');
+    updateCountHeaderSingle();
+  };
+
+  // เพิ่มปุ่มงานเศษ ถ้าไฟล์เดิมยังไม่มี
+  function addLooseSingleButtons(){
+    document.querySelectorAll('.role-menu-grid').forEach(grid => {
+      if(grid.querySelector('.loose-count-btn')) return;
+
+      const lotusStock = Array.from(grid.querySelectorAll('button'))
+        .find(btn => /showCountPage\('LOTUS'\)/.test(btn.getAttribute('onclick') || ''));
+      if(!lotusStock) return;
+
+      const lotusBtn = document.createElement('button');
+      lotusBtn.type = 'button';
+      lotusBtn.className = 'loose-count-btn loose-lotus-btn';
+      lotusBtn.setAttribute('onclick', "showLooseCountPage('LOTUS')");
+      lotusBtn.innerHTML = `
+        <i class="loose-work-icon lotus">คู่<small>เศษ</small></i>
+        <span><b>งานเศษ LOTUS</b><span>ไม่เต็มกล่อง · หน่วยคู่</span></span>
+      `;
+
+      const bigcBtn = document.createElement('button');
+      bigcBtn.type = 'button';
+      bigcBtn.className = 'loose-count-btn loose-bigc-btn';
+      bigcBtn.setAttribute('onclick', "showLooseCountPage('BIG C')");
+      bigcBtn.innerHTML = `
+        <i class="loose-work-icon bigc">B<span style="color:#e2131d">C</span></i>
+        <span><b>งานเศษ BIG C</b><span>ไม่เต็มกล่อง · หน่วยคู่</span></span>
+      `;
+
+      grid.insertBefore(bigcBtn, lotusStock);
+      grid.insertBefore(lotusBtn, bigcBtn);
+    });
+  }
+
+  const oldShowPageSingle = window.showPage;
+  window.showPage = function(page){
+    const result = typeof oldShowPageSingle === 'function' ? oldShowPageSingle.apply(this, arguments) : undefined;
+    if(page === 'home') setTimeout(addLooseSingleButtons, 0);
+    if(page === 'count') setTimeout(updateCountHeaderSingle, 0);
+    return result;
+  };
+
+  const oldRenderHomeSingle = typeof renderHomeByRole === 'function' ? renderHomeByRole : null;
+  if(oldRenderHomeSingle){
+    renderHomeByRole = function(){
+      oldRenderHomeSingle();
+      addLooseSingleButtons();
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(addLooseSingleButtons, 400);
   });
 })();
 </script>
