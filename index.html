@@ -2335,7 +2335,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=count-filter-v10').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=customer-logo-design-v11').catch(() => {});
       });
     }
   </script>
@@ -5033,6 +5033,263 @@ window.addEventListener('DOMContentLoaded',()=>{
     return result;
   };
   document.addEventListener('DOMContentLoaded', () => setTimeout(ensureCountFilterUI, 300));
+})();
+</script>
+
+
+<!-- ===== FINAL PATCH: Designed customer logos for LOTUS / BIG C ===== -->
+<style>
+.customer-menu-logo{
+  background:transparent!important;
+  box-shadow:none!important;
+  width:70px!important;
+  height:70px!important;
+  margin:0 auto 10px!important;
+  display:grid!important;
+  place-items:center!important;
+  border-radius:20px!important;
+}
+.cust-logo{
+  position:relative;
+  display:inline-grid;
+  place-items:center;
+  width:68px;
+  height:68px;
+  flex:0 0 auto;
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 12px 26px rgba(16,24,40,.16);
+  border:3px solid #fff;
+  font-family:'Prompt',system-ui,sans-serif;
+  isolation:isolate;
+}
+.cust-logo.bigc{
+  background:
+    radial-gradient(circle at 22% 20%, rgba(255,255,255,.65) 0 9px, transparent 10px),
+    linear-gradient(145deg,#d9fb28 0%,#8ee400 54%,#56b700 100%);
+}
+.cust-logo.bigc::before{
+  content:'Big';
+  position:absolute;
+  left:8px;
+  top:9px;
+  color:#fff200;
+  -webkit-text-stroke:1.3px #178000;
+  text-shadow:1px 2px 0 rgba(0,0,0,.16);
+  font-size:17px;
+  font-weight:900;
+  transform:rotate(-8deg);
+  z-index:2;
+}
+.cust-logo.bigc::after{
+  content:'C';
+  position:absolute;
+  right:5px;
+  bottom:-10px;
+  color:#e30613;
+  -webkit-text-stroke:2px #fff200;
+  text-shadow:0 3px 0 rgba(0,0,0,.15);
+  font-size:58px;
+  font-weight:900;
+  line-height:1;
+  z-index:1;
+}
+.cust-logo.lotus{
+  background:
+    radial-gradient(circle at 72% 20%, rgba(255,255,255,.45) 0 9px, transparent 10px),
+    linear-gradient(145deg,#00c8bd 0%,#00a8a5 52%,#008f98 100%);
+}
+.cust-logo.lotus::before{
+  content:'Lotus';
+  color:white;
+  font-size:19px;
+  font-weight:900;
+  letter-spacing:-.8px;
+  text-shadow:0 2px 0 rgba(0,0,0,.16);
+  transform:translateY(-2px);
+}
+.cust-logo.lotus::after{
+  content:"'s";
+  position:absolute;
+  right:12px;
+  top:21px;
+  color:white;
+  font-size:12px;
+  font-weight:900;
+  text-shadow:0 2px 0 rgba(0,0,0,.13);
+}
+.cust-logo.sm{
+  width:46px;
+  height:46px;
+  border-radius:14px;
+  border-width:2px;
+  box-shadow:0 8px 18px rgba(16,24,40,.13);
+}
+.cust-logo.sm.bigc::before{font-size:12px;left:5px;top:6px;-webkit-text-stroke:.9px #178000;}
+.cust-logo.sm.bigc::after{font-size:40px;right:2px;bottom:-8px;-webkit-text-stroke:1.5px #fff200;}
+.cust-logo.sm.lotus::before{font-size:13px;}
+.cust-logo.sm.lotus::after{font-size:9px;right:8px;top:14px;}
+
+.customer-progress-line.has-logo{
+  grid-template-columns:52px 72px minmax(0,1fr) auto!important;
+  align-items:center!important;
+}
+.customer-progress-line.has-logo .cust-logo{
+  grid-column:1;
+}
+.customer-progress-line.has-logo b{
+  grid-column:2;
+}
+.customer-progress-line.has-logo i{
+  grid-column:3;
+}
+.customer-progress-line.has-logo strong{
+  grid-column:4;
+}
+.customer-progress-line.has-logo span{
+  grid-column:2 / 5!important;
+}
+
+.dash-customer-card.has-logo{
+  grid-template-columns:56px minmax(0,1fr) auto!important;
+  align-items:center!important;
+}
+.dash-customer-card.has-logo .cust-logo{
+  grid-column:1;
+  grid-row:1 / 3;
+}
+.dash-customer-card.has-logo b{
+  grid-column:2;
+  grid-row:1;
+}
+.dash-customer-card.has-logo strong{
+  grid-column:3;
+  grid-row:1;
+}
+.dash-customer-card.has-logo p{
+  grid-column:2 / 4;
+  grid-row:2;
+}
+.dash-customer-card.has-logo i,
+.dash-customer-card.has-logo small{
+  grid-column:1 / 4!important;
+}
+
+@media(max-width:520px){
+  .customer-menu-logo{width:56px!important;height:56px!important;margin-bottom:8px!important;}
+  .cust-logo{width:56px;height:56px;border-radius:16px;}
+  .cust-logo.bigc::before{font-size:14px;left:7px;top:8px;}
+  .cust-logo.bigc::after{font-size:48px;right:4px;bottom:-8px;}
+  .cust-logo.lotus::before{font-size:16px;}
+  .cust-logo.lotus::after{right:10px;top:18px;font-size:10px;}
+
+  .cust-logo.sm{width:40px;height:40px;border-radius:12px;}
+  .cust-logo.sm.bigc::before{font-size:10px;left:5px;top:5px;}
+  .cust-logo.sm.bigc::after{font-size:34px;right:2px;bottom:-6px;}
+  .cust-logo.sm.lotus::before{font-size:12px;}
+  .cust-logo.sm.lotus::after{font-size:8px;right:7px;top:12px;}
+
+  .customer-progress-line.has-logo{
+    grid-template-columns:44px 62px minmax(0,1fr) auto!important;
+    gap:7px!important;
+  }
+  .dash-customer-card.has-logo{
+    grid-template-columns:46px minmax(0,1fr) auto!important;
+    gap:8px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function logoClass(name){
+    return String(name || '').toUpperCase().includes('BIG') ? 'bigc' : 'lotus';
+  }
+
+  function logoHtml(name, small = false){
+    const cls = logoClass(name);
+    const label = cls === 'bigc' ? 'BIG C' : 'LOTUS';
+    return `<span class="cust-logo ${cls}${small ? ' sm' : ''}" aria-label="${label}" title="${label}"></span>`;
+  }
+
+  function applyCustomerLogos(){
+    // หน้า Home/Admin menu: แทน emoji ด้วยโลโก้ที่ออกแบบใหม่
+    document.querySelectorAll('.role-menu-grid button').forEach(btn => {
+      const txt = (btn.textContent || '').toUpperCase();
+      if(!txt.includes('LOTUS') && !txt.includes('BIG C')) return;
+      const i = btn.querySelector('i');
+      if(!i) return;
+      i.className = 'customer-menu-logo';
+      i.innerHTML = logoHtml(txt.includes('BIG C') ? 'BIG C' : 'LOTUS');
+    });
+
+    // ความคืบหน้าการนับหน้า Home
+    document.querySelectorAll('.customer-progress-line').forEach(line => {
+      const b = line.querySelector('b');
+      if(!b) return;
+      const name = b.textContent.trim().toUpperCase();
+      if(!name.includes('LOTUS') && !name.includes('BIG C')) return;
+      if(!line.querySelector('.cust-logo')){
+        line.insertAdjacentHTML('afterbegin', logoHtml(name.includes('BIG C') ? 'BIG C' : 'LOTUS', true));
+      }
+      line.classList.add('has-logo');
+    });
+
+    // Dashboard แยกตาม Customer
+    document.querySelectorAll('.dash-customer-card').forEach(card => {
+      const b = card.querySelector('b');
+      if(!b) return;
+      const name = b.textContent.trim().toUpperCase();
+      if(!name.includes('LOTUS') && !name.includes('BIG C')) return;
+      if(!card.querySelector('.cust-logo')){
+        card.insertAdjacentHTML('afterbegin', logoHtml(name.includes('BIG C') ? 'BIG C' : 'LOTUS', true));
+      }
+      card.classList.add('has-logo');
+    });
+  }
+
+  const oldRenderHomeByRole = window.renderHomeByRole;
+  if(typeof oldRenderHomeByRole === 'function'){
+    window.renderHomeByRole = function(){
+      const result = oldRenderHomeByRole.apply(this, arguments);
+      setTimeout(applyCustomerLogos, 0);
+      return result;
+    };
+  }
+
+  const oldRenderCountOverview = window.renderCountOverview;
+  if(typeof oldRenderCountOverview === 'function'){
+    window.renderCountOverview = function(){
+      const result = oldRenderCountOverview.apply(this, arguments);
+      setTimeout(applyCustomerLogos, 0);
+      return result;
+    };
+  }
+
+  const oldRefreshRoleDashboard = window.refreshRoleDashboard;
+  if(typeof oldRefreshRoleDashboard === 'function'){
+    window.refreshRoleDashboard = async function(){
+      const result = await oldRefreshRoleDashboard.apply(this, arguments);
+      setTimeout(applyCustomerLogos, 0);
+      return result;
+    };
+  }
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(){
+      const result = oldShowPage.apply(this, arguments);
+      setTimeout(applyCustomerLogos, 0);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(applyCustomerLogos, 250);
+    setTimeout(applyCustomerLogos, 1000);
+  });
+
+  window.applyCustomerLogos = applyCustomerLogos;
 })();
 </script>
 
