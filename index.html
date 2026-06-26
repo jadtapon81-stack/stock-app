@@ -2296,7 +2296,7 @@ body{
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-        navigator.serviceWorker.register('/service-worker.js?v=home-progress-removed-v21').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js?v=thai-time-only-v22').catch(() => {});
       });
     }
   </script>
@@ -7863,7 +7863,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   if('serviceWorker' in navigator){
     window.addEventListener('load', () => {
       navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
-      navigator.serviceWorker.register('/service-worker.js?v=home-progress-removed-v21').catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=thai-time-only-v22').catch(() => {});
     });
   }
 })();
@@ -8458,6 +8458,289 @@ body.final-page-otherCustomer #otherCustomerPage{display:block!important;}
   });
 
   window.removeHomeCountProgress = removeHomeCountProgress;
+})();
+</script>
+
+
+<!-- ===== FINAL PATCH: Thailand time only (Asia/Bangkok) ===== -->
+<script>
+(function(){
+  const THAI_TZ = 'Asia/Bangkok';
+
+  function thaiParts(value = new Date()){
+    const d = value instanceof Date ? value : new Date(value || Date.now());
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: THAI_TZ,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false
+    }).formatToParts(isNaN(d.getTime()) ? new Date() : d);
+    const get = type => (parts.find(p => p.type === type) || {}).value || '00';
+    return {
+      year: get('year'),
+      month: get('month'),
+      day: get('day'),
+      hour: get('hour'),
+      minute: get('minute'),
+      second: get('second')
+    };
+  }
+
+  function thaiDateTimeText(value = new Date(), withSeconds = false){
+    const p = thaiParts(value);
+    return `${p.day}/${p.month}/${p.year} ${p.hour}:${p.minute}${withSeconds ? ':' + p.second : ''}`;
+  }
+
+  function thaiTimeText(value = new Date(), withSeconds = false){
+    const p = thaiParts(value);
+    return `${p.hour}:${p.minute}${withSeconds ? ':' + p.second : ''}`;
+  }
+
+  function thaiDateFileText(value = new Date()){
+    const p = thaiParts(value);
+    return `${p.year}-${p.month}-${p.day}`;
+  }
+
+  // ใช้ส่งเข้า DB กรณีต้องระบุเวลาเอง: เป็นเวลาไทยพร้อม timezone +07:00
+  function thaiDbTimestamp(value = new Date()){
+    const p = thaiParts(value);
+    return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}+07:00`;
+  }
+
+  // จุดเริ่มวันของประเทศไทย แปลงเป็น ISO UTC สำหรับ query วันนี้
+  function thaiStartOfTodayUtcIso(){
+    const p = thaiParts(new Date());
+    return new Date(`${p.year}-${p.month}-${p.day}T00:00:00+07:00`).toISOString();
+  }
+
+  function parseAnyDate(value){
+    if(value === undefined || value === null || value === '') return null;
+    if(value instanceof Date) return isNaN(value.getTime()) ? null : value;
+    if(typeof value === 'number') {
+      const d = new Date(value);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    let s = String(value).trim();
+    if(!s) return null;
+
+    // ถ้ามาเป็นรูปแบบ 2026-06-26 16:30:00 และไม่มี timezone ให้ถือว่าเป็นเวลา UTC ของ DB
+    if(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(s) && !/(Z|[+-]\d{2}:?\d{2})$/.test(s)){
+      s = s.replace(' ', 'T') + 'Z';
+    }
+
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function isDateColumnName(key){
+    return /(^|_)(created_at|updated_at|counted_at|last_seen|deleted_at|date_time|timestamp|time_at|datetime)$/i.test(String(key || ''))
+      || /_at$/i.test(String(key || ''));
+  }
+
+  function isDateLikeValue(value){
+    if(value === undefined || value === null || value === '') return false;
+    if(value instanceof Date) return true;
+    if(typeof value !== 'string') return false;
+    return /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(value.trim());
+  }
+
+  function convertRowTimesToThai(row){
+    const out = {};
+    Object.keys(row || {}).forEach(k => {
+      const v = row[k];
+
+      if(isDateColumnName(k) && isDateLikeValue(v)){
+        out[k] = thaiDateTimeText(v, true);
+      }else{
+        out[k] = v;
+      }
+
+      // เพิ่มคอลัมน์อ่านง่ายเป็นเวลาไทยให้ทุกช่องเวลา
+      if(isDateColumnName(k) && isDateLikeValue(v)){
+        out[`${k}_th`] = thaiDateTimeText(v, true);
+      }
+    });
+    return out;
+  }
+
+  // เปิดให้ฟังก์ชันอื่นเรียกใช้ได้
+  window.APP_TIMEZONE = THAI_TZ;
+  window.thaiDateTimeText = thaiDateTimeText;
+  window.thaiTimeText = thaiTimeText;
+  window.thaiDateFileText = thaiDateFileText;
+  window.thaiDbTimestamp = thaiDbTimestamp;
+  window.thaiStartOfTodayUtcIso = thaiStartOfTodayUtcIso;
+  window.convertRowTimesToThai = convertRowTimesToThai;
+
+  // เวลาหน้า Home / Dashboard / FG ต้องแสดงเป็นไทยเท่านั้น
+  window.setLastUpdateTime = function(){
+    const el = document.getElementById('lastUpdateText');
+    if(el) el.textContent = thaiDateTimeText(new Date(), false);
+  };
+
+  window.fgNowText = function(){
+    return thaiDateTimeText(new Date(), false);
+  };
+
+  // นับรายการของ "วันนี้" โดยยึดวันประเทศไทย ไม่ใช่ timezone เครื่องหรือ UTC
+  window.safeCountRows = async function(tableName, dateColumn = 'created_at', todayOnly = true){
+    try{
+      let query = getSupabase()
+        .from(tableName)
+        .select('id', { count: 'exact', head: true });
+
+      if(todayOnly){
+        query = query.gte(dateColumn, thaiStartOfTodayUtcIso());
+      }
+
+      const { count, error } = await query;
+      if(error) throw error;
+      return count || 0;
+    }catch(err){
+      try{
+        const { count } = await getSupabase()
+          .from(tableName)
+          .select('id', { count: 'exact', head: true });
+        return count || 0;
+      }catch(e){
+        return 0;
+      }
+    }
+  };
+
+  // Export Excel: แปลงทุกคอลัมน์เวลาเป็นเวลาไทย ไม่ปล่อยรูปแบบ UTC ออกไป
+  window.exportExcel = async function(){
+    try{
+      setLoading(true, 'กำลัง Export Excel เวลาไทย...');
+
+      const tables = [
+        { name: 'Master_Data', table: 'master_data' },
+        { name: 'Available_Stock', table: 'available_stock' },
+        { name: 'FG_IN', table: 'fg_in' },
+        { name: 'FG_OUT', table: 'fg_out' },
+        { name: 'Stock_Count', table: 'stock_count' },
+        { name: 'Stock_Count_Loose', table: 'stock_count_loose' },
+        { name: 'Loose_Master_Data', table: 'loose_master_data' },
+        { name: 'Stock_Transaction', table: 'stock_transaction' },
+        { name: 'Active_Users', table: 'active_users' }
+      ];
+
+      const wb = XLSX.utils.book_new();
+
+      for(const t of tables){
+        let rows = [];
+        try{
+          rows = await fetchAll(t.table);
+          rows = (rows || []).map(convertRowTimesToThai);
+        }catch(e){
+          console.warn('Export ข้ามตาราง/วิวที่โหลดไม่ได้:', t.table, e);
+          rows = [{ error: 'โหลดข้อมูลไม่ได้ หรือยังไม่มีตาราง/วิวนี้', table: t.table }];
+        }
+
+        const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}]);
+        XLSX.utils.book_append_sheet(wb, ws, t.name);
+      }
+
+      XLSX.writeFile(wb, `stock_export_TH_${thaiDateFileText()}.xlsx`);
+      showToast('Export Excel เวลาไทยสำเร็จ');
+    }catch(err){
+      alert('Export Excel ไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  // ล่าสุดบนหน้า Admin ใช้เวลาไทยเต็มรูปแบบ
+  window.loadAdminLatestActivity = async function(){
+    const rows = [];
+    async function pull(table, type){
+      try{
+        const { data, error } = await getSupabase()
+          .from(table)
+          .select('*')
+          .order('created_at', { ascending:false })
+          .limit(10);
+        if(!error && data) data.forEach(r => rows.push({ ...r, _type:type }));
+      }catch(e){}
+    }
+
+    await pull('fg_in', 'FG IN');
+    await pull('fg_out', 'FG OUT');
+    await pull('stock_count', 'COUNT');
+    await pull('stock_count_loose', 'COUNT LOOSE');
+
+    rows.sort((a,b) => {
+      const da = parseAnyDate(a.created_at)?.getTime() || 0;
+      const db = parseAnyDate(b.created_at)?.getTime() || 0;
+      return db - da;
+    });
+
+    const html = `<table><thead><tr><th>ชื่อคนที่กรอก</th><th>ทำรายการ</th><th>จำนวน</th><th>Location</th><th>เวลาไทย</th></tr></thead><tbody>` +
+      rows.slice(0, 8).map(r => `
+        <tr>
+          <td>${safe(r.created_by || r.counted_by || r.user_name || '-')}</td>
+          <td class="act-${String(r._type).replace(/\s+/g,'').toLowerCase()}">${safe(r._type)}</td>
+          <td>${safe(r.Quantity ?? r.quantity ?? r.count_qty ?? '-')}</td>
+          <td>${safe(r.Location ?? r.location ?? '-')}</td>
+          <td>${safe(thaiDateTimeText(r.created_at || Date.now(), true))}</td>
+        </tr>
+      `).join('') + '</tbody></table>';
+
+    const box = document.getElementById('adminLatestActivity');
+    if(box) box.innerHTML = html;
+
+    const dash = document.getElementById('dashLatestActivity');
+    if(dash) dash.innerHTML = html;
+
+    const last = document.getElementById('adminLastTime');
+    if(last && rows[0]) last.textContent = thaiTimeText(rows[0].created_at || Date.now(), true) + ' น.';
+  };
+
+  // Dashboard update time เป็นเวลาไทยเท่านั้น
+  const previousRefreshRoleDashboardThaiTime = window.refreshRoleDashboard;
+  if(typeof previousRefreshRoleDashboardThaiTime === 'function'){
+    window.refreshRoleDashboard = async function(){
+      const result = await previousRefreshRoleDashboardThaiTime.apply(this, arguments);
+      const up = document.getElementById('dashUpdateTime');
+      if(up) up.textContent = thaiDateTimeText(new Date(), true);
+      return result;
+    };
+  }
+
+  // FG footer clock เป็นเวลาไทยเสมอ
+  function refreshThaiClocks(){
+    const fgNow = document.getElementById('fgNowText');
+    if(fgNow) fgNow.textContent = thaiDateTimeText(new Date(), false);
+
+    const dashNow = document.getElementById('dashUpdateTime');
+    if(dashNow && dashNow.textContent.trim() !== '--/--/---- --:--'){
+      dashNow.textContent = thaiDateTimeText(new Date(), true);
+    }
+
+    const lastUpdate = document.getElementById('lastUpdateText');
+    if(lastUpdate && lastUpdate.textContent.trim() !== '--:--'){
+      lastUpdate.textContent = thaiDateTimeText(new Date(), false);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    refreshThaiClocks();
+    setInterval(refreshThaiClocks, 30000);
+  });
+
+  // service worker เก่าอาจ cache เวลาแบบเก่าไว้ จึงบังคับอัปเดต
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.getRegistrations()
+        .then(regs => regs.forEach(r => r.update && r.update()))
+        .catch(() => {});
+    });
+  }
 })();
 </script>
 
