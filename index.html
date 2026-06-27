@@ -13378,5 +13378,1261 @@ main{
 })();
 </script>
 
+
+<!-- ===== EXPERT FINAL PATCH V90: Perfect mobile menu icons + Master delete + Count status/diff ===== -->
+<style>
+/* =========================
+   V90 UI FIX: HOME MENU ICONS
+   ========================= */
+.role-sheet{
+  max-width:1120px!important;
+  margin-left:auto!important;
+  margin-right:auto!important;
+}
+.role-menu-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(132px,1fr))!important;
+  gap:14px!important;
+  align-items:stretch!important;
+}
+.role-menu-grid button{
+  min-width:0!important;
+  min-height:118px!important;
+  height:auto!important;
+  padding:14px 10px 12px!important;
+  border-radius:18px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:7px!important;
+  text-align:center!important;
+  overflow:hidden!important;
+  background:linear-gradient(180deg,#fff,#fffdfc)!important;
+  border:1.4px solid #ffd8a8!important;
+  box-shadow:0 8px 18px rgba(16,24,40,.06)!important;
+}
+.role-menu-grid button b{
+  width:100%!important;
+  max-width:100%!important;
+  display:block!important;
+  margin:0!important;
+  color:#071120!important;
+  font-size:clamp(13px,2.5vw,16px)!important;
+  line-height:1.08!important;
+  font-weight:1000!important;
+  letter-spacing:-.25px!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+  text-wrap:balance!important;
+}
+.role-menu-grid button span{
+  width:100%!important;
+  display:block!important;
+  margin:0!important;
+  color:#6b7280!important;
+  font-size:11px!important;
+  line-height:1.15!important;
+  white-space:normal!important;
+  overflow:hidden!important;
+}
+.role-menu-grid button i,
+.role-menu-grid .customer-menu-logo,
+.role-menu-grid .loose-work-icon,
+.role-menu-grid .perfect-logo{
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  max-width:48px!important;
+  max-height:48px!important;
+  flex:0 0 48px!important;
+  margin:0 auto!important;
+  border-radius:14px!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:hidden!important;
+  font-style:normal!important;
+  box-sizing:border-box!important;
+  line-height:1!important;
+  box-shadow:0 8px 16px rgba(15,23,42,.12)!important;
+}
+.role-menu-grid .loose-count-btn{
+  display:flex!important;
+  grid-template-columns:none!important;
+  text-align:center!important;
+  min-height:118px!important;
+  padding:14px 10px 12px!important;
+  gap:7px!important;
+  border-style:dashed!important;
+}
+.role-menu-grid .loose-count-btn .customer-menu-logo,
+.role-menu-grid .loose-count-btn .customer-menu-logo .cust-logo,
+.role-menu-grid .loose-count-btn .customer-menu-logo .customer-icon{
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  max-width:48px!important;
+  max-height:48px!important;
+}
+.perfect-logo{
+  position:relative!important;
+  color:#fff!important;
+  border:3px solid #fff!important;
+  isolation:isolate!important;
+}
+.perfect-logo span{
+  display:block!important;
+  width:auto!important;
+  color:inherit!important;
+  font-size:inherit!important;
+  font-weight:1000!important;
+  line-height:.95!important;
+  text-align:center!important;
+  text-shadow:0 1px 2px rgba(0,0,0,.20)!important;
+}
+.perfect-logo.lotus{
+  background:linear-gradient(145deg,#35d4c8 0%,#06a6a4 100%)!important;
+}
+.perfect-logo.lotus span{
+  font-size:13px!important;
+  letter-spacing:-.8px!important;
+}
+.perfect-logo.bigc{
+  background:linear-gradient(145deg,#d9ff3b 0%,#7bd42a 58%,#ee1c25 59%,#ee1c25 100%)!important;
+  color:#fff200!important;
+}
+.perfect-logo.bigc span{
+  font-size:13px!important;
+  letter-spacing:-.55px!important;
+}
+.perfect-logo.villa{background:linear-gradient(145deg,#116039,#0b7a46)!important;color:#ffe27a!important;}
+.perfect-logo.villa span{font-size:11px!important;letter-spacing:-.3px!important;}
+.perfect-logo.maxmart{background:linear-gradient(145deg,#4254d8 0%,#1c2d93 62%,#ffdf3b 63%,#ffdf3b 100%)!important;}
+.perfect-logo.maxmart span{font-size:13px!important;}
+.perfect-logo.seven{background:linear-gradient(145deg,#ff8a1d 0%,#ff8a1d 43%,#10aa4d 44%,#10aa4d 70%,#ee1b2f 71%)!important;}
+.perfect-logo.seven span{font-size:12px!important;}
+.perfect-logo.ptt{background:linear-gradient(145deg,#1f77d3,#2aa8e8)!important;}
+.perfect-logo.ptt span{font-size:13px!important;}
+.perfect-logo.cj{background:linear-gradient(145deg,#9333ea,#ef4444)!important;}
+.perfect-logo.cj span{font-size:16px!important;}
+.perfect-logo.other{background:radial-gradient(circle at 35% 25%,#ffffff 0,#fff3 18%,transparent 19%),linear-gradient(145deg,#020617,#c70712)!important;}
+.perfect-logo.other span{font-size:9px!important;letter-spacing:-.3px!important;}
+.perfect-logo.chart{
+  background:linear-gradient(145deg,#f0fff4,#fff7ed)!important;
+  color:#111827!important;
+  border-color:#fff!important;
+}
+.perfect-logo.action-in,
+.perfect-logo.action-out{
+  background:#fff1f2!important;
+  color:#e11d48!important;
+  border-color:#fff!important;
+  font-size:24px!important;
+  font-weight:1000!important;
+  box-shadow:none!important;
+}
+.perfect-logo.action-out{color:#e11d48!important;}
+.perfect-logo.export{background:#eef2ff!important;color:#4338ca!important;}
+.perfect-logo.clock{background:#fff7ed!important;color:#ea580c!important;}
+.perfect-logo.box{background:#fee2e2!important;color:#b91c1c!important;}
+
+@media(max-width:720px){
+  .role-sheet{padding:14px 12px!important;}
+  .role-menu-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:12px!important;
+  }
+  .role-menu-grid button{
+    min-height:112px!important;
+    padding:13px 8px 11px!important;
+    border-radius:18px!important;
+  }
+  .role-menu-grid button b{
+    font-size:14px!important;
+    line-height:1.08!important;
+  }
+  .role-menu-grid button span{
+    font-size:11px!important;
+  }
+}
+@media(min-width:721px){
+  .role-menu-grid.admin-menu-grid,
+  .role-menu-grid.user-menu-grid{
+    grid-template-columns:repeat(4,minmax(132px,1fr))!important;
+  }
+}
+@media(max-width:360px){
+  .role-menu-grid{gap:9px!important;}
+  .role-menu-grid button{min-height:108px!important;padding:12px 6px 10px!important;}
+  .role-menu-grid button i,
+  .role-menu-grid .perfect-logo,
+  .role-menu-grid .customer-menu-logo,
+  .role-menu-grid .loose-work-icon{
+    width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;flex-basis:44px!important;
+  }
+  .role-menu-grid button b{font-size:13px!important;}
+  .role-menu-grid button span{font-size:10px!important;}
+}
+
+/* =========================
+   V90 MASTER COUNT STATUS
+   ========================= */
+.master-count-status-col,
+.master-diff-col,
+.master-actions-col{
+  white-space:nowrap!important;
+}
+.master-count-badge{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:78px!important;
+  padding:6px 9px!important;
+  border-radius:999px!important;
+  font-size:12px!important;
+  font-weight:1000!important;
+  line-height:1!important;
+}
+.master-count-badge.counted{
+  background:#dcfce7!important;
+  color:#166534!important;
+  border:1px solid #bbf7d0!important;
+}
+.master-count-badge.uncounted{
+  background:#fff1f2!important;
+  color:#b91c1c!important;
+  border:1px solid #fecdd3!important;
+}
+.master-diff-pill{
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  min-width:56px!important;
+  padding:6px 9px!important;
+  border-radius:999px!important;
+  font-size:12px!important;
+  font-weight:1000!important;
+  line-height:1!important;
+}
+.master-diff-pill.ok{
+  background:#eef2ff!important;
+  color:#1d4ed8!important;
+}
+.master-diff-pill.bad{
+  background:#fee2e2!important;
+  color:#b91c1c!important;
+}
+.master-diff-pill.none{
+  background:#f3f4f6!important;
+  color:#6b7280!important;
+}
+.master-count-info{
+  margin:12px 0 0!important;
+  padding:12px!important;
+  border-radius:16px!important;
+  border:1px solid #e5e7eb!important;
+  background:#f9fafb!important;
+}
+.master-count-info h4{
+  margin:0 0 10px!important;
+  font-size:15px!important;
+  color:#111827!important;
+}
+.master-count-info-grid{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:8px!important;
+}
+.master-count-info-grid div{
+  padding:10px 8px!important;
+  border-radius:12px!important;
+  background:#fff!important;
+  border:1px solid #eef0f3!important;
+}
+.master-count-info-grid small{
+  display:block!important;
+  color:#6b7280!important;
+  font-size:11px!important;
+  line-height:1.1!important;
+}
+.master-count-info-grid b{
+  display:block!important;
+  margin-top:4px!important;
+  color:#111827!important;
+  font-size:16px!important;
+  line-height:1.1!important;
+  word-break:break-word!important;
+}
+.master-count-info .counted-text{color:#166534!important;}
+.master-count-info .uncounted-text{color:#b91c1c!important;}
+.master-delete-btn{
+  background:#dc2626!important;
+  color:#fff!important;
+  border:0!important;
+}
+.master-edit-actions.has-delete{
+  grid-template-columns:1fr 1fr 1fr!important;
+}
+.mobile-master-count-row{
+  display:grid!important;
+  grid-template-columns:1fr 1fr!important;
+  gap:8px!important;
+  margin-top:10px!important;
+}
+.mobile-master-count-row div{
+  padding:10px!important;
+  border-radius:14px!important;
+  background:#f9fafb!important;
+  border:1px solid #eef0f3!important;
+}
+.mobile-master-count-row small{
+  display:block!important;
+  color:#6b7280!important;
+  font-size:11px!important;
+}
+.mobile-master-count-row b{
+  display:block!important;
+  margin-top:3px!important;
+  color:#111827!important;
+  font-size:14px!important;
+}
+@media(max-width:720px){
+  .master-edit-actions.has-delete{grid-template-columns:1fr!important;}
+  .master-count-info-grid{grid-template-columns:1fr 1fr!important;}
+  .master-delete-btn{order:3!important;}
+}
+</style>
+
+<script>
+(function(){
+  const MASTER_TABLE_V90 = (typeof MASTER_TABLE !== 'undefined') ? MASTER_TABLE : 'master_data';
+  const MAIN_COUNT_TABLE_V90 = (typeof COUNT_TABLE !== 'undefined') ? COUNT_TABLE : 'stock_count';
+  const OPTIONAL_COUNT_TABLES_V90 = [
+    MAIN_COUNT_TABLE_V90,
+    'stock_count_loose',
+    'stock_count_loose_lotus',
+    'stock_count_loose_bigc'
+  ];
+
+  function h(v){
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
+    }[c]));
+  }
+  function j(v){
+    return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');
+  }
+  function n(v){
+    return String(v ?? '').trim().toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+  }
+  function val(r, names){
+    for(const name of names){
+      if(r && r[name] !== undefined && r[name] !== null) return r[name];
+    }
+    return '';
+  }
+  function num(v){
+    const x = Number(v ?? 0);
+    if(Number.isNaN(x)) return '0';
+    return x.toLocaleString('th-TH');
+  }
+  function rowKey(r){
+    return {
+      id:String(val(r,['id','master_id']) ?? '').trim(),
+      itemKey:String(val(r,['item_key','Item_Key']) ?? '').trim(),
+      item:String(val(r,['Item','item']) ?? '').trim(),
+      code:String(val(r,['CODE','code']) ?? '').trim(),
+      assort:String(val(r,['Assort','assort']) ?? '').trim(),
+      location:String(val(r,['Location','location']) ?? '').trim()
+    };
+  }
+  function countKey(r){
+    return {
+      masterId:String(val(r,['master_id','id']) ?? '').trim(),
+      itemKey:String(val(r,['item_key','Item_Key']) ?? '').trim(),
+      item:String(val(r,['Item','item']) ?? '').trim(),
+      code:String(val(r,['CODE','code']) ?? '').trim(),
+      assort:String(val(r,['Assort','assort']) ?? '').trim(),
+      location:String(val(r,['Location','location']) ?? '').trim()
+    };
+  }
+  function isCountForRow(countRow, masterRow){
+    const m = rowKey(masterRow);
+    const c = countKey(countRow);
+    if(m.id && c.masterId && m.id === c.masterId) return true;
+    if(m.itemKey && c.itemKey && n(m.itemKey) === n(c.itemKey)) return true;
+    return (
+      m.item && c.item && n(m.item) === n(c.item) &&
+      n(m.code) === n(c.code) &&
+      n(m.assort) === n(c.assort) &&
+      (!m.location || !c.location || n(m.location) === n(c.location))
+    );
+  }
+  function latestCount(rows){
+    const arr = (rows || []).slice();
+    arr.sort((a,b)=> new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0));
+    return arr[0] || null;
+  }
+  function localCountRows(){
+    try{
+      return Array.isArray(countRows) ? countRows : [];
+    }catch(e){
+      return [];
+    }
+  }
+  function localCountDetail(row){
+    const matches = localCountRows().filter(c => isCountForRow(c,row));
+    const latest = latestCount(matches);
+    return buildDetail(row, latest, matches.length);
+  }
+  function buildDetail(masterRow, countRow, countTimes){
+    const systemQty = Number(val(masterRow,['Quantity','quantity']) || val(countRow||{},['system_qty','System_Qty','Quantity','quantity']) || 0);
+    if(!countRow){
+      return { counted:false, countQty:null, systemQty, diff:null, countTimes:0, countedBy:'-', countedAt:'-' };
+    }
+    const countQty = Number(val(countRow,['count_qty','Count_Qty','Quantity','quantity']) || 0);
+    return {
+      counted:true,
+      countQty,
+      systemQty,
+      diff: countQty - systemQty,
+      countTimes: countTimes || 1,
+      countedBy: val(countRow,['counted_by','created_by','user_name']) || '-',
+      countedAt: val(countRow,['created_at','updated_at']) || '-',
+      raw: countRow
+    };
+  }
+  async function fetchCountDetail(row){
+    const matches = [];
+    const key = rowKey(row);
+
+    async function pull(table, column, value){
+      if(!value) return;
+      try{
+        const { data, error } = await getSupabase()
+          .from(table)
+          .select('*')
+          .eq(column, value)
+          .limit(20);
+        if(!error && Array.isArray(data)){
+          data.forEach(x => matches.push(x));
+        }
+      }catch(e){}
+    }
+
+    for(const table of [...new Set(OPTIONAL_COUNT_TABLES_V90)]){
+      await pull(table, 'master_id', key.id);
+      await pull(table, 'item_key', key.itemKey);
+    }
+
+    const exact = matches.filter(c => isCountForRow(c,row));
+    const latest = latestCount(exact);
+    return buildDetail(row, latest, exact.length);
+  }
+  function detailHtml(detail){
+    const diffClass = !detail.counted ? 'none' : Number(detail.diff) === 0 ? 'ok' : 'bad';
+    const statusText = detail.counted ? 'นับแล้ว' : 'ยังไม่นับ';
+    const statusClass = detail.counted ? 'counted-text' : 'uncounted-text';
+    return `
+      <h4>สถานะการนับของไอเทมนี้: <span class="${statusClass}">${statusText}</span></h4>
+      <div class="master-count-info-grid">
+        <div><small>System Qty</small><b>${num(detail.systemQty)}</b></div>
+        <div><small>นับได้</small><b>${detail.counted ? num(detail.countQty) : '-'}</b></div>
+        <div><small>Diff</small><b class="${diffClass === 'bad' ? 'uncounted-text' : ''}">${detail.counted ? num(detail.diff) : '-'}</b></div>
+        <div><small>จำนวนครั้งที่พบผลนับ</small><b>${num(detail.countTimes || 0)}</b></div>
+      </div>
+      <div class="master-count-info-grid" style="margin-top:8px">
+        <div><small>ผู้บันทึก</small><b>${h(detail.countedBy || '-')}</b></div>
+        <div style="grid-column:span 3"><small>เวลาที่บันทึกล่าสุด</small><b>${h(formatCountDateV90(detail.countedAt))}</b></div>
+      </div>
+    `;
+  }
+  function formatCountDateV90(v){
+    if(!v || v === '-') return '-';
+    const d = new Date(v);
+    if(Number.isNaN(d.getTime())) return String(v);
+    try{
+      return d.toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }catch(e){ return String(v); }
+  }
+  function countBadgeHtml(row){
+    const d = localCountDetail(row);
+    return `<span class="master-count-badge ${d.counted ? 'counted' : 'uncounted'}">${d.counted ? 'นับแล้ว' : 'ยังไม่นับ'}</span>`;
+  }
+  function diffBadgeHtml(row){
+    const d = localCountDetail(row);
+    if(!d.counted) return `<span class="master-diff-pill none">-</span>`;
+    const cls = Number(d.diff) === 0 ? 'ok' : 'bad';
+    return `<span class="master-diff-pill ${cls}">${num(d.diff)}</span>`;
+  }
+
+  function ensureMasterCountInfoBox(){
+    const modal = document.getElementById('masterEditModal');
+    if(!modal) return null;
+
+    let box = document.getElementById('masterCountInfoBox');
+    if(!box){
+      const note = modal.querySelector('.master-key-note');
+      if(note){
+        note.insertAdjacentHTML('afterend', `<div id="masterCountInfoBox" class="master-count-info">กำลังตรวจสอบสถานะการนับ...</div>`);
+      }
+    }
+    ensureDeleteButtonV90();
+    return document.getElementById('masterCountInfoBox');
+  }
+
+  function ensureDeleteButtonV90(){
+    const actions = document.querySelector('#masterEditModal .master-edit-actions');
+    if(!actions) return;
+    actions.classList.add('has-delete');
+    let btn = document.getElementById('masterDeleteBtn');
+    if(!btn){
+      actions.insertAdjacentHTML('afterbegin', `<button type="button" id="masterDeleteBtn" class="master-delete-btn" onclick="deleteMasterData()">ลบ Master Data</button>`);
+    }else{
+      btn.textContent = 'ลบ Master Data';
+      btn.onclick = window.deleteMasterData;
+    }
+  }
+
+  async function updateMasterCountInfo(id){
+    const box = ensureMasterCountInfoBox();
+    if(!box) return;
+    const row = (typeof masterRows !== 'undefined' && Array.isArray(masterRows) ? masterRows : []).find(r => String(r.id) === String(id));
+    if(!row){
+      box.innerHTML = '<span class="uncounted-text">ไม่พบข้อมูลแถวนี้</span>';
+      return;
+    }
+    box.innerHTML = 'กำลังตรวจสอบสถานะการนับ...';
+    const detail = await fetchCountDetail(row);
+    box.innerHTML = detailHtml(detail);
+  }
+
+  const prevOpenMasterEditV90 = window.openMasterEdit;
+  window.openMasterEdit = function(id){
+    if(typeof prevOpenMasterEditV90 === 'function'){
+      prevOpenMasterEditV90.apply(this, arguments);
+    }
+    ensureMasterCountInfoBox();
+    setTimeout(() => updateMasterCountInfo(id), 0);
+  };
+
+  const prevRenderMasterTableV90 = window.renderMasterTable;
+  window.renderMasterTable = function(rows){
+    const masterCount = document.getElementById('masterCount');
+    const body = document.getElementById('masterBody');
+    const cards = document.getElementById('masterCards');
+    if(!body || !cards){
+      if(typeof prevRenderMasterTableV90 === 'function') return prevRenderMasterTableV90.apply(this, arguments);
+      return;
+    }
+
+    rows = rows || [];
+    if(masterCount) masterCount.textContent = rows.length.toLocaleString('th-TH');
+
+    const headRow = document.querySelector('#masterPage thead tr');
+    if(headRow){
+      headRow.innerHTML = `
+        <th>Item</th>
+        <th>CODE</th>
+        <th>Assort</th>
+        <th>Location</th>
+        <th>Quantity</th>
+        <th>item_key</th>
+        <th class="master-count-status-col">สถานะนับ</th>
+        <th class="master-diff-col">Diff</th>
+        <th class="master-actions-col">จัดการ</th>
+      `;
+    }
+
+    body.innerHTML = '';
+    cards.innerHTML = '';
+
+    rows.forEach(r => {
+      const id = val(r, ['id']);
+      const item = val(r, ['Item','item']);
+      const code = val(r, ['CODE','code']);
+      const assort = val(r, ['Assort','assort']);
+      const location = val(r, ['Location','location']);
+      const qty = val(r, ['Quantity','quantity']);
+      const key = val(r, ['item_key','Item_Key']);
+      const detail = localCountDetail(r);
+
+      body.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${h(item)}</td>
+          <td>${h(code)}</td>
+          <td>${h(assort)}</td>
+          <td>${h(location)}</td>
+          <td>${h(qty)}</td>
+          <td>${h(key)}</td>
+          <td class="master-count-status-col">${countBadgeHtml(r)}</td>
+          <td class="master-diff-col">${diffBadgeHtml(r)}</td>
+          <td class="master-actions-col">
+            <button type="button" class="master-edit-btn" onclick="openMasterEdit('${j(id)}')">ดู / แก้ไข</button>
+          </td>
+        </tr>
+      `);
+
+      cards.insertAdjacentHTML('beforeend', `
+        <article class="mobile-item-card">
+          <div class="mobile-card-top">
+            <div>
+              <b>${h(item)}</b>
+              <span>${h(key || '-')}</span>
+            </div>
+            <strong>${h(qty)}</strong>
+          </div>
+          <div class="mobile-card-grid">
+            <div><small>CODE</small><p>${h(code)}</p></div>
+            <div><small>Assort</small><p>${h(assort)}</p></div>
+            <div><small>Location</small><p>${h(location)}</p></div>
+          </div>
+          <div class="mobile-master-count-row">
+            <div><small>สถานะนับ</small><b>${detail.counted ? 'นับแล้ว' : 'ยังไม่นับ'}</b></div>
+            <div><small>Diff</small><b>${detail.counted ? num(detail.diff) : '-'}</b></div>
+          </div>
+          <button type="button" class="master-edit-btn mobile-master-edit" onclick="openMasterEdit('${j(id)}')">ดู / แก้ไข / ลบ</button>
+        </article>
+      `);
+    });
+  };
+
+  async function deleteLinkedCounts(row){
+    const key = rowKey(row);
+    for(const table of [...new Set(OPTIONAL_COUNT_TABLES_V90)]){
+      try{
+        if(key.id){
+          await getSupabase().from(table).delete().eq('master_id', key.id);
+        }
+      }catch(e){}
+      try{
+        if(key.itemKey){
+          await getSupabase().from(table).delete().eq('item_key', key.itemKey);
+        }
+      }catch(e){}
+    }
+  }
+
+  window.deleteMasterData = async function(){
+    const id = document.getElementById('masterEditId')?.value;
+    if(!id){
+      alert('ไม่พบ id ของ Master Data ที่จะลบ');
+      return;
+    }
+
+    const rows = (typeof masterRows !== 'undefined' && Array.isArray(masterRows)) ? masterRows : [];
+    const row = rows.find(r => String(r.id) === String(id));
+    if(!row){
+      alert('ไม่พบข้อมูลแถวนี้ใน Master Data');
+      return;
+    }
+
+    const item = val(row,['Item','item']);
+    const code = val(row,['CODE','code']);
+    const assort = val(row,['Assort','assort']);
+    const location = val(row,['Location','location']);
+    const itemKey = val(row,['item_key','Item_Key']);
+    const label = [item, code, assort, location].filter(Boolean).join(' ') || itemKey || 'รายการนี้';
+
+    const detail = await fetchCountDetail(row);
+    const countMsg = detail.counted
+      ? `\n\nสถานะ: นับแล้ว\nSystem Qty: ${num(detail.systemQty)}\nนับได้: ${num(detail.countQty)}\nDiff: ${num(detail.diff)}\n\nระบบจะลบผลนับที่ผูกกับไอเทมนี้ก่อน แล้วจึงลบ Master Data เพื่อกันปัญหา Foreign Key`
+      : `\n\nสถานะ: ยังไม่นับ`;
+
+    const ok1 = confirm('ต้องการลบ Master Data นี้ใช่ไหม?\n\n' + label + countMsg);
+    if(!ok1) return;
+
+    const ok2 = confirm('ยืนยันลบถาวรอีกครั้ง\n\nเมื่อลบแล้วรายการนี้จะหายจาก Master Data และ Dashboard จะคำนวณใหม่');
+    if(!ok2) return;
+
+    setLoading(true, 'กำลังลบ Master Data...');
+    try{
+      await deleteLinkedCounts(row);
+
+      let { error } = await getSupabase()
+        .from(MASTER_TABLE_V90)
+        .delete()
+        .eq('id', id);
+
+      if(error && itemKey){
+        const retry = await getSupabase()
+          .from(MASTER_TABLE_V90)
+          .delete()
+          .eq('item_key', itemKey);
+        error = retry.error;
+      }
+
+      if(error) throw error;
+
+      try{
+        masterRows = rows.filter(r => String(r.id) !== String(id));
+      }catch(e){}
+      try{
+        countRows = localCountRows().filter(c => !isCountForRow(c,row));
+        savedKeys = new Set(countRows.map(makeSavedKey));
+      }catch(e){}
+
+      if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows || []);
+      if(typeof closeMasterEditModal === 'function') closeMasterEditModal();
+      if(typeof renderMasterTable === 'function') renderMasterTable(masterRows || []);
+      if(typeof updateHomeStats === 'function') await updateHomeStats();
+      if(typeof refreshRoleDashboard === 'function') await refreshRoleDashboard();
+
+      showToast('ลบ Master Data สำเร็จ');
+    }catch(err){
+      const msg = String(err?.message || err || '');
+      if(/row-level security|permission|policy|403/i.test(msg)){
+        alert('ลบไม่สำเร็จ: Supabase ยังไม่อนุญาตให้ Delete\n\nให้เปิด Policy DELETE ของตาราง master_data และ stock_count ก่อน\n\nรายละเอียด: ' + msg);
+      }else{
+        alert('ลบไม่สำเร็จ: ' + msg);
+      }
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  function logoHtml(type){
+    const t = String(type || '').toUpperCase();
+    if(t.includes('FG IN')) return '<i class="perfect-logo action-in">↓</i>';
+    if(t.includes('FG OUT')) return '<i class="perfect-logo action-out">↑</i>';
+    if(t.includes('LOTUS')) return '<i class="perfect-logo lotus"><span>Lotus</span></i>';
+    if(t.includes('BIG C') || t.includes('BIGC')) return '<i class="perfect-logo bigc"><span>Big<br>C</span></i>';
+    if(t.includes('VILLA')) return '<i class="perfect-logo villa"><span>VILLA</span></i>';
+    if(t.includes('MAX')) return '<i class="perfect-logo maxmart"><span>MAX</span></i>';
+    if(t.includes('7-11') || t.includes('7 11')) return '<i class="perfect-logo seven"><span>7-11</span></i>';
+    if(t.includes('PTT')) return '<i class="perfect-logo ptt"><span>PTT</span></i>';
+    if(t.includes('CJ')) return '<i class="perfect-logo cj"><span>CJ</span></i>';
+    if(t.includes('DASHBOARD')) return '<i class="perfect-logo chart"><span>📊</span></i>';
+    if(t.includes('MASTER')) return '<i class="perfect-logo box"><span>▦</span></i>';
+    if(t.includes('EXPORT')) return '<i class="perfect-logo export"><span>⇩</span></i>';
+    if(t.includes('LATEST')) return '<i class="perfect-logo clock"><span>◷</span></i>';
+    if(t.includes('OTHER')) return '<i class="perfect-logo other"><span>OTHER</span></i>';
+    return '';
+  }
+
+  function cleanMenuText(btn){
+    const raw = (btn.textContent || '').replace(/\s+/g,' ').trim().toUpperCase();
+    const b = btn.querySelector('b');
+    const span = btn.querySelector('span');
+    if(!b) return;
+
+    if(raw.includes('FG IN')){
+      b.innerHTML = 'FG IN';
+      if(span) span.textContent = 'นำสินค้าเข้า';
+      return;
+    }
+    if(raw.includes('FG OUT')){
+      b.innerHTML = 'FG OUT';
+      if(span) span.textContent = 'นำสินค้าออก';
+      return;
+    }
+    if(raw.includes('STOCK COUNT') && raw.includes('LOTUS')){
+      b.innerHTML = 'STOCK COUNT<br>LOTUS';
+      if(span) span.textContent = 'นับสต็อก โลตัส';
+      return;
+    }
+    if(raw.includes('STOCK COUNT') && (raw.includes('BIG C') || raw.includes('BIGC'))){
+      b.innerHTML = 'STOCK COUNT<br>BIG C';
+      if(span) span.textContent = 'นับสต็อก บิ๊กซี';
+      return;
+    }
+    if(raw.includes('งานเศษ') || raw.includes('งาน เศษ') || raw.includes('LOOSE')){
+      if(raw.includes('LOTUS')){
+        b.innerHTML = 'งานเศษ<br>LOTUS';
+        if(span) span.textContent = 'หน่วยคู่';
+      }else if(raw.includes('BIG C') || raw.includes('BIGC')){
+        b.innerHTML = 'งานเศษ<br>BIG C';
+        if(span) span.textContent = 'หน่วยคู่';
+      }
+      return;
+    }
+    if(raw.includes('OTHER')){
+      b.innerHTML = 'Other customer';
+      if(span) span.textContent = '';
+      return;
+    }
+  }
+
+  function applyPerfectHomeIcons(){
+    document.querySelectorAll('.role-menu-grid button').forEach(btn => {
+      const raw = (btn.textContent || '').replace(/\s+/g,' ').trim();
+      const logo = logoHtml(raw);
+      if(logo){
+        const oldIcon = btn.querySelector('i,.customer-menu-logo,.loose-work-icon');
+        if(oldIcon){
+          oldIcon.outerHTML = logo;
+        }else{
+          btn.insertAdjacentHTML('afterbegin', logo);
+        }
+      }
+      cleanMenuText(btn);
+    });
+  }
+
+  const prevRenderHomeByRoleV90 = (typeof renderHomeByRole === 'function') ? renderHomeByRole : null;
+  try{
+    if(prevRenderHomeByRoleV90){
+      renderHomeByRole = function(){
+        const result = prevRenderHomeByRoleV90.apply(this, arguments);
+        setTimeout(applyPerfectHomeIcons, 0);
+        return result;
+      };
+    }
+  }catch(e){}
+
+  const prevSetupRolePagesV90 = (typeof setupRolePages === 'function') ? setupRolePages : null;
+  try{
+    if(prevSetupRolePagesV90){
+      setupRolePages = function(){
+        const result = prevSetupRolePagesV90.apply(this, arguments);
+        setTimeout(applyPerfectHomeIcons, 0);
+        return result;
+      };
+    }
+  }catch(e){}
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(applyPerfectHomeIcons, 300);
+    setTimeout(applyPerfectHomeIcons, 900);
+    setTimeout(() => {
+      try{
+        if(typeof renderMasterTable === 'function' && typeof masterRows !== 'undefined' && Array.isArray(masterRows) && masterRows.length){
+          const keyword = document.getElementById('masterSearch')?.value || '';
+          const rows = keyword && typeof searchRows === 'function' ? searchRows(masterRows, keyword) : masterRows;
+          renderMasterTable(rows);
+        }
+      }catch(e){}
+    }, 1200);
+  });
+
+  window.applyPerfectHomeIcons = applyPerfectHomeIcons;
+  window.updateMasterCountInfo = updateMasterCountInfo;
+})();
+</script>
+
+
+<!-- ===== EXPERT PATCH V95: Professional remaining home icons (keep BIG C / Lotus as-is) ===== -->
+<style>
+/* แก้เฉพาะไอคอนที่เหลือ: FG, Other, Dashboard, Master, Export, Latest
+   ไม่แตะโลโก้ Lotus / BIG C */
+.role-menu-grid .menu-icon-pro{
+  width:50px!important;
+  height:50px!important;
+  min-width:50px!important;
+  min-height:50px!important;
+  max-width:50px!important;
+  max-height:50px!important;
+  flex:0 0 50px!important;
+  margin:0 auto!important;
+  border-radius:16px!important;
+  position:relative!important;
+  display:grid!important;
+  place-items:center!important;
+  overflow:hidden!important;
+  box-sizing:border-box!important;
+  font-style:normal!important;
+  line-height:1!important;
+  border:3px solid #fff!important;
+  box-shadow:0 10px 20px rgba(15,23,42,.14)!important;
+  isolation:isolate!important;
+}
+
+.role-menu-grid .menu-icon-pro::before,
+.role-menu-grid .menu-icon-pro::after,
+.role-menu-grid .menu-icon-pro em{
+  box-sizing:border-box!important;
+}
+
+.role-menu-grid .menu-icon-pro em{
+  display:block!important;
+  position:absolute!important;
+  font-style:normal!important;
+  line-height:1!important;
+  margin:0!important;
+  padding:0!important;
+  width:auto!important;
+  height:auto!important;
+  min-width:0!important;
+  min-height:0!important;
+  max-width:none!important;
+  max-height:none!important;
+  color:inherit!important;
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  text-shadow:none!important;
+}
+
+/* FG IN / FG OUT */
+.role-menu-grid .fg-in-pro,
+.role-menu-grid .fg-out-pro{
+  background:linear-gradient(145deg,#fff1f2 0%,#ffe4e6 100%)!important;
+  color:#dc2626!important;
+  box-shadow:0 10px 18px rgba(220,38,38,.10)!important;
+}
+.role-menu-grid .fg-out-pro{
+  background:linear-gradient(145deg,#eff6ff 0%,#dbeafe 100%)!important;
+  color:#2563eb!important;
+  box-shadow:0 10px 18px rgba(37,99,235,.10)!important;
+}
+.role-menu-grid .fg-in-pro::before,
+.role-menu-grid .fg-out-pro::before{
+  content:''!important;
+  position:absolute!important;
+  width:5px!important;
+  height:22px!important;
+  left:50%!important;
+  top:12px!important;
+  transform:translateX(-50%)!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+}
+.role-menu-grid .fg-in-pro::after{
+  content:''!important;
+  position:absolute!important;
+  left:50%!important;
+  top:28px!important;
+  transform:translateX(-50%) rotate(45deg)!important;
+  width:14px!important;
+  height:14px!important;
+  border-right:5px solid currentColor!important;
+  border-bottom:5px solid currentColor!important;
+  border-radius:2px!important;
+}
+.role-menu-grid .fg-out-pro::after{
+  content:''!important;
+  position:absolute!important;
+  left:50%!important;
+  top:10px!important;
+  transform:translateX(-50%) rotate(45deg)!important;
+  width:14px!important;
+  height:14px!important;
+  border-left:5px solid currentColor!important;
+  border-top:5px solid currentColor!important;
+  border-radius:2px!important;
+}
+
+/* OTHER CUSTOMER */
+.role-menu-grid .other-pro{
+  background:
+    radial-gradient(circle at 34% 25%,rgba(255,255,255,.95) 0 7px,rgba(255,255,255,.35) 8px,transparent 15px),
+    linear-gradient(145deg,#1f2937 0%,#7f1d1d 48%,#dc2626 100%)!important;
+  color:#fff!important;
+}
+.role-menu-grid .other-pro em{
+  left:50%!important;
+  top:58%!important;
+  transform:translate(-50%,-50%)!important;
+  font-size:9px!important;
+  font-weight:1000!important;
+  letter-spacing:-.35px!important;
+  color:#fff!important;
+}
+
+/* DASHBOARD */
+.role-menu-grid .dashboard-pro{
+  background:linear-gradient(145deg,#eff6ff 0%,#ffffff 100%)!important;
+  color:#2563eb!important;
+  border-color:#fff!important;
+}
+.role-menu-grid .dashboard-pro::before{
+  content:''!important;
+  position:absolute!important;
+  left:12px!important;
+  right:11px!important;
+  bottom:12px!important;
+  height:23px!important;
+  border-left:3px solid #93c5fd!important;
+  border-bottom:3px solid #93c5fd!important;
+  border-radius:0 0 0 5px!important;
+}
+.role-menu-grid .dashboard-pro em{
+  bottom:15px!important;
+  width:6px!important;
+  border-radius:999px 999px 2px 2px!important;
+}
+.role-menu-grid .dashboard-pro em:nth-child(1){
+  left:18px!important;
+  height:12px!important;
+  background:#22c55e!important;
+}
+.role-menu-grid .dashboard-pro em:nth-child(2){
+  left:26px!important;
+  height:18px!important;
+  background:#3b82f6!important;
+}
+.role-menu-grid .dashboard-pro em:nth-child(3){
+  left:34px!important;
+  height:24px!important;
+  background:#f97316!important;
+}
+
+/* MASTER DATA */
+.role-menu-grid .master-pro{
+  background:linear-gradient(145deg,#fff7ed 0%,#ffedd5 100%)!important;
+  color:#ea580c!important;
+}
+.role-menu-grid .master-pro::before{
+  content:''!important;
+  position:absolute!important;
+  width:26px!important;
+  height:22px!important;
+  left:12px!important;
+  top:17px!important;
+  border:3px solid currentColor!important;
+  border-radius:5px!important;
+  background:rgba(255,255,255,.60)!important;
+}
+.role-menu-grid .master-pro::after{
+  content:''!important;
+  position:absolute!important;
+  width:26px!important;
+  height:10px!important;
+  left:12px!important;
+  top:11px!important;
+  border:3px solid currentColor!important;
+  border-bottom:0!important;
+  border-radius:6px 6px 2px 2px!important;
+  transform:skewX(-18deg)!important;
+  background:rgba(255,255,255,.35)!important;
+}
+.role-menu-grid .master-pro em{
+  left:50%!important;
+  top:29px!important;
+  transform:translateX(-50%)!important;
+  width:12px!important;
+  height:3px!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+}
+
+/* EXPORT DATA */
+.role-menu-grid .export-pro{
+  background:linear-gradient(145deg,#eef2ff 0%,#e0e7ff 100%)!important;
+  color:#4f46e5!important;
+}
+.role-menu-grid .export-pro::before{
+  content:''!important;
+  position:absolute!important;
+  width:5px!important;
+  height:19px!important;
+  left:50%!important;
+  top:10px!important;
+  transform:translateX(-50%)!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+}
+.role-menu-grid .export-pro::after{
+  content:''!important;
+  position:absolute!important;
+  left:50%!important;
+  top:24px!important;
+  transform:translateX(-50%) rotate(45deg)!important;
+  width:14px!important;
+  height:14px!important;
+  border-right:5px solid currentColor!important;
+  border-bottom:5px solid currentColor!important;
+  border-radius:2px!important;
+}
+.role-menu-grid .export-pro em{
+  left:12px!important;
+  right:12px!important;
+  bottom:10px!important;
+  height:8px!important;
+  border:3px solid currentColor!important;
+  border-top:0!important;
+  border-radius:0 0 7px 7px!important;
+}
+
+/* LATEST DATA */
+.role-menu-grid .latest-pro{
+  background:linear-gradient(145deg,#f8fafc 0%,#fef3c7 100%)!important;
+  color:#92400e!important;
+}
+.role-menu-grid .latest-pro::before{
+  content:''!important;
+  position:absolute!important;
+  width:25px!important;
+  height:25px!important;
+  left:50%!important;
+  top:50%!important;
+  transform:translate(-50%,-50%)!important;
+  border:3px solid currentColor!important;
+  border-radius:999px!important;
+  background:rgba(255,255,255,.55)!important;
+}
+.role-menu-grid .latest-pro::after{
+  content:''!important;
+  position:absolute!important;
+  width:3px!important;
+  height:10px!important;
+  left:50%!important;
+  top:16px!important;
+  transform:translateX(-50%)!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+}
+.role-menu-grid .latest-pro em{
+  width:10px!important;
+  height:3px!important;
+  left:25px!important;
+  top:26px!important;
+  transform-origin:left center!important;
+  transform:rotate(-22deg)!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+}
+
+/* Text balance on home cards */
+.role-menu-grid button:has(.menu-icon-pro) b{
+  line-height:1.08!important;
+  letter-spacing:-.35px!important;
+}
+.role-menu-grid button:has(.menu-icon-pro) span{
+  font-size:10.8px!important;
+  line-height:1.15!important;
+}
+
+/* Mobile: keep two columns but make icons visually consistent */
+@media(max-width:720px){
+  .role-menu-grid .menu-icon-pro{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+    max-width:48px!important;
+    max-height:48px!important;
+    flex-basis:48px!important;
+    border-radius:15px!important;
+  }
+  .role-menu-grid button:has(.menu-icon-pro){
+    min-height:112px!important;
+    padding:13px 7px 10px!important;
+  }
+}
+@media(max-width:360px){
+  .role-menu-grid .menu-icon-pro{
+    width:44px!important;
+    height:44px!important;
+    min-width:44px!important;
+    min-height:44px!important;
+    max-width:44px!important;
+    max-height:44px!important;
+    flex-basis:44px!important;
+  }
+  .role-menu-grid button:has(.menu-icon-pro) b{
+    font-size:12.5px!important;
+  }
+  .role-menu-grid button:has(.menu-icon-pro) span{
+    font-size:10px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function menuIcon(kind){
+    const map = {
+      fgin:'<i class="menu-icon-pro fg-in-pro"></i>',
+      fgout:'<i class="menu-icon-pro fg-out-pro"></i>',
+      other:'<i class="menu-icon-pro other-pro"><em>OTHER</em></i>',
+      dashboard:'<i class="menu-icon-pro dashboard-pro"><em></em><em></em><em></em></i>',
+      master:'<i class="menu-icon-pro master-pro"><em></em></i>',
+      export:'<i class="menu-icon-pro export-pro"><em></em></i>',
+      latest:'<i class="menu-icon-pro latest-pro"><em></em></i>'
+    };
+    return map[kind] || '';
+  }
+
+  function kindFromButton(btn){
+    const raw = (btn.textContent || '').replace(/\s+/g,' ').trim().toUpperCase();
+
+    // ไม่แตะ Lotus / BIG C / งานเศษ ที่โลโก้โอเคแล้ว
+    if(raw.includes('LOTUS') || raw.includes('BIG C') || raw.includes('BIGC')) return '';
+
+    if(raw.includes('FG IN')) return 'fgin';
+    if(raw.includes('FG OUT')) return 'fgout';
+    if(raw.includes('OTHER')) return 'other';
+    if(raw.includes('DASHBOARD')) return 'dashboard';
+    if(raw.includes('MASTER')) return 'master';
+    if(raw.includes('EXPORT')) return 'export';
+    if(raw.includes('LATEST')) return 'latest';
+    return '';
+  }
+
+  function replaceIcon(btn, html){
+    const old = btn.querySelector('.menu-icon-pro, .perfect-logo, .customer-menu-logo, .loose-work-icon, i');
+    if(old) old.outerHTML = html;
+    else btn.insertAdjacentHTML('afterbegin', html);
+  }
+
+  function polishHomeMenuIcons(){
+    document.querySelectorAll('.role-menu-grid button').forEach(btn => {
+      const kind = kindFromButton(btn);
+      if(!kind) return;
+      replaceIcon(btn, menuIcon(kind));
+
+      const b = btn.querySelector('b');
+      const span = btn.querySelector(':scope > span');
+      if(!b) return;
+
+      if(kind === 'other'){
+        b.textContent = 'Other customer';
+        if(span) span.textContent = 'ลูกค้าอื่น';
+      }else if(kind === 'dashboard'){
+        b.textContent = 'DASHBOARD';
+        if(span) span.textContent = 'ภาพรวมข้อมูล';
+      }else if(kind === 'master'){
+        b.textContent = 'MASTER DATA';
+        if(span) span.textContent = 'ตรวจสอบฐานข้อมูล';
+      }else if(kind === 'export'){
+        b.textContent = 'EXPORT DATA';
+        if(span) span.textContent = 'ส่งออกข้อมูล';
+      }else if(kind === 'latest'){
+        b.textContent = 'LATEST DATA';
+        if(span) span.textContent = 'ข้อมูลล่าสุด';
+      }else if(kind === 'fgin'){
+        b.textContent = 'FG IN';
+        if(span) span.textContent = 'นำสินค้าเข้า';
+      }else if(kind === 'fgout'){
+        b.textContent = 'FG OUT';
+        if(span) span.textContent = 'นำสินค้าออก';
+      }
+    });
+  }
+
+  const oldApply = window.applyPerfectHomeIcons;
+  window.applyPerfectHomeIcons = function(){
+    if(typeof oldApply === 'function') oldApply.apply(this, arguments);
+    setTimeout(polishHomeMenuIcons, 0);
+  };
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(){
+      const result = oldShowPage.apply(this, arguments);
+      setTimeout(polishHomeMenuIcons, 0);
+      setTimeout(polishHomeMenuIcons, 120);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(polishHomeMenuIcons, 200);
+    setTimeout(polishHomeMenuIcons, 800);
+    setTimeout(polishHomeMenuIcons, 1400);
+  });
+  window.addEventListener('load', () => {
+    setTimeout(polishHomeMenuIcons, 300);
+    setTimeout(polishHomeMenuIcons, 1000);
+  });
+
+  window.polishHomeMenuIcons = polishHomeMenuIcons;
+})();
+</script>
+
+
 </body>
 </html>
