@@ -573,7 +573,7 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     window.clearCountSearch = function () {
       $('countSearch').value = ''
       closeCountSuggest()
-      $('countResult').innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก ${safe(currentCountCustomer)}</div>`
+      $('countResult').innerHTML = `<div class="empty"> ${safe(currentCountCustomer)}</div>`
       $('countSearch').focus()
     }
 
@@ -2184,14 +2184,14 @@ body{
         <input id="countedBy" type="hidden">
         <div class="search-row count-search-row">
           <div class="search-wrapper count-search-wrap">
-            <input id="countSearch" placeholder="ค้นหา Item / CODE / item_key / Location" autocomplete="off" oninput="showCountSuggest()" onkeydown="if(event.key==='Enter') searchForCount()">
+            <input id="countSearch" placeholder="ค้นหา" autocomplete="off" oninput="showCountSuggest()" onkeydown="if(event.key==='Enter') searchForCount()">
             <span class="clear-search" onclick="clearCountSearch()">×</span>
             <div id="countSuggest" class="count-suggest"></div>
           </div>
           <button onclick="searchForCount()">ค้นหา</button>
           <button class="scan" onclick="openScanner('countSearch')">สแกน</button>
         </div>
-        <div id="countResult" class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก BIG C</div>
+        <div id="countResult" class="empty"></div>
       </section>
 
       <section id="fgPage" class="page-card fg-modern-page fg-mode-in" style="display:none;">
@@ -3991,14 +3991,24 @@ window.addEventListener('DOMContentLoaded',()=>{
   font-size:14px!important;
 }
 .dashboard-red-bar{
-  grid-template-columns:58px 1fr 82px 64px!important;
+  grid-template-columns:58px 1fr 46px 64px!important;
+  gap:6px!important;
 }
+
 .dashboard-red-bar .dash-refresh-btn{
-  font-size:14px!important;
+  width:42px!important;
+  min-width:42px!important;
+  height:42px!important;
+  min-height:42px!important;
+  padding:0!important;
+  border-radius:14px!important;
+  font-size:0!important;
+}
+
+.dashboard-red-bar .dash-refresh-btn::before{
+  content:'↻';
+  font-size:22px!important;
   font-weight:900!important;
-  min-width:76px!important;
-  padding:0 10px!important;
-  line-height:1!important;
 }
 .role-user-home .role-red-head p{display:none!important;}
 .toast{
@@ -5379,7 +5389,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     title.innerHTML = `Stock Count ${safe(customer)} <span class="count-mode-chip ${window.currentCountWorkType === 'LOOSE' ? '' : 'full'}">${window.currentCountWorkType === 'LOOSE' ? 'งานเศษ' : 'เต็มกล่อง'} · หน่วย ${countUnit()}</span>`;
     const empty = $('countResult');
     if(empty && empty.classList.contains('empty')){
-      empty.innerHTML = `ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับสต็อก ${safe(customer)}<div class="count-unit-title">${safe(modeLabel())} | หน่วย ${safe(countUnit())}</div>`;
+      empty.innerHTML = ` ${safe(customer)}<div class="count-unit-title">${safe(modeLabel())} | หน่วย ${safe(countUnit())}</div>`;
     }
   }
 
@@ -10213,6 +10223,3158 @@ main{
       navigator.serviceWorker.register('/service-worker.js?v=' + FG_MASTER_PATCH_VERSION).catch(() => {});
     });
   }
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH: Fix Count title for all customers on mobile ===== -->
+<style>
+  #countTitle .count-mode-chip{white-space:normal!important;line-height:1.25!important;}
+  @media(max-width:520px){
+    #countTitle{font-size:32px!important;line-height:1.12!important;letter-spacing:-.3px!important;}
+    #countTitle .count-mode-chip{display:inline-flex!important;margin-top:10px!important;margin-left:0!important;font-size:15px!important;padding:8px 12px!important;}
+  }
+</style>
+<script>
+(function(){
+  const COUNT_TITLE_FIX_VERSION = 'count-title-all-customers-v46';
+  const CUSTOMER_LIST_FINAL = [
+    { key:'LOTUS', label:'LOTUS', aliases:['LOTUS','LT','โลตัส'] },
+    { key:'BIG C', label:'BIG C', aliases:['BIG C','BIGC','BC','BIG'] },
+    { key:'VILLA MARKET', label:'Villa Market', aliases:['VILLA MARKET','VILLAMARKET','VILLA'] },
+    { key:'MAXMART', label:'Maxmart', aliases:['MAXMART','MAX MART','MAX'] },
+    { key:'7-11', label:'7-11', aliases:['7-11','711','7ELEVEN','SEVEN','SEVENELEVEN'] },
+    { key:'PTT', label:'PTT', aliases:['PTT'] },
+    { key:'CJ', label:'CJ', aliases:['CJ','CJ MORE','CJMORE'] }
+  ];
+
+  function normCustomerFix(v){
+    return String(v ?? '').toUpperCase().replace(/[\s\-_'".\/]+/g,'').replace(/[’`]/g,'');
+  }
+
+  function findCustomerFix(value){
+    const raw = String(value ?? '').trim();
+    const n = normCustomerFix(raw);
+    return CUSTOMER_LIST_FINAL.find(c => c.key === raw || normCustomerFix(c.key) === n || c.aliases.some(a => normCustomerFix(a) === n))
+        || CUSTOMER_LIST_FINAL.find(c => n.endsWith(normCustomerFix(c.key)) || c.aliases.some(a => n.endsWith(normCustomerFix(a))))
+        || null;
+  }
+
+  function canonicalCustomerFix(value){
+    return window.canonicalStockCustomer ? window.canonicalStockCustomer(value) : (findCustomerFix(value)?.key || String(value ?? '').trim());
+  }
+
+  function customerLabelFix(value){
+    const c = findCustomerFix(value) || findCustomerFix(canonicalCustomerFix(value));
+    return c?.label || String(value ?? '').trim();
+  }
+
+  function isLooseFix(){
+    return window.currentCountWorkType === 'LOOSE';
+  }
+
+  function unitFix(){
+    return isLooseFix() ? 'คู่' : 'กล่อง';
+  }
+
+  function modeTextFix(){
+    return isLooseFix() ? 'งานเศษ' : 'เต็มกล่อง';
+  }
+
+  function safeFix(v){
+    if(typeof window.safe === 'function') return window.safe(v);
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+
+  function forceCountTitle(customer){
+    const c = canonicalCustomerFix(customer || window.currentCountCustomer || currentCountCustomer || '');
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+
+    const title = document.getElementById('countTitle');
+    if(title){
+      title.innerHTML = `Stock Count ${safeFix(customerLabelFix(c))} <span class="count-mode-chip ${isLooseFix() ? '' : 'full'}">${modeTextFix()} · หน่วย ${unitFix()}</span>`;
+    }
+
+    const empty = document.getElementById('countResult');
+    if(empty && empty.classList.contains('empty')){
+      const txt = empty.textContent || '';
+      if(txt.includes('ค้นหา') || txt.includes('กรอก') || txt.includes('ยังไม่มีข้อมูล')){
+        empty.innerHTML = `<div class="empty"> ${safeFix(customerLabelFix(c))}</div>`;
+      }
+    }
+  }
+
+  async function loadCountHistoryForFinal(){
+    if(typeof fetchAll !== 'function') return;
+    const table = isLooseFix() ? 'stock_count_loose' : (typeof COUNT_TABLE !== 'undefined' ? COUNT_TABLE : 'stock_count');
+    try{
+      const rows = await fetchAll(table);
+      countRows = Array.isArray(rows) ? rows : [];
+      if(isLooseFix() && typeof isCustomerRow === 'function'){
+        countRows = countRows.filter(r => isCustomerRow(r, currentCountCustomer));
+      }
+      savedKeys = new Set(countRows.map(r => typeof makeSavedKey === 'function' ? makeSavedKey(r) : String(r.item_key || r.id || '')));
+    }catch(e){
+      console.warn('โหลดประวัติการนับไม่สำเร็จ', e);
+    }
+  }
+
+  const previousShowCountPage = window.showCountPage;
+  window.showCountPage = async function(customer){
+    const c = canonicalCustomerFix(customer);
+    window.currentCountWorkType = 'FULL_BOX';
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+
+    await loadCountHistoryForFinal();
+
+    let result;
+    if(typeof previousShowCountPage === 'function'){
+      result = await previousShowCountPage.call(this, c);
+    }else if(typeof showPage === 'function'){
+      showPage('count');
+    }
+
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+    forceCountTitle(c);
+    setTimeout(() => forceCountTitle(c), 50);
+    setTimeout(() => forceCountTitle(c), 200);
+    return result;
+  };
+
+  const previousShowLooseCountPage = window.showLooseCountPage;
+  if(typeof previousShowLooseCountPage === 'function'){
+    window.showLooseCountPage = async function(customer){
+      const c = canonicalCustomerFix(customer);
+      window.currentCountWorkType = 'LOOSE';
+      try{ currentCountCustomer = c; }catch(e){}
+      window.currentCountCustomer = c;
+
+      let result = await previousShowLooseCountPage.call(this, c);
+
+      try{ currentCountCustomer = c; }catch(e){}
+      window.currentCountCustomer = c;
+      window.currentCountWorkType = 'LOOSE';
+      forceCountTitle(c);
+      setTimeout(() => forceCountTitle(c), 50);
+      setTimeout(() => forceCountTitle(c), 200);
+      return result;
+    };
+  }
+
+  const previousShowPage = window.showPage;
+  window.showPage = function(page){
+    const result = typeof previousShowPage === 'function' ? previousShowPage.apply(this, arguments) : undefined;
+    if(page === 'count'){
+      const c = canonicalCustomerFix(window.currentCountCustomer || currentCountCustomer);
+      setTimeout(() => forceCountTitle(c), 0);
+      setTimeout(() => forceCountTitle(c), 120);
+    }
+    return result;
+  };
+
+  window.fixCountTitleAllCustomers = forceCountTitle;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => forceCountTitle(window.currentCountCustomer || currentCountCustomer), 600);
+  });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=' + COUNT_TITLE_FIX_VERSION).catch(() => {});
+    });
+  }
+})();
+</script>
+
+
+<!-- ===== FINAL CONSOLIDATED FIX v60: customers/count/FG/available/time/mobile ===== -->
+<style>
+  /* Final mobile safety: keep customer icons inside buttons without covering text */
+  @media(max-width:720px){
+    .role-menu-grid{
+      width:100%!important;
+      max-width:100%!important;
+      margin-left:auto!important;
+      margin-right:auto!important;
+      justify-items:stretch!important;
+    }
+    .role-menu-grid > button:not(.other-customer-btn):not(.loose-count-btn){
+      position:relative!important;
+      min-height:138px!important;
+      padding:14px 8px 12px!important;
+      display:flex!important;
+      flex-direction:column!important;
+      align-items:center!important;
+      justify-content:flex-start!important;
+      gap:6px!important;
+      text-align:center!important;
+      overflow:hidden!important;
+    }
+    .role-menu-grid > button:not(.other-customer-btn):not(.loose-count-btn) .customer-menu-logo,
+    .role-menu-grid > button:not(.other-customer-btn):not(.loose-count-btn) > i{
+      width:48px!important;
+      height:48px!important;
+      min-width:48px!important;
+      min-height:48px!important;
+      max-width:48px!important;
+      max-height:48px!important;
+      margin:0 auto 6px!important;
+      position:static!important;
+      transform:none!important;
+      flex:0 0 48px!important;
+      display:grid!important;
+      place-items:center!important;
+      border-radius:16px!important;
+    }
+    .role-menu-grid > button:not(.other-customer-btn):not(.loose-count-btn) .cust-logo{
+      width:48px!important;
+      height:48px!important;
+      min-width:48px!important;
+      min-height:48px!important;
+      max-width:48px!important;
+      max-height:48px!important;
+      border-radius:15px!important;
+      position:relative!important;
+      transform:none!important;
+    }
+    .role-menu-grid > button:not(.other-customer-btn):not(.loose-count-btn) b{
+      display:block!important;
+      width:100%!important;
+      margin:0!important;
+      padding:0!important;
+      font-size:17px!important;
+      line-height:1.12!important;
+      min-height:auto!important;
+      overflow:visible!important;
+      word-break:normal!important;
+      white-space:normal!important;
+      position:static!important;
+      transform:none!important;
+      z-index:2!important;
+    }
+    .role-menu-grid > button:not(.other-customer-btn):not(.loose-count-btn) span{
+      display:block!important;
+      width:100%!important;
+      margin:0!important;
+      padding:0!important;
+      font-size:12px!important;
+      line-height:1.2!important;
+      color:#6b7280!important;
+      position:static!important;
+      transform:none!important;
+      z-index:2!important;
+    }
+    .role-menu-grid .loose-count-btn,
+    .role-menu-grid .other-customer-btn{
+      grid-column:1 / -1!important;
+      min-height:78px!important;
+      display:grid!important;
+      grid-template-columns:48px minmax(0,1fr)!important;
+      align-items:center!important;
+      gap:12px!important;
+      text-align:left!important;
+      padding:11px 14px!important;
+      overflow:hidden!important;
+    }
+    .role-menu-grid .loose-count-btn .customer-menu-logo,
+    .role-menu-grid .other-customer-btn .customer-menu-logo,
+    .role-menu-grid .loose-count-btn .cust-logo,
+    .role-menu-grid .other-customer-btn .cust-logo{
+      width:46px!important;
+      height:46px!important;
+      min-width:46px!important;
+      min-height:46px!important;
+      max-width:46px!important;
+      max-height:46px!important;
+      margin:0!important;
+      position:relative!important;
+      transform:none!important;
+    }
+    .role-sheet{
+      margin-left:auto!important;
+      margin-right:auto!important;
+      max-width:calc(100vw - 20px)!important;
+    }
+  }
+
+  /* final clean count page */
+  #countTitle .count-mode-chip{
+    display:inline-flex!important;
+    align-items:center!important;
+    margin-left:8px!important;
+    padding:7px 12px!important;
+    border-radius:999px!important;
+    font-size:13px!important;
+    font-weight:900!important;
+    white-space:normal!important;
+    line-height:1.2!important;
+  }
+  #countTitle .count-mode-chip.full{background:#eefbf2!important;color:#138a38!important;}
+  @media(max-width:520px){
+    #countTitle{font-size:30px!important;line-height:1.14!important;}
+    #countTitle .count-mode-chip{margin-left:0!important;margin-top:8px!important;font-size:14px!important;}
+  }
+</style>
+
+<script>
+(function(){
+  'use strict';
+
+  const FINAL_FIX_VERSION = 'final-consolidated-v60';
+
+  const FINAL_CUSTOMERS = [
+    { key:'LOTUS', label:'LOTUS', aliases:['LOTUS','LT','โลตัส'], type:'main' },
+    { key:'BIG C', label:'BIG C', aliases:['BIG C','BIGC','BC','BIG'], type:'main' },
+    { key:'VILLA MARKET', label:'Villa Market', aliases:['VILLA MARKET','VILLAMARKET','VILLA'], type:'other' },
+    { key:'MAXMART', label:'Maxmart', aliases:['MAXMART','MAX MART','MAX'], type:'other' },
+    { key:'7-11', label:'7-11', aliases:['7-11','711','7ELEVEN','SEVEN','SEVEN ELEVEN','SEVENELEVEN'], type:'other' },
+    { key:'PTT', label:'PTT', aliases:['PTT'], type:'other' },
+    { key:'CJ', label:'CJ', aliases:['CJ','CJ MORE','CJMORE'], type:'other' }
+  ];
+
+  const LOOSE_MASTER_TABLE_FINAL = 'loose_master_data';
+  const LOOSE_COUNT_TABLE_FINAL = 'stock_count_loose';
+
+  function byId(id){ return document.getElementById(id); }
+  function norm(v){ return String(v ?? '').toUpperCase().replace(/[\s\-_'".\/]+/g,'').replace(/[’`]/g,''); }
+  function safeHtml(v){
+    if(typeof safe === 'function') return safe(v);
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+  function safeJs(v){
+    if(typeof safeForJs === 'function') return safeForJs(v);
+    return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');
+  }
+  function toNumber(v){
+    const n = Number(String(v ?? '').replace(/,/g,'').trim());
+    return Number.isFinite(n) ? n : 0;
+  }
+  function num(v){ return toNumber(v).toLocaleString('th-TH'); }
+
+  function customerCfg(value){
+    const raw = String(value ?? '').trim();
+    const n = norm(raw);
+    return FINAL_CUSTOMERS.find(c => c.key === raw || norm(c.key) === n || c.aliases.some(a => norm(a) === n))
+        || FINAL_CUSTOMERS.find(c => n.endsWith(norm(c.key)) || c.aliases.some(a => n.endsWith(norm(a))))
+        || null;
+  }
+  function customerKey(value){
+    const cfg = customerCfg(value);
+    return cfg ? cfg.key : String(value ?? '').trim();
+  }
+  function customerLabel(value){
+    const key = customerKey(value);
+    return customerCfg(key)?.label || key || '-';
+  }
+  function rowCustomer(row){
+    const raw = String(row?.customer ?? row?.Customer ?? row?.channel ?? row?.Channel ?? '').trim();
+    const fromRaw = customerCfg(raw);
+    if(fromRaw) return fromRaw.key;
+    const key = String(row?.item_key ?? '').trim();
+    const fromKey = customerCfg(key);
+    return fromKey ? fromKey.key : customerKey(raw);
+  }
+  function rowVal(row, field){
+    if(field === 'item') return row?.Item ?? row?.item ?? '';
+    if(field === 'code') return row?.CODE ?? row?.code ?? '';
+    if(field === 'assort') return row?.Assort ?? row?.assort ?? '';
+    if(field === 'location') return row?.Location ?? row?.location ?? '';
+    if(field === 'qty') return row?.Quantity ?? row?.quantity ?? row?.available_qty ?? row?.available_Qty ?? 0;
+    if(field === 'customer') return rowCustomer(row);
+    return '';
+  }
+  function buildKeyFromRow(row){
+    const item = rowVal(row,'item');
+    const code = rowVal(row,'code');
+    const assort = rowVal(row,'assort');
+    const location = rowVal(row,'location');
+    const customer = rowCustomer(row);
+    if(typeof buildItemKey === 'function') return buildItemKey(item, code, assort, location, customer);
+    return String(item || '') + String(code || '').toUpperCase() + String(assort || '') + String(location || '') + String(customer || '');
+  }
+  function normalizedItemKey(row){
+    return norm(row?.item_key || buildKeyFromRow(row));
+  }
+  function savedKeyFinal(row){
+    const key = normalizedItemKey(row);
+    if(key) return key;
+    return [rowVal(row,'item'), rowVal(row,'code'), rowVal(row,'assort'), rowVal(row,'location'), rowCustomer(row)].map(norm).join('|');
+  }
+  function isLooseMode(){ return window.currentCountWorkType === 'LOOSE'; }
+  function unitText(){ return isLooseMode() ? 'คู่' : 'กล่อง'; }
+  function countTableName(){ return isLooseMode() ? LOOSE_COUNT_TABLE_FINAL : (typeof COUNT_TABLE !== 'undefined' ? COUNT_TABLE : 'stock_count'); }
+  function activeMasterRows(){
+    return isLooseMode() ? (window.looseMasterRows || []) : (masterRows || []);
+  }
+
+  window.STOCK_CUSTOMERS = FINAL_CUSTOMERS;
+  window.canonicalStockCustomer = customerKey;
+  window.isCustomerRow = function(row, customer){
+    if(!customer) return true;
+    return norm(rowCustomer(row)) === norm(customerKey(customer));
+  };
+  try{ isCustomerRow = window.isCustomerRow; }catch(e){}
+  window.makeSavedKey = savedKeyFinal;
+  try{ makeSavedKey = savedKeyFinal; }catch(e){}
+  window.isSaved = function(row){ return (savedKeys || new Set()).has(savedKeyFinal(row)); };
+  try{ isSaved = window.isSaved; }catch(e){}
+  window.getSavedRow = function(row){
+    const key = savedKeyFinal(row);
+    return (countRows || []).find(r => savedKeyFinal(r) === key) || null;
+  };
+  try{ getSavedRow = window.getSavedRow; }catch(e){}
+
+  function formatThaiDateTime(value){
+    if(value === undefined || value === null || value === '') return '';
+    let s = String(value).trim();
+    if(/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}/.test(s) && !/(Z|[+-]\d{2}:?\d{2})$/.test(s)){
+      s = s.replace(' ', 'T') + 'Z';
+    }
+    const d = new Date(s);
+    if(isNaN(d.getTime())) return String(value ?? '');
+    return d.toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  }
+  window.formatThaiDateTimeFinal = formatThaiDateTime;
+
+  async function loadCountHistoryFinal(){
+    try{
+      let rows = await fetchAll(countTableName());
+      if(isLooseMode()) rows = (rows || []).filter(r => norm(rowCustomer(r)) === norm(currentCountCustomer));
+      countRows = Array.isArray(rows) ? rows : [];
+      savedKeys = new Set(countRows.map(savedKeyFinal));
+    }catch(err){
+      console.warn('โหลดประวัติการนับไม่สำเร็จ:', countTableName(), err);
+      countRows = [];
+      savedKeys = new Set();
+    }
+  }
+
+  async function loadLooseMasterFinal(customer){
+    try{
+      const rows = await fetchAll(LOOSE_MASTER_TABLE_FINAL);
+      window.looseMasterRows = (rows || []).filter(r => norm(rowCustomer(r)) === norm(customer));
+    }catch(err){
+      window.looseMasterRows = [];
+      throw new Error('โหลด loose_master_data ไม่สำเร็จ: ' + (err?.message || err));
+    }
+  }
+
+  function updateCountTitleFinal(){
+    const c = customerKey(window.currentCountCustomer || currentCountCustomer || 'LOTUS');
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+    const title = byId('countTitle');
+    if(title){
+      title.innerHTML = `Stock Count ${safeHtml(customerLabel(c))} <span class="count-mode-chip ${isLooseMode() ? '' : 'full'}">${isLooseMode() ? 'งานเศษ' : 'เต็มกล่อง'} · หน่วย ${unitText()}</span>`;
+    }
+    const empty = byId('countResult');
+    if(empty && empty.classList.contains('empty')){
+      empty.innerHTML = `<div class="empty"> ${safeHtml(customerLabel(c))}</div>`;
+    }
+    updateCountFilterSummaryFinal();
+  }
+
+  function updateCountFilterSummaryFinal(){
+    const summary = byId('countFilterSummary');
+    if(!summary) return;
+    const rows = activeMasterRows().filter(r => window.isCustomerRow(r, currentCountCustomer));
+    const counted = rows.filter(r => window.isSaved(r)).length;
+    const total = rows.length;
+    const remain = Math.max(total - counted, 0);
+    const currentFilterText = byId('countFilterText')?.textContent || 'ทั้งหมด';
+    summary.innerHTML = `ฟิลเตอร์: <b>${safeHtml(currentFilterText)}</b> | แสดง ${total.toLocaleString('th-TH')} รายการ | นับแล้ว ${counted.toLocaleString('th-TH')} | ยังไม่นับ ${remain.toLocaleString('th-TH')}`;
+  }
+
+  window.searchOfflineRows = function(keyword, customer = currentCountCustomer){
+    const q = norm(keyword);
+    if(!q) return [];
+    const rows = activeMasterRows().filter(r => window.isCustomerRow(r, customer));
+    const exact = rows.filter(r => {
+      const item = norm(rowVal(r,'item'));
+      const code = norm(rowVal(r,'code'));
+      const assort = norm(rowVal(r,'assort'));
+      const location = norm(rowVal(r,'location'));
+      const itemKey = normalizedItemKey(r);
+      return q === item + code + assort || q === item + code + assort + location || q === itemKey;
+    });
+    if(exact.length) return exact;
+    return rows.filter(r => [
+      r.item_key,
+      rowVal(r,'item'),
+      rowVal(r,'code'),
+      rowVal(r,'assort'),
+      rowVal(r,'location'),
+      rowCustomer(r)
+    ].map(norm).some(v => v && v.includes(q)));
+  };
+  try{ searchOfflineRows = window.searchOfflineRows; }catch(e){}
+
+  window.showCountSuggest = function(){
+    const input = byId('countSearch');
+    const box = byId('countSuggest');
+    if(!input || !box) return;
+    const q = norm(input.value);
+    if(q.length < 2){
+      if(typeof closeCountSuggest === 'function') closeCountSuggest();
+      return;
+    }
+    const rows = window.searchOfflineRows(input.value, currentCountCustomer).slice(0, 50);
+    if(!rows.length){
+      box.innerHTML = `<div class="count-suggest-empty">ไม่พบข้อมูล</div>`;
+      box.classList.add('show');
+      return;
+    }
+    box.innerHTML = rows.map(r => {
+      const item = rowVal(r,'item');
+      const code = rowVal(r,'code');
+      const assort = rowVal(r,'assort');
+      const location = rowVal(r,'location');
+      const qty = rowVal(r,'qty');
+      const value = `${item}${code}${assort}${location ? location : ''}`;
+      const text = `${item}${code}${assort}${location ? ' | ' + location : ''} | Qty ${qty} ${unitText()}`;
+      return `<button type="button" onclick="selectCountSuggest('${safeJs(value)}')">${safeHtml(text)}</button>`;
+    }).join('');
+    box.classList.add('show');
+  };
+
+  window.renderCountResult = function(result){
+    const box = byId('countResult');
+    if(!box) return;
+    box.className = '';
+    box.innerHTML = '';
+    (result || []).forEach(r => {
+      const id = r.id ?? savedKeyFinal(r);
+      const item = rowVal(r,'item');
+      const code = rowVal(r,'code');
+      const assort = rowVal(r,'assort');
+      const location = rowVal(r,'location') || '-';
+      const qty = rowVal(r,'qty');
+      const savedRow = window.getSavedRow(r);
+      const saved = !!savedRow;
+      const savedQty = savedRow?.count_qty ?? '';
+      box.insertAdjacentHTML('beforeend', `
+        <div class="result-card ${saved ? 'saved-card' : ''} ${isLooseMode() ? 'loose-count-card' : ''}" id="card_${safeHtml(id)}">
+          <div class="shoe-badge">${isLooseMode() ? 'คู่' : '👟'}</div>
+          ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
+          <div class="result-grid count-result-grid">
+            <div class="system-qty-card"><b>System Qty <span class="unit-badge-count">${safeHtml(unitText())}</span></b><span>${safeHtml(qty)}</span></div>
+            <div><b>Item</b><span>${safeHtml(item)}</span></div>
+            <div><b>CODE</b><span>${safeHtml(code)}</span></div>
+            <div><b>Assort</b><span>${safeHtml(assort)}</span></div>
+            <div><b>Location</b><span>${safeHtml(location)}</span></div>
+          </div>
+          <div class="count-form">
+            <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้ (${safeHtml(unitText())})" id="count_${safeHtml(id)}" value="${safeHtml(savedQty)}">
+            <button class="save-btn" id="save_${safeHtml(id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>${saved ? 'อัปเดต' : 'บันทึก'}</button>
+            <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
+          </div>
+        </div>
+      `);
+    });
+  };
+  try{ renderCountResult = window.renderCountResult; }catch(e){}
+
+  window.searchForCount = function(){
+    if(typeof closeCountSuggest === 'function') closeCountSuggest();
+    const keyword = byId('countSearch')?.value || '';
+    const box = byId('countResult');
+    if(!box) return;
+    if(!keyword.trim()){
+      box.className = 'empty';
+      box.innerHTML = `<div class="empty">กรุณากรอกข้อมูลเพื่อค้นหา</div>`;
+      return;
+    }
+    const result = window.searchOfflineRows(keyword, currentCountCustomer);
+    if(!result.length){
+      box.className = 'empty';
+      box.innerHTML = `<div class="empty">ไม่มีข้อมูลที่ตรงกับ: ${safeHtml(keyword)}</div>`;
+      return;
+    }
+    window.renderCountResult(result);
+    updateCountTitleFinal();
+  };
+
+  window.showCountPage = async function(customer){
+    const c = customerKey(customer);
+    window.currentCountWorkType = 'FULL_BOX';
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+    await loadCountHistoryFinal();
+    if(byId('countSearch')) byId('countSearch').value = '';
+    if(typeof closeCountSuggest === 'function') closeCountSuggest();
+    if(typeof showPage === 'function') showPage('count');
+    updateCountTitleFinal();
+    setTimeout(updateCountTitleFinal, 80);
+  };
+
+  window.showLooseCountPage = async function(customer){
+    const c = customerKey(customer);
+    window.currentCountWorkType = 'LOOSE';
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+    if(typeof setLoading === 'function') setLoading(true, 'กำลังโหลดงานเศษ ' + customerLabel(c) + '...');
+    try{
+      await loadLooseMasterFinal(c);
+      await loadCountHistoryFinal();
+      if(byId('countSearch')) byId('countSearch').value = '';
+      if(typeof closeCountSuggest === 'function') closeCountSuggest();
+      if(typeof showPage === 'function') showPage('count');
+      const box = byId('countResult');
+      if(box){
+        box.className = 'empty';
+        box.innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกนเพื่อเริ่มนับงานเศษ ${safeHtml(customerLabel(c))}</div>`;
+      }
+      updateCountTitleFinal();
+    }catch(err){
+      alert(err?.message || String(err));
+    }finally{
+      if(typeof setLoading === 'function') setLoading(false);
+    }
+  };
+
+  window.saveCount = async function(row){
+    const id = row.id ?? savedKeyFinal(row);
+    const input = byId('count_' + id);
+    if(!input) return alert('ไม่พบช่องจำนวนที่นับได้');
+    const raw = String(input.value ?? '').trim();
+    const countQty = toNumber(raw);
+    if(raw === '') return alert('กรุณาใส่จำนวนที่นับได้');
+    if(countQty < 0) return alert('จำนวนต้องไม่ติดลบ');
+
+    const c = customerKey(currentCountCustomer || rowCustomer(row));
+    const payload = {
+      master_id: row.id ?? null,
+      item_key: row.item_key || buildKeyFromRow(row),
+      item: rowVal(row,'item') || null,
+      code: rowVal(row,'code') || null,
+      assort: rowVal(row,'assort') || null,
+      location: rowVal(row,'location') || null,
+      system_qty: toNumber(rowVal(row,'qty')),
+      count_qty: countQty,
+      counted_by: currentUser || null,
+      customer: c
+    };
+    if(isLooseMode()) payload.count_type = 'LOOSE';
+
+    const table = countTableName();
+    const oldRow = window.getSavedRow(row);
+    let response;
+    if(oldRow){
+      let query = getSupabase().from(table).update(payload);
+      if(oldRow.id) query = query.eq('id', oldRow.id);
+      else if(payload.item_key) query = query.eq('item_key', payload.item_key).eq('customer', c);
+      else query = query.eq('master_id', row.id);
+      response = await query.select('*').maybeSingle();
+    }else{
+      response = await getSupabase().from(table).insert(payload).select('*').single();
+    }
+
+    if(response.error){
+      const msg = response.error.message || String(response.error);
+      if(/customer/i.test(msg)){
+        const fallback = {...payload};
+        delete fallback.customer;
+        let retry;
+        if(oldRow){
+          let query = getSupabase().from(table).update(fallback);
+          if(oldRow.id) query = query.eq('id', oldRow.id);
+          else if(payload.item_key) query = query.eq('item_key', payload.item_key);
+          else query = query.eq('master_id', row.id);
+          retry = await query.select('*').maybeSingle();
+        }else{
+          retry = await getSupabase().from(table).insert(fallback).select('*').single();
+        }
+        if(retry.error) return alert('บันทึกไม่สำเร็จ: ' + retry.error.message);
+        response = retry;
+      }else{
+        return alert('บันทึกไม่สำเร็จ: ' + msg);
+      }
+    }
+
+    const savedData = response.data || payload;
+    const oldKey = savedKeyFinal(row);
+    if(oldRow) countRows = (countRows || []).map(r => savedKeyFinal(r) === oldKey ? {...r, ...savedData, ...payload} : r);
+    else countRows.push(savedData);
+    savedKeys.add(oldKey);
+
+    const saveBtn = byId('save_' + id);
+    if(saveBtn) saveBtn.textContent = 'อัปเดต';
+    const card = byId('card_' + id);
+    if(card){
+      card.classList.add('saved-card');
+      if(!card.querySelector('.saved-status')) card.insertAdjacentHTML('afterbegin','<div class="saved-status">บันทึกแล้ว</div>');
+    }
+    updateCountFilterSummaryFinal();
+    if(typeof showToast === 'function') showToast(oldRow ? 'อัปเดตสำเร็จ' : 'บันทึกสำเร็จ');
+  };
+  try{ saveCount = window.saveCount; }catch(e){}
+
+  function fgValues(){
+    const customer = customerKey(byId('fgCustomer')?.value || '');
+    if(byId('fgCustomer')) byId('fgCustomer').value = customer;
+    return {
+      item: (byId('fgItem')?.value || '').trim(),
+      code: (byId('fgCode')?.value || '').trim().toUpperCase(),
+      assort: (byId('fgAssort')?.value || '').trim(),
+      location: (byId('fgLocation')?.value || '').trim(),
+      customer
+    };
+  }
+  function itemKeyFromValues(f){
+    if(typeof buildItemKey === 'function') return buildItemKey(f.item, f.code, f.assort, f.location, f.customer);
+    return String(f.item || '') + String(f.code || '').toUpperCase() + String(f.assort || '') + String(f.location || '') + String(f.customer || '');
+  }
+  function findMasterLocal(itemKey){
+    const nk = norm(itemKey);
+    return (masterRows || []).find(r => norm(r.item_key || buildKeyFromRow(r)) === nk) || null;
+  }
+  async function findMasterRemote(itemKey){
+    const local = findMasterLocal(itemKey);
+    if(local) return local;
+    try{
+      const {data, error} = await getSupabase().from(MASTER_TABLE).select('*').eq('item_key', itemKey).maybeSingle();
+      if(error) throw error;
+      return data || null;
+    }catch(e){
+      console.warn('เช็ค Master Data ไม่สำเร็จ', e);
+      return null;
+    }
+  }
+  async function ensureMasterForIn(f, qty, itemKey){
+    const exists = await findMasterRemote(itemKey);
+    if(exists) return {inserted:false, row:exists};
+    const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+    const payload = {
+      Item:f.item,
+      CODE:f.code,
+      Assort:assortValue,
+      Location:f.location,
+      Quantity:qty,
+      customer:f.customer
+    };
+    const {data, error} = await getSupabase().from(MASTER_TABLE).insert(payload).select('*').single();
+    if(error){
+      if(error.code === '23505') return {inserted:false, row: await findMasterRemote(itemKey)};
+      throw new Error('เพิ่ม Master Data ไม่สำเร็จ: ' + (error.message || error));
+    }
+    const newRow = data || {...payload, item_key:itemKey};
+    masterRows = [newRow, ...(masterRows || [])];
+    window.masterRows = masterRows;
+    if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows);
+    return {inserted:true, row:newRow};
+  }
+  async function tableColumns(table){
+    try{
+      const {data, error} = await getSupabase().from(table).select('*').limit(1);
+      if(error) throw error;
+      if(data && data.length) return Object.keys(data[0]);
+    }catch(e){}
+    return [];
+  }
+  function pickColumns(source, cols){
+    if(!cols || !cols.length) return source;
+    const set = new Set(cols);
+    const out = {};
+    Object.keys(source).forEach(k => { if(set.has(k)) out[k] = source[k]; });
+    return out;
+  }
+  async function insertSmart(table, source, fallbackSources = []){
+    const cols = await tableColumns(table);
+    const candidates = [source, ...fallbackSources].map(s => pickColumns(s, cols)).filter(x => Object.keys(x).length);
+    let lastError = null;
+    for(const p of candidates){
+      const {error} = await getSupabase().from(table).insert(p);
+      if(!error) return true;
+      lastError = error;
+    }
+    throw lastError || new Error('insert failed: ' + table);
+  }
+
+  window.saveFgMovement = async function(){
+    const rawQty = String(byId('fgMoveQty')?.value ?? '').trim();
+    const moveQty = toNumber(rawQty);
+    if(rawQty === '' || moveQty <= 0){
+      if(window.showFgPopup) showFgPopup('กรุณาใส่จำนวน', 'จำนวน CARTON ต้องมากกว่า 0', 'error');
+      else alert('กรุณาใส่จำนวน CARTON');
+      return;
+    }
+    const f = fgValues();
+    if(!f.item || !f.code || !f.assort || !f.location || !f.customer){
+      if(window.showFgPopup) showFgPopup('ข้อมูลไม่ครบ', 'กรุณากรอก Item, CODE, Assort, Location และ Customer ให้ครบ', 'error');
+      else alert('กรุณากรอก Item, CODE, Assort, Location และ Customer ให้ครบ');
+      return;
+    }
+    if(!customerCfg(f.customer)){
+      if(window.showFgPopup) showFgPopup('Customer ไม่ถูกต้อง', 'เลือก Customer จากรายการที่กำหนด', 'error');
+      else alert('Customer ไม่ถูกต้อง');
+      return;
+    }
+
+    const movementType = currentFgMode === 'OUT' ? 'OUT' : 'IN';
+    const tableName = movementType === 'IN' ? 'fg_in' : 'fg_out';
+    const itemKey = itemKeyFromValues(f);
+    const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+
+    if(typeof setLoading === 'function') setLoading(true, movementType === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...');
+    try{
+      let masterInfo = {inserted:false,row:null};
+      if(movementType === 'IN'){
+        masterInfo = await ensureMasterForIn(f, moveQty, itemKey);
+      }else{
+        const exists = await findMasterRemote(itemKey);
+        if(!exists) throw new Error('ไม่พบข้อมูลใน Master Data สำหรับ FG OUT');
+      }
+
+      const movementPayload = {
+        item_key:itemKey,
+        Item:f.item,
+        item:f.item,
+        CODE:f.code,
+        code:f.code,
+        Assort:assortValue,
+        assort:assortValue,
+        Location:f.location,
+        location:f.location,
+        Quantity:moveQty,
+        quantity:moveQty,
+        customer:f.customer,
+        transaction_type:movementType,
+        movement_type:movementType,
+        created_by:currentUser || null
+      };
+
+      await insertSmart(tableName, movementPayload, [
+        {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, created_by:currentUser || null},
+        {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, created_by:currentUser || null}
+      ]);
+
+      try{
+        await insertSmart('stock_transaction', movementPayload, [
+          {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, transaction_type:movementType, created_by:currentUser || null},
+          {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, movement_type:movementType, created_by:currentUser || null}
+        ]);
+      }catch(e){
+        console.warn('เพิ่ม stock_transaction ไม่สำเร็จ แต่ FG บันทึกแล้ว', e);
+      }
+
+      try{ masterRows = await fetchAll(MASTER_TABLE); window.masterRows = masterRows; }catch(e){}
+      try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){}
+      try{ if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows || []); }catch(e){}
+      try{ if(typeof renderMasterTable === 'function') renderMasterTable(masterRows || []); }catch(e){}
+      try{ if(typeof updateHomeStats === 'function') await updateHomeStats(); }catch(e){}
+      if(typeof clearFgForm === 'function') clearFgForm(false);
+
+      const msg = `${movementType === 'IN' ? 'เพิ่มข้อมูลเรียบร้อยแล้ว' : 'เบิกข้อมูลเรียบร้อยแล้ว'}\n${customerLabel(f.customer)} ${moveQty.toLocaleString('th-TH')} CARTON\n${movementType === 'IN' ? (masterInfo.inserted ? 'เพิ่ม Master Data แล้ว' : 'มี Master Data อยู่แล้ว') : 'บันทึก FG OUT แล้ว'}`;
+      if(typeof showToast === 'function') showToast(msg);
+    }catch(err){
+      if(window.showFgPopup) showFgPopup('บันทึกไม่สำเร็จ', err?.message || String(err), 'error');
+      else alert('บันทึกไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      if(typeof setLoading === 'function') setLoading(false);
+    }
+  };
+
+  function decorateThaiTimeRows(rows){
+    return (rows || []).map(r => {
+      const out = {...r};
+      Object.keys(r || {}).forEach(k => {
+        if(/_at$|time|date/i.test(k) && r[k]){
+          out[k + '_th_text'] = formatThaiDateTime(r[k]);
+        }
+      });
+      return out;
+    });
+  }
+
+  const oldExportExcelFinal = window.exportExcel;
+  window.exportExcel = async function(){
+    try{
+      if(typeof setLoading === 'function') setLoading(true, 'กำลัง Export Excel...');
+      const tables = [
+        { name:'Master_Data', table:'master_data' },
+        { name:'Available_Stock', table:'available_stock' },
+        { name:'FG_IN', table:'fg_in' },
+        { name:'FG_OUT', table:'fg_out' },
+        { name:'Stock_Transaction', table:'stock_transaction' },
+        { name:'Stock_Count', table:'stock_count' },
+        { name:'Stock_Count_Loose', table:'stock_count_loose' },
+        { name:'Loose_Master_Data', table:'loose_master_data' }
+      ];
+      const wb = XLSX.utils.book_new();
+      for(const t of tables){
+        let rows = [];
+        try{ rows = decorateThaiTimeRows(await fetchAll(t.table)); }
+        catch(e){ rows = [{ error:'โหลดข้อมูลไม่ได้ หรือยังไม่มีตาราง/วิวนี้', table:t.table }]; }
+        const ws = XLSX.utils.json_to_sheet(rows.length ? rows : [{}]);
+        XLSX.utils.book_append_sheet(wb, ws, t.name);
+      }
+      const today = new Date().toISOString().slice(0,10);
+      XLSX.writeFile(wb, `stock_export_${today}.xlsx`);
+      if(typeof showToast === 'function') showToast('Export Excel สำเร็จ');
+    }catch(err){
+      alert('Export Excel ไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      if(typeof setLoading === 'function') setLoading(false);
+    }
+  };
+
+  function finalBoot(){
+    try{ updateCountTitleFinal(); }catch(e){}
+    try{
+      document.querySelectorAll('.role-menu-grid button').forEach(btn => {
+        btn.style.transform = '';
+      });
+    }catch(e){}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(finalBoot, 300);
+    setTimeout(finalBoot, 1200);
+  });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.update && r.update())).catch(() => {});
+      navigator.serviceWorker.register('/service-worker.js?v=' + FINAL_FIX_VERSION).catch(() => {});
+    });
+  }
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH v61: home menu visual polish only (mobile + button color + refresh placement) ===== -->
+<style>
+#homePage .role-sheet{background:#fcfcfe!important;}
+#homePage .role-menu-grid > button{background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)!important;border:1px solid #e5e7eb!important;box-shadow:0 10px 24px rgba(16,24,40,.08)!important;}
+#homePage .role-menu-grid > button.full-count-btn{background:linear-gradient(180deg,#ffffff 0%,#f1f7ff 100%)!important;border:1px solid #cfe1ff!important;box-shadow:0 12px 26px rgba(37,99,235,.10)!important;}
+#homePage .role-menu-grid > button.full-count-btn > b{color:#111827!important;}
+#homePage .role-menu-grid > button.work-loose-btn{background:linear-gradient(180deg,#fffafa 0%,#fff4f5 100%)!important;border:1.5px dashed #efc5cb!important;box-shadow:0 6px 16px rgba(190,24,93,.05)!important;}
+#homePage .role-menu-grid > button.work-loose-btn > b{color:#b42318!important;}
+#homePage .role-menu-grid > button.work-loose-btn > span,#homePage .role-menu-grid > button.work-loose-btn span span{color:#7b8794!important;}
+#homePage .role-menu-grid > button.other-customer-btn,#homePage .role-menu-grid > button.other-customer-menu-btn,#homePage .role-menu-grid > button[onclick*="Other"],#homePage .role-menu-grid > button[onclick*="otherCustomer"],#homePage .role-menu-grid > button[onclick*="showOtherCustomer"]{background:linear-gradient(180deg,#ffffff 0%,#fbfbfd 100%)!important;border:1px solid #eceff3!important;}
+#homePage .role-menu-grid > button.full-count-btn .customer-menu-logo,#homePage .role-menu-grid > button.menu-action-card > .customer-menu-logo,#homePage .role-menu-grid > button:not(.work-loose-btn):not(.other-customer-btn) > .customer-menu-logo,#homePage .role-menu-grid > button.full-count-btn > i,#homePage .role-menu-grid > button.menu-action-card > i,#homePage .role-menu-grid > button:not(.work-loose-btn):not(.other-customer-btn) > i{width:50px!important;height:50px!important;min-width:50px!important;min-height:50px!important;max-width:50px!important;max-height:50px!important;margin:4px auto 6px!important;display:grid!important;place-items:center!important;border-radius:16px!important;overflow:hidden!important;}
+#homePage .role-menu-grid > button.work-loose-btn .customer-menu-logo,#homePage .role-menu-grid > button.work-loose-btn .loose-work-icon,#homePage .role-menu-grid > button.work-loose-btn > i{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;max-width:44px!important;max-height:44px!important;margin:3px auto 6px!important;display:grid!important;place-items:center!important;border-radius:14px!important;overflow:hidden!important;}
+#homePage .role-menu-grid .customer-menu-logo .cust-logo,#homePage .role-menu-grid .cust-logo{width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;max-width:100%!important;max-height:100%!important;border-radius:inherit!important;margin:0!important;border-width:2px!important;}
+#homePage .role-menu-grid .cust-logo.bigc::before{font-size:12px!important;left:6px!important;top:7px!important;-webkit-text-stroke:.7px #178000!important;}
+#homePage .role-menu-grid .cust-logo.bigc::after{font-size:34px!important;right:3px!important;bottom:-4px!important;-webkit-text-stroke:1.2px #fff200!important;}
+#homePage .role-menu-grid .cust-logo.lotus::before{font-size:14px!important;letter-spacing:-.35px!important;transform:translateY(-1px)!important;}
+#homePage .role-menu-grid .cust-logo.lotus::after{font-size:8px!important;right:6px!important;top:13px!important;}
+.topbar{gap:8px!important;}.topbar .brand{min-width:0!important;}
+.topbar .refresh-top-btn,.role-red-head .head-refresh-mini,.other-customer-head .head-refresh-mini{border:1px solid rgba(255,255,255,.35)!important;background:rgba(255,255,255,.18)!important;color:#fff!important;border-radius:16px!important;display:grid!important;place-items:center!important;box-shadow:0 8px 18px rgba(0,0,0,.10)!important;}
+.topbar .refresh-top-btn{width:42px!important;height:42px!important;font-size:21px!important;}
+.role-red-head .head-refresh-mini,.other-customer-head .head-refresh-mini{position:absolute!important;right:88px!important;top:34px!important;width:52px!important;height:52px!important;font-size:23px!important;}
+@media (max-width:720px){#homePage .role-sheet{background:#fbfcfe!important;}#homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn){min-height:136px!important;padding:11px 8px 12px!important;gap:5px!important;}#homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > b{min-height:34px!important;font-size:15px!important;line-height:1.12!important;}#homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > span{font-size:11px!important;line-height:1.18!important;}#homePage .role-menu-grid > button.full-count-btn .customer-menu-logo,#homePage .role-menu-grid > button.full-count-btn > i,#homePage .role-menu-grid > button.menu-action-card > i,#homePage .role-menu-grid > button.menu-action-card > .customer-menu-logo,#homePage .role-menu-grid > button:not(.work-loose-btn):not(.other-customer-btn) > i,#homePage .role-menu-grid > button:not(.work-loose-btn):not(.other-customer-btn) > .customer-menu-logo{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;max-width:44px!important;max-height:44px!important;border-radius:14px!important;margin:3px auto 5px!important;}#homePage .role-menu-grid > button.work-loose-btn{min-height:122px!important;padding:10px 8px 11px!important;}#homePage .role-menu-grid > button.work-loose-btn .customer-menu-logo,#homePage .role-menu-grid > button.work-loose-btn .loose-work-icon,#homePage .role-menu-grid > button.work-loose-btn > i{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:12px!important;}#homePage .role-menu-grid > button.work-loose-btn > b{font-size:12.5px!important;line-height:1.08!important;}#homePage .role-menu-grid .cust-logo.bigc::before{font-size:10px!important;left:5px!important;top:6px!important;-webkit-text-stroke:.55px #178000!important;}#homePage .role-menu-grid .cust-logo.bigc::after{font-size:29px!important;right:2px!important;bottom:-3px!important;-webkit-text-stroke:1px #fff200!important;}#homePage .role-menu-grid .cust-logo.lotus::before{font-size:12px!important;}#homePage .role-menu-grid .cust-logo.lotus::after{font-size:7px!important;right:5px!important;top:11px!important;}.topbar .refresh-top-btn{width:38px!important;height:38px!important;font-size:18px!important;}.role-red-head .head-refresh-mini,.other-customer-head .head-refresh-mini{top:24px!important;right:70px!important;width:42px!important;height:42px!important;font-size:19px!important;border-radius:13px!important;}}
+@media (max-width:390px){#homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn){min-height:128px!important;padding:10px 6px 10px!important;}#homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > b{font-size:13.5px!important;}#homePage .role-menu-grid > button:not(.other-customer-btn):not(.other-customer-menu-btn) > span{font-size:10px!important;}#homePage .role-menu-grid > button.full-count-btn .customer-menu-logo,#homePage .role-menu-grid > button.full-count-btn > i,#homePage .role-menu-grid > button.menu-action-card > i,#homePage .role-menu-grid > button.menu-action-card > .customer-menu-logo,#homePage .role-menu-grid > button:not(.work-loose-btn):not(.other-customer-btn) > i,#homePage .role-menu-grid > button:not(.work-loose-btn):not(.other-customer-btn) > .customer-menu-logo{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:12px!important;}#homePage .role-menu-grid > button.work-loose-btn .customer-menu-logo,#homePage .role-menu-grid > button.work-loose-btn .loose-work-icon,#homePage .role-menu-grid > button.work-loose-btn > i{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;border-radius:11px!important;}.role-red-head .head-refresh-mini,.other-customer-head .head-refresh-mini{right:62px!important;width:38px!important;height:38px!important;font-size:17px!important;}}
+</style>
+<script>
+(function(){
+  const VERSION='home-mobile-visual-v61';
+  function classifyHomeButtons(){document.querySelectorAll('#homePage .role-menu-grid > button').forEach(btn=>{const txt=String(btn.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();btn.classList.remove('work-loose-btn','full-count-btn','menu-action-card');if(txt.includes('งานเศษ')||txt.includes('ไม่เต็ม')) btn.classList.add('work-loose-btn');else if(txt.includes('STOCK COUNT')) btn.classList.add('full-count-btn');else btn.classList.add('menu-action-card');});}
+  function addTopbarRefresh(){const topbar=document.querySelector('#appPage > header.topbar');if(!topbar||topbar.querySelector('.refresh-top-btn'))return;const homeBtn=topbar.querySelector('.home-top-btn');const btn=document.createElement('button');btn.className='notif-btn refresh-top-btn';btn.type='button';btn.setAttribute('aria-label','Refresh');btn.textContent='↻';btn.onclick=()=>{if(typeof window.refreshAppData==='function')window.refreshAppData();else location.reload();};if(homeBtn)topbar.insertBefore(btn,homeBtn);else topbar.appendChild(btn);}
+  function addHeaderRefreshNearHome(){document.querySelectorAll('.role-red-head .home-mini,.other-customer-head .home-mini').forEach(homeBtn=>{if(homeBtn.parentElement.querySelector('.head-refresh-mini'))return;const btn=document.createElement('button');btn.className='head-refresh-mini';btn.type='button';btn.setAttribute('aria-label','Refresh');btn.textContent='↻';btn.onclick=()=>{if(typeof window.refreshAppData==='function')window.refreshAppData();else location.reload();};homeBtn.insertAdjacentElement('beforebegin',btn);});}
+  function applyHomeUiFixV61(){classifyHomeButtons();addTopbarRefresh();addHeaderRefreshNearHome();}
+  const prevShowPageV61=window.showPage;if(typeof prevShowPageV61==='function'){window.showPage=function(){const result=prevShowPageV61.apply(this,arguments);setTimeout(applyHomeUiFixV61,0);setTimeout(applyHomeUiFixV61,250);return result;};}
+  const prevRenderHomeV61=window.renderHomeByRole;if(typeof prevRenderHomeV61==='function'){window.renderHomeByRole=function(){const result=prevRenderHomeV61.apply(this,arguments);setTimeout(applyHomeUiFixV61,0);setTimeout(applyHomeUiFixV61,250);return result;};}
+  document.addEventListener('DOMContentLoaded',()=>{setTimeout(applyHomeUiFixV61,120);setTimeout(applyHomeUiFixV61,700);setTimeout(applyHomeUiFixV61,1600);});
+  if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('/service-worker.js?v='+VERSION).catch(()=>{});});}
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH v62: mobile home icons clean + distinct buttons + refresh beside home only ===== -->
+<style>
+/* จำกัดเฉพาะหน้า Home มือถือ: ไม่แตะฟังก์ชันอื่น */
+@media (max-width:720px){
+  #homePage .role-sheet{
+    background:#ffffff!important;
+  }
+
+  #homePage .role-menu-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:12px!important;
+    align-items:stretch!important;
+  }
+
+  /* ปุ่มทั่วไป: ข้อความอยู่บน ไอคอนอยู่กลาง ไม่ทับกัน */
+  #homePage .role-menu-grid > button{
+    position:relative!important;
+    display:grid!important;
+    grid-template-rows:auto 48px auto!important;
+    grid-template-columns:1fr!important;
+    align-items:center!important;
+    justify-items:center!important;
+    justify-content:center!important;
+    gap:7px!important;
+    min-height:144px!important;
+    padding:14px 8px 13px!important;
+    overflow:hidden!important;
+    text-align:center!important;
+    border-radius:22px!important;
+    background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)!important;
+    border:1px solid #e6eaf0!important;
+    box-shadow:0 10px 22px rgba(15,23,42,.075)!important;
+    transform:none!important;
+  }
+
+  #homePage .role-menu-grid > button > b{
+    order:1!important;
+    grid-row:1!important;
+    position:relative!important;
+    z-index:2!important;
+    display:block!important;
+    width:100%!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0 2px!important;
+    font-size:17px!important;
+    line-height:1.08!important;
+    font-weight:1000!important;
+    color:#111827!important;
+    letter-spacing:-.2px!important;
+    white-space:normal!important;
+  }
+
+  #homePage .role-menu-grid > button > i,
+  #homePage .role-menu-grid > button > .customer-menu-logo,
+  #homePage .role-menu-grid > button .customer-menu-logo,
+  #homePage .role-menu-grid > button .loose-work-icon{
+    order:2!important;
+    grid-row:2!important;
+    position:relative!important;
+    z-index:1!important;
+    display:grid!important;
+    place-items:center!important;
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    max-width:46px!important;
+    max-height:46px!important;
+    margin:0 auto!important;
+    padding:0!important;
+    border-radius:15px!important;
+    overflow:hidden!important;
+    background:#fff1f2!important;
+    color:#c70712!important;
+    box-shadow:none!important;
+    font-style:normal!important;
+    font-size:22px!important;
+    line-height:1!important;
+    transform:none!important;
+  }
+
+  #homePage .role-menu-grid > button > span{
+    order:3!important;
+    grid-row:3!important;
+    position:relative!important;
+    z-index:2!important;
+    display:block!important;
+    width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    font-size:12px!important;
+    line-height:1.22!important;
+    font-weight:700!important;
+    color:#6b7280!important;
+    white-space:normal!important;
+  }
+
+  #homePage .role-menu-grid .cust-logo{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    max-width:46px!important;
+    max-height:46px!important;
+    border-radius:15px!important;
+    border:2px solid #fff!important;
+    margin:0!important;
+    transform:none!important;
+    box-shadow:none!important;
+  }
+  #homePage .role-menu-grid .cust-logo.lotus::before{font-size:12px!important;letter-spacing:-.25px!important;transform:translateY(-1px)!important;}
+  #homePage .role-menu-grid .cust-logo.lotus::after{font-size:7px!important;right:6px!important;top:12px!important;}
+  #homePage .role-menu-grid .cust-logo.bigc::before{font-size:10px!important;left:5px!important;top:6px!important;-webkit-text-stroke:.55px #178000!important;}
+  #homePage .role-menu-grid .cust-logo.bigc::after{font-size:30px!important;right:2px!important;bottom:-4px!important;-webkit-text-stroke:1px #fff200!important;}
+
+  /* งานเต็มกล่อง: เด่นกว่างานเศษ สีไม่ซ้ำกับพื้นหลัง */
+  #homePage .role-menu-grid > button.full-count-btn{
+    background:linear-gradient(180deg,#ffffff 0%,#eef6ff 100%)!important;
+    border:1.5px solid #b9d7ff!important;
+    box-shadow:0 13px 28px rgba(37,99,235,.13)!important;
+  }
+  #homePage .role-menu-grid > button.full-count-btn > b{color:#0f172a!important;}
+  #homePage .role-menu-grid > button.full-count-btn > span{color:#475569!important;}
+
+  /* งานเศษ: สีอ่อนกว่า ห้ามเด่นกว่างานเต็ม และไม่ใช้สีเดียวกัน */
+  #homePage .role-menu-grid > button.work-loose-btn,
+  #homePage .role-menu-grid > button.loose-count-btn{
+    min-height:126px!important;
+    grid-template-rows:auto 40px auto!important;
+    padding:12px 8px 11px!important;
+    background:linear-gradient(180deg,#ffffff 0%,#fff8f3 100%)!important;
+    border:1.5px dashed #f2c4aa!important;
+    box-shadow:0 6px 14px rgba(234,88,12,.045)!important;
+    opacity:.96!important;
+  }
+  #homePage .role-menu-grid > button.work-loose-btn > b,
+  #homePage .role-menu-grid > button.loose-count-btn > b{
+    font-size:14px!important;
+    color:#9a3412!important;
+    line-height:1.08!important;
+  }
+  #homePage .role-menu-grid > button.work-loose-btn > span,
+  #homePage .role-menu-grid > button.loose-count-btn > span,
+  #homePage .role-menu-grid > button.loose-count-btn span span{
+    font-size:11px!important;
+    color:#78716c!important;
+  }
+  #homePage .role-menu-grid > button.work-loose-btn > i,
+  #homePage .role-menu-grid > button.loose-count-btn > i,
+  #homePage .role-menu-grid > button.work-loose-btn .customer-menu-logo,
+  #homePage .role-menu-grid > button.loose-count-btn .customer-menu-logo,
+  #homePage .role-menu-grid > button.work-loose-btn .loose-work-icon,
+  #homePage .role-menu-grid > button.loose-count-btn .loose-work-icon{
+    width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:13px!important;
+  }
+  #homePage .role-menu-grid > button.work-loose-btn .cust-logo,
+  #homePage .role-menu-grid > button.loose-count-btn .cust-logo{
+    width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:13px!important;
+  }
+
+  /* Other customer: สีปุ่มไม่กลืนกับพื้นหลัง */
+  #homePage .role-menu-grid > button.other-customer-btn,
+  #homePage .role-menu-grid > button.other-customer-menu-btn,
+  #homePage .role-menu-grid > button[onclick*="Other"],
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"],
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"]{
+    grid-column:1 / -1!important;
+    min-height:96px!important;
+    grid-template-columns:58px 1fr!important;
+    grid-template-rows:auto auto!important;
+    justify-items:start!important;
+    text-align:left!important;
+    padding:14px 18px!important;
+    background:linear-gradient(135deg,#fff7f7 0%,#ffffff 56%,#f8fafc 100%)!important;
+    border:1.5px solid #f0c6c6!important;
+    box-shadow:0 8px 22px rgba(153,27,27,.08)!important;
+  }
+  #homePage .role-menu-grid > button.other-customer-btn > i,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > i,
+  #homePage .role-menu-grid > button[onclick*="Other"] > i,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > i,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > i{
+    grid-column:1!important;grid-row:1 / 3!important;width:48px!important;height:48px!important;min-width:48px!important;min-height:48px!important;max-width:48px!important;max-height:48px!important;margin:0!important;background:linear-gradient(135deg,#450a0a,#dc2626)!important;color:#fff!important;
+  }
+  #homePage .role-menu-grid > button.other-customer-btn > b,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > b,
+  #homePage .role-menu-grid > button[onclick*="Other"] > b,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > b,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > b{
+    grid-column:2!important;grid-row:1!important;text-align:left!important;font-size:22px!important;line-height:1.05!important;color:#111827!important;
+  }
+  #homePage .role-menu-grid > button.other-customer-btn > span,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > span,
+  #homePage .role-menu-grid > button[onclick*="Other"] > span,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > span,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > span{
+    grid-column:2!important;grid-row:2!important;text-align:left!important;font-size:12px!important;color:#6b7280!important;
+  }
+
+  /* ปุ่ม Refresh อยู่ข้างปุ่ม Home เท่านั้น */
+  #homePage .role-red-head .head-refresh-mini,
+  .other-customer-head .head-refresh-mini{
+    position:absolute!important;
+    right:78px!important;
+    top:30px!important;
+    width:46px!important;
+    height:46px!important;
+    border-radius:16px!important;
+    border:1px solid rgba(255,255,255,.42)!important;
+    background:rgba(255,255,255,.18)!important;
+    color:#fff!important;
+    display:grid!important;
+    place-items:center!important;
+    font-size:21px!important;
+    font-weight:900!important;
+    box-shadow:none!important;
+  }
+  #homePage .role-red-head .home-mini,
+  .other-customer-head .home-mini{
+    right:22px!important;
+  }
+}
+
+@media (max-width:390px){
+  #homePage .role-menu-grid{gap:10px!important;}
+  #homePage .role-menu-grid > button{min-height:136px!important;padding:13px 6px 12px!important;grid-template-rows:auto 42px auto!important;}
+  #homePage .role-menu-grid > button > b{font-size:15px!important;}
+  #homePage .role-menu-grid > button > span{font-size:10.5px!important;}
+  #homePage .role-menu-grid > button > i,
+  #homePage .role-menu-grid > button > .customer-menu-logo,
+  #homePage .role-menu-grid > button .customer-menu-logo,
+  #homePage .role-menu-grid > button .loose-work-icon,
+  #homePage .role-menu-grid .cust-logo{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;max-width:40px!important;max-height:40px!important;border-radius:12px!important;}
+  #homePage .role-menu-grid .cust-logo.lotus::before{font-size:11px!important;}
+  #homePage .role-menu-grid .cust-logo.bigc::before{font-size:9px!important;}
+  #homePage .role-menu-grid .cust-logo.bigc::after{font-size:27px!important;}
+  #homePage .role-menu-grid > button.work-loose-btn,
+  #homePage .role-menu-grid > button.loose-count-btn{min-height:118px!important;grid-template-rows:auto 36px auto!important;}
+  #homePage .role-menu-grid > button.work-loose-btn > b,
+  #homePage .role-menu-grid > button.loose-count-btn > b{font-size:12.5px!important;}
+  #homePage .role-menu-grid > button.work-loose-btn > i,
+  #homePage .role-menu-grid > button.loose-count-btn > i,
+  #homePage .role-menu-grid > button.work-loose-btn .customer-menu-logo,
+  #homePage .role-menu-grid > button.loose-count-btn .customer-menu-logo,
+  #homePage .role-menu-grid > button.work-loose-btn .cust-logo,
+  #homePage .role-menu-grid > button.loose-count-btn .cust-logo{width:36px!important;height:36px!important;min-width:36px!important;min-height:36px!important;max-width:36px!important;max-height:36px!important;border-radius:11px!important;}
+  #homePage .role-menu-grid > button.other-customer-btn,
+  #homePage .role-menu-grid > button.other-customer-menu-btn,
+  #homePage .role-menu-grid > button[onclick*="Other"],
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"],
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"]{min-height:88px!important;grid-template-columns:52px 1fr!important;padding:12px 14px!important;}
+  #homePage .role-menu-grid > button.other-customer-btn > b,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > b,
+  #homePage .role-menu-grid > button[onclick*="Other"] > b,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > b,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > b{font-size:19px!important;}
+  #homePage .role-red-head .head-refresh-mini,
+  .other-customer-head .head-refresh-mini{right:68px!important;top:28px!important;width:40px!important;height:40px!important;font-size:18px!important;border-radius:14px!important;}
+}
+</style>
+<script>
+(function(){
+  function classifyHomeButtonsV62(){
+    document.querySelectorAll('#homePage .role-menu-grid > button').forEach(btn=>{
+      const txt = String(btn.textContent || '').replace(/\s+/g,' ').trim().toUpperCase();
+      btn.classList.remove('work-loose-btn','full-count-btn','menu-action-card');
+      if(txt.includes('งานเศษ') || txt.includes('ไม่เต็ม') || txt.includes('หน่วยคู่')) btn.classList.add('work-loose-btn');
+      else if(txt.includes('STOCK COUNT')) btn.classList.add('full-count-btn');
+      else btn.classList.add('menu-action-card');
+    });
+  }
+  function ensureRefreshBesideHomeV62(){
+    document.querySelectorAll('#homePage .role-red-head, .other-customer-head').forEach(head=>{
+      const homeBtn = head.querySelector('.home-mini, .role-admin-badge, .home-top-btn');
+      if(!homeBtn) return;
+      let refresh = head.querySelector('.head-refresh-mini');
+      if(!refresh){
+        refresh = document.createElement('button');
+        refresh.type = 'button';
+        refresh.className = 'head-refresh-mini';
+        refresh.textContent = '↻';
+        refresh.setAttribute('aria-label','Refresh');
+        refresh.onclick = function(e){
+          e.preventDefault();
+          if(typeof window.refreshAppData === 'function') window.refreshAppData();
+          else if(typeof window.loadMasterData === 'function') window.loadMasterData();
+          else location.reload();
+        };
+        homeBtn.insertAdjacentElement('beforebegin', refresh);
+      }
+    });
+  }
+  function applyV62(){
+    classifyHomeButtonsV62();
+    ensureRefreshBesideHomeV62();
+  }
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(){
+      const r = oldShowPage.apply(this, arguments);
+      setTimeout(applyV62, 0);
+      setTimeout(applyV62, 120);
+      return r;
+    };
+  }
+  const oldRenderHomeByRole = typeof window.renderHomeByRole === 'function' ? window.renderHomeByRole : null;
+  if(oldRenderHomeByRole){
+    window.renderHomeByRole = function(){
+      const r = oldRenderHomeByRole.apply(this, arguments);
+      setTimeout(applyV62, 0);
+      setTimeout(applyV62, 120);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    setTimeout(applyV62,250);
+    setTimeout(applyV62,900);
+    setTimeout(applyV62,1800);
+  });
+  window.applyHomeMobileV62 = applyV62;
+})();
+</script>
+
+
+
+<!-- ===== PATCH V63: Warm button colors + loose lighter + header refresh position ===== -->
+<style>
+/* จุดขยับตำแหน่งปุ่มด้านขวาบน:
+   เพิ่ม/ลดค่า right = ขยับซ้าย/ขวา, เพิ่ม/ลดค่า top = ขยับลง/ขึ้น */
+#homePage .role-red-head .role-admin-badge,
+#homePage .role-red-head .home-mini,
+#homePage .role-red-head .home-top-btn,
+.other-customer-head .home-mini,
+.other-customer-head .home-top-btn{
+  top:26px!important;
+  right:18px!important;
+  z-index:8!important;
+}
+
+/* ปุ่ม Refresh ให้อยู่ซ้ายปุ่ม Home/Admin ไม่ซ้อนกัน */
+#homePage .role-red-head .head-refresh-mini,
+.other-customer-head .head-refresh-mini{
+  top:29px!important;
+  right:122px!important;
+  width:42px!important;
+  height:42px!important;
+  border-radius:15px!important;
+  background:linear-gradient(135deg,#ffb347,#ff7a1a)!important;
+  color:#fff!important;
+  border:1px solid rgba(255,255,255,.45)!important;
+  box-shadow:0 10px 22px rgba(166,60,0,.22)!important;
+  z-index:7!important;
+}
+
+/* ปุ่มที่กดได้ ใช้โทนร้อน อ่านง่าย ไม่กลืนกับพื้นหลัง */
+#homePage .role-menu-grid > button.menu-action-card,
+#homePage .role-menu-grid > button.full-count-btn,
+#homePage .role-menu-grid > button:not(.work-loose-btn){
+  background:linear-gradient(180deg,#ffffff 0%,#fff8f2 100%)!important;
+  border:1.5px solid #ffe0c2!important;
+  box-shadow:0 10px 24px rgba(180,72,0,.10)!important;
+}
+
+/* งานเต็มกล่อง: เด่นกว่า งานเศษ */
+#homePage .role-menu-grid > button.full-count-btn{
+  background:linear-gradient(180deg,#fff4ec 0%,#ffffff 62%)!important;
+  border:2px solid #ff9f43!important;
+  box-shadow:0 14px 28px rgba(217,88,0,.16)!important;
+}
+#homePage .role-menu-grid > button.full-count-btn b{
+  color:#9a2600!important;
+}
+#homePage .role-menu-grid > button.full-count-btn span{
+  color:#7c4a2d!important;
+}
+
+/* งานเศษ: สีอ่อนกว่า ไม่เด่นกว่างานเต็ม */
+#homePage .role-menu-grid > button.work-loose-btn,
+#homePage .role-menu-grid > button.loose-count-btn{
+  background:linear-gradient(180deg,#fffdf9 0%,#fff6ee 100%)!important;
+  border:1.4px dashed #f4c7a1!important;
+  box-shadow:0 8px 18px rgba(180,72,0,.06)!important;
+  opacity:.96!important;
+}
+#homePage .role-menu-grid > button.work-loose-btn b,
+#homePage .role-menu-grid > button.loose-count-btn b{
+  color:#b64a16!important;
+  font-weight:900!important;
+}
+#homePage .role-menu-grid > button.work-loose-btn span,
+#homePage .role-menu-grid > button.loose-count-btn span{
+  color:#8b6b56!important;
+}
+
+/* ไอคอนในปุ่มงานเศษ ลดความเด่น */
+#homePage .role-menu-grid > button.work-loose-btn .cust-logo,
+#homePage .role-menu-grid > button.loose-count-btn .cust-logo{
+  transform:scale(.86)!important;
+  opacity:.92!important;
+  box-shadow:0 6px 14px rgba(16,24,40,.10)!important;
+}
+
+/* ไอคอนในปุ่มงานเต็ม ให้อยู่กลางและไม่ทับข้อความ */
+#homePage .role-menu-grid > button.full-count-btn .customer-menu-logo,
+#homePage .role-menu-grid > button.full-count-btn i{
+  margin:6px auto 8px!important;
+}
+
+/* มือถือ: กันปุ่ม Refresh ซ้อน Admin/Home และทำให้แถวบนสวยขึ้น */
+@media(max-width:520px){
+  #homePage .role-red-head .role-admin-badge,
+  #homePage .role-red-head .home-mini,
+  #homePage .role-red-head .home-top-btn,
+  .other-customer-head .home-mini,
+  .other-customer-head .home-top-btn{
+    top:24px!important;
+    right:14px!important;
+  }
+  #homePage .role-red-head .head-refresh-mini,
+  .other-customer-head .head-refresh-mini{
+    top:27px!important;
+    right:104px!important;
+    width:38px!important;
+    height:38px!important;
+    font-size:17px!important;
+  }
+  #homePage .role-menu-grid > button.full-count-btn{
+    border-width:1.7px!important;
+  }
+  #homePage .role-menu-grid > button.work-loose-btn,
+  #homePage .role-menu-grid > button.loose-count-btn{
+    border-width:1.2px!important;
+  }
+}
+
+@media(max-width:390px){
+  #homePage .role-red-head .head-refresh-mini,
+  .other-customer-head .head-refresh-mini{
+    right:94px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function applyV63WarmButtons(){
+    document.querySelectorAll('#homePage .role-menu-grid > button').forEach(btn=>{
+      const txt = String(btn.textContent || '').replace(/\s+/g,' ').trim().toUpperCase();
+      btn.classList.remove('work-loose-btn','full-count-btn','menu-action-card');
+      if(txt.includes('งานเศษ') || txt.includes('ไม่เต็ม') || txt.includes('หน่วยคู่')) btn.classList.add('work-loose-btn');
+      else if(txt.includes('STOCK COUNT')) btn.classList.add('full-count-btn');
+      else btn.classList.add('menu-action-card');
+    });
+  }
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(){
+      const r = oldShowPage.apply(this, arguments);
+      setTimeout(applyV63WarmButtons,0);
+      setTimeout(applyV63WarmButtons,150);
+      return r;
+    };
+  }
+  document.addEventListener('DOMContentLoaded',()=>{
+    setTimeout(applyV63WarmButtons,250);
+    setTimeout(applyV63WarmButtons,900);
+  });
+  window.applyV63WarmButtons = applyV63WarmButtons;
+})();
+</script>
+
+
+
+<!-- ===== PATCH V64: Header spacing fix only ===== -->
+<style>
+/* แก้ระยะปุ่มขวาบนให้สมดุล ไม่ชิด ไม่ซ้อน
+   ถ้าจะขยับเอง:
+   - Admin/Home: แก้ right/top ใน .role-admin-badge หรือ .home-mini
+   - Refresh: ให้ right = right ของปุ่มหลัก + ความกว้างปุ่มหลัก + 10px
+*/
+#homePage .role-red-head{
+  overflow:visible!important;
+}
+
+/* ปุ่ม Admin บนหน้า Home */
+#homePage .role-red-head .role-admin-badge{
+  top:20px!important;
+  right:16px!important;
+  width:96px!important;
+  min-width:96px!important;
+  height:54px!important;
+  min-height:54px!important;
+  padding:6px 10px!important;
+  border-radius:18px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:1px!important;
+  line-height:1.05!important;
+}
+#homePage .role-red-head .role-admin-badge small{
+  display:block!important;
+  margin-top:1px!important;
+  font-size:11px!important;
+  line-height:1.05!important;
+}
+
+/* ปุ่ม Home กรณีเป็น user */
+#homePage .role-red-head .home-mini,
+#homePage .role-red-head .home-top-btn,
+.other-customer-head .home-mini,
+.other-customer-head .home-top-btn{
+  top:20px!important;
+  right:16px!important;
+  width:72px!important;
+  min-width:72px!important;
+  height:54px!important;
+  min-height:54px!important;
+  border-radius:18px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+
+/* Refresh หน้า Admin: อยู่ซ้ายปุ่ม Admin แบบมีระยะ 10px */
+#homePage .role-red-head:has(.role-admin-badge) .head-refresh-mini{
+  top:28px!important;
+  right:122px!important; /* 16 + 96 + 10 */
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  min-height:38px!important;
+  border-radius:13px!important;
+  font-size:17px!important;
+  display:grid!important;
+  place-items:center!important;
+}
+
+/* Refresh หน้า User/Other: อยู่ซ้ายปุ่ม Home แบบมีระยะ 10px */
+#homePage .role-red-head:not(:has(.role-admin-badge)) .head-refresh-mini,
+.other-customer-head .head-refresh-mini{
+  top:28px!important;
+  right:98px!important; /* 16 + 72 + 10 */
+  width:38px!important;
+  height:38px!important;
+  min-width:38px!important;
+  min-height:38px!important;
+  border-radius:13px!important;
+  font-size:17px!important;
+  display:grid!important;
+  place-items:center!important;
+}
+
+@media(max-width:430px){
+  #homePage .role-red-head .role-admin-badge{
+    top:18px!important;
+    right:14px!important;
+    width:92px!important;
+    min-width:92px!important;
+    height:52px!important;
+    min-height:52px!important;
+    padding:5px 8px!important;
+    font-size:14px!important;
+  }
+  #homePage .role-red-head .role-admin-badge small{
+    font-size:10px!important;
+  }
+  #homePage .role-red-head .home-mini,
+  #homePage .role-red-head .home-top-btn,
+  .other-customer-head .home-mini,
+  .other-customer-head .home-top-btn{
+    top:18px!important;
+    right:14px!important;
+    width:66px!important;
+    min-width:66px!important;
+    height:50px!important;
+    min-height:50px!important;
+  }
+  #homePage .role-red-head:has(.role-admin-badge) .head-refresh-mini{
+    top:25px!important;
+    right:116px!important; /* 14 + 92 + 10 */
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+  }
+  #homePage .role-red-head:not(:has(.role-admin-badge)) .head-refresh-mini,
+  .other-customer-head .head-refresh-mini{
+    top:25px!important;
+    right:90px!important; /* 14 + 66 + 10 */
+    width:36px!important;
+    height:36px!important;
+    min-width:36px!important;
+    min-height:36px!important;
+  }
+}
+
+@media(max-width:360px){
+  #homePage .role-red-head .role-admin-badge{
+    width:86px!important;
+    min-width:86px!important;
+    font-size:13px!important;
+  }
+  #homePage .role-red-head:has(.role-admin-badge) .head-refresh-mini{
+    right:110px!important; /* 14 + 86 + 10 */
+  }
+}
+</style>
+
+
+
+<!-- ===== PATCH V65: FIX REFRESH BUTTON POSITION ONLY ===== -->
+<style>
+/* บังคับตำแหน่งปุ่มรีเฟรชหน้า Count/FG/Master ให้อยู่ขวา ข้างปุ่ม HOME ไม่อยู่กลางจอ */
+body #appPage > .topbar{
+  position:sticky!important;
+  top:0!important;
+  display:grid!important;
+  grid-template-columns:auto auto minmax(0,1fr) auto auto!important;
+  align-items:center!important;
+  justify-content:stretch!important;
+  column-gap:10px!important;
+  width:100%!important;
+}
+
+/* ซ้าย */
+body #appPage > .topbar > .hamburger{
+  grid-column:1!important;
+  justify-self:start!important;
+  margin:0!important;
+}
+
+body #appPage > .topbar > .brand{
+  grid-column:2!important;
+  justify-self:start!important;
+  margin:0!important;
+  min-width:0!important;
+}
+
+/* ปุ่ม Refresh ไปอยู่ก่อน HOME ด้านขวา */
+body #appPage > .topbar > .refresh-top-btn,
+body #appPage > .topbar > .dash-refresh-btn,
+body #appPage > .topbar > .role-refresh-btn,
+body #appPage > .topbar > .refresh-mini,
+body #appPage > .topbar > button[onclick="refreshAppData()"],
+body #appPage > .topbar > button[onclick="loadMasterData()"]{
+  grid-column:4!important;
+  justify-self:end!important;
+  align-self:center!important;
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+  margin:0!important;
+
+  width:44px!important;
+  min-width:44px!important;
+  max-width:44px!important;
+  height:44px!important;
+  min-height:44px!important;
+  max-height:44px!important;
+
+  padding:0!important;
+  border-radius:15px!important;
+  border:1px solid rgba(255,255,255,.38)!important;
+  background:rgba(255,255,255,.18)!important;
+  color:#fff!important;
+
+  display:grid!important;
+  place-items:center!important;
+
+  font-size:0!important;
+  line-height:1!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.26), 0 8px 18px rgba(80,0,0,.14)!important;
+}
+
+body #appPage > .topbar > .refresh-top-btn::before,
+body #appPage > .topbar > .dash-refresh-btn::before,
+body #appPage > .topbar > .role-refresh-btn::before,
+body #appPage > .topbar > .refresh-mini::before,
+body #appPage > .topbar > button[onclick="refreshAppData()"]::before,
+body #appPage > .topbar > button[onclick="loadMasterData()"]::before{
+  content:'↻'!important;
+  font-size:22px!important;
+  font-weight:900!important;
+}
+
+/* HOME ขวาสุด */
+body #appPage > .topbar > .home-top-btn,
+body #appPage > .topbar > .notif-btn.home-top-btn{
+  grid-column:5!important;
+  justify-self:end!important;
+  align-self:center!important;
+  position:static!important;
+  inset:auto!important;
+  transform:none!important;
+  margin:0!important;
+  flex:none!important;
+}
+
+/* กันกรณีมีปุ่มรีเฟรชมากกว่า 1 อันใน topbar */
+body #appPage > .topbar > .refresh-top-btn ~ .refresh-top-btn{
+  display:none!important;
+}
+
+/* มือถือ: ให้ปุ่มเล็กลงและไม่บีบช่องค้นหา */
+@media(max-width:520px){
+  body #appPage > .topbar{
+    grid-template-columns:auto minmax(0,1fr) auto auto!important;
+    column-gap:8px!important;
+    padding-left:12px!important;
+    padding-right:12px!important;
+  }
+
+  body #appPage > .topbar > .hamburger{
+    grid-column:1!important;
+  }
+
+  body #appPage > .topbar > .brand{
+    grid-column:2!important;
+    overflow:hidden!important;
+  }
+
+  body #appPage > .topbar > .brand b,
+  body #appPage > .topbar > .brand span{
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  body #appPage > .topbar > .refresh-top-btn,
+  body #appPage > .topbar > .dash-refresh-btn,
+  body #appPage > .topbar > .role-refresh-btn,
+  body #appPage > .topbar > .refresh-mini,
+  body #appPage > .topbar > button[onclick="refreshAppData()"],
+  body #appPage > .topbar > button[onclick="loadMasterData()"]{
+    grid-column:3!important;
+    width:38px!important;
+    min-width:38px!important;
+    max-width:38px!important;
+    height:38px!important;
+    min-height:38px!important;
+    max-height:38px!important;
+    border-radius:13px!important;
+  }
+
+  body #appPage > .topbar > .refresh-top-btn::before,
+  body #appPage > .topbar > .dash-refresh-btn::before,
+  body #appPage > .topbar > .role-refresh-btn::before,
+  body #appPage > .topbar > .refresh-mini::before,
+  body #appPage > .topbar > button[onclick="refreshAppData()"]::before,
+  body #appPage > .topbar > button[onclick="loadMasterData()"]::before{
+    font-size:19px!important;
+  }
+
+  body #appPage > .topbar > .home-top-btn,
+  body #appPage > .topbar > .notif-btn.home-top-btn{
+    grid-column:4!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function ensureRefreshNextToHomeV65(){
+    const topbar = document.querySelector('#appPage > .topbar');
+    if(!topbar) return;
+
+    const homeBtn = topbar.querySelector('.home-top-btn');
+    if(!homeBtn) return;
+
+    let refreshBtn = topbar.querySelector('.refresh-top-btn');
+    if(!refreshBtn){
+      refreshBtn = document.createElement('button');
+      refreshBtn.type = 'button';
+      refreshBtn.className = 'refresh-top-btn';
+      refreshBtn.setAttribute('aria-label','Refresh');
+      refreshBtn.onclick = function(){
+        if(typeof window.refreshAppData === 'function') window.refreshAppData();
+        else if(typeof window.loadMasterData === 'function') window.loadMasterData();
+        else location.reload();
+      };
+    }
+
+    refreshBtn.textContent = '↻';
+
+    /* บังคับให้ refresh อยู่ติดซ้ายของ HOME เสมอ */
+    if(refreshBtn.nextElementSibling !== homeBtn){
+      topbar.insertBefore(refreshBtn, homeBtn);
+    }
+
+    /* ลบปุ่ม refresh ซ้ำที่อาจถูกสร้างจาก patch เก่า */
+    Array.from(topbar.querySelectorAll('.refresh-top-btn')).forEach((btn, idx) => {
+      if(idx > 0) btn.remove();
+    });
+  }
+
+  const oldShowPageV65 = window.showPage;
+  if(typeof oldShowPageV65 === 'function'){
+    window.showPage = function(){
+      const result = oldShowPageV65.apply(this, arguments);
+      setTimeout(ensureRefreshNextToHomeV65, 0);
+      setTimeout(ensureRefreshNextToHomeV65, 150);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(ensureRefreshNextToHomeV65, 100);
+    setTimeout(ensureRefreshNextToHomeV65, 700);
+  });
+
+  window.ensureRefreshNextToHomeV65 = ensureRefreshNextToHomeV65;
+})();
+</script>
+
+
+
+
+<!-- ===== PATCH V66: FIX DOUBLE HEADER / TOPBAR OVERLAP ONLY ===== -->
+<style>
+/* หน้า Home / Dashboard ต้องไม่โชว์ topbar ด้านบน เพราะมี header ของหน้านั้นอยู่แล้ว */
+body.hide-main-topbar #appPage > .topbar,
+body.home-page-active #appPage > .topbar,
+body.dashboard-page-active #appPage > .topbar{
+  display:none!important;
+  visibility:hidden!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+}
+
+/* หน้า Count / FG / Master ให้ใช้ topbar เดียว และปุ่ม refresh อยู่ติด HOME ด้านขวา */
+body:not(.home-page-active):not(.dashboard-page-active) #appPage > .topbar{
+  visibility:visible!important;
+}
+
+/* กันปุ่ม refresh ใน Home ชนปุ่ม Admin */
+#homePage .role-red-head .head-refresh-mini{
+  position:absolute!important;
+  top:34px!important;
+  right:128px!important;
+  z-index:3!important;
+}
+#homePage .role-red-head .role-admin-badge{
+  position:absolute!important;
+  top:26px!important;
+  right:18px!important;
+  z-index:4!important;
+}
+
+@media(max-width:520px){
+  #homePage .role-red-head .head-refresh-mini{
+    top:28px!important;
+    right:104px!important;
+  }
+  #homePage .role-red-head .role-admin-badge{
+    top:22px!important;
+    right:12px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  function syncTopbarForCurrentPageV66(page){
+    const home = document.getElementById('homePage');
+    const dash = document.getElementById('dashboardPage');
+    const topbar = document.querySelector('#appPage > .topbar');
+
+    const isHome = page === 'home' || (home && getComputedStyle(home).display !== 'none');
+    const isDash = page === 'dashboard' || (dash && getComputedStyle(dash).display !== 'none');
+    const hide = !!(isHome || isDash);
+
+    document.body.classList.toggle('home-page-active', !!isHome && !isDash);
+    document.body.classList.toggle('dashboard-page-active', !!isDash);
+    document.body.classList.toggle('hide-main-topbar', hide);
+
+    if(topbar){
+      if(hide){
+        topbar.style.setProperty('display','none','important');
+        topbar.style.setProperty('visibility','hidden','important');
+      }else{
+        topbar.style.removeProperty('visibility');
+        topbar.style.setProperty('display','grid','important');
+      }
+    }
+  }
+
+  const prevShowPageV66 = window.showPage;
+  if(typeof prevShowPageV66 === 'function'){
+    window.showPage = function(page){
+      const result = prevShowPageV66.apply(this, arguments);
+      setTimeout(() => syncTopbarForCurrentPageV66(page), 0);
+      setTimeout(() => syncTopbarForCurrentPageV66(page), 120);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(() => syncTopbarForCurrentPageV66(), 80);
+    setTimeout(() => syncTopbarForCurrentPageV66(), 600);
+  });
+
+  window.syncTopbarForCurrentPageV66 = syncTopbarForCurrentPageV66;
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH v67: Dashboard count must match real count pages + remove noisy descriptions ===== -->
+<style>
+/* Hide only the noisy description rows in the dashboard/customer progress section */
+#userCountOverview .customer-progress-line > span,
+#adminCountOverview .customer-progress-line > span,
+#dashCustomerCards .dash-customer-card > small,
+#dashCustomerCards .dash-customer-card .dash-diff-box{
+  display:none!important;
+}
+#userCountOverview .customer-progress-line,
+#adminCountOverview .customer-progress-line{
+  padding-bottom:14px!important;
+}
+#dashCustomerCards .dash-customer-card p small{
+  display:none!important;
+}
+</style>
+
+<script>
+(function(){
+  'use strict';
+
+  const TRUE_DASH_VERSION = 'dashboard-true-count-v67';
+  const FULL_MASTER_TABLE = typeof MASTER_TABLE !== 'undefined' ? MASTER_TABLE : 'master_data';
+  const FULL_COUNT_TABLE = typeof COUNT_TABLE !== 'undefined' ? COUNT_TABLE : 'stock_count';
+  const LOOSE_MASTER_TABLE = 'loose_master_data';
+  const LOOSE_COUNT_TABLE = 'stock_count_loose';
+
+  const DASH_CUSTOMERS = (Array.isArray(window.STOCK_CUSTOMERS) && window.STOCK_CUSTOMERS.length)
+    ? window.STOCK_CUSTOMERS
+    : [
+      {key:'LOTUS', label:'LOTUS', aliases:['LOTUS','LT','โลตัส']},
+      {key:'BIG C', label:'BIG C', aliases:['BIG C','BIGC','BC']},
+      {key:'VILLA MARKET', label:'Villa Market', aliases:['VILLA MARKET','VILLA']},
+      {key:'MAXMART', label:'Maxmart', aliases:['MAXMART','MAX MART']},
+      {key:'7-11', label:'7-11', aliases:['7-11','711','7ELEVEN']},
+      {key:'PTT', label:'PTT', aliases:['PTT']},
+      {key:'CJ', label:'CJ', aliases:['CJ']}
+    ];
+
+  function $(id){ return document.getElementById(id); }
+  function esc(v){
+    if(typeof safe === 'function') return safe(v);
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+  function fmt(v){ return Number(v || 0).toLocaleString('th-TH'); }
+  function n(v){ return String(v ?? '').toUpperCase().replace(/[\s\-_'".\/’`]+/g,''); }
+  function num(v){ const x = Number(String(v ?? 0).replace(/,/g,'')); return Number.isFinite(x) ? x : 0; }
+  function pct(a,b){ return b ? ((a/b)*100).toFixed(2) : '0.00'; }
+  function cfg(value){
+    const raw = String(value ?? '').trim();
+    const nn = n(raw);
+    return DASH_CUSTOMERS.find(c => c.key === raw || n(c.key) === nn || (c.aliases || []).some(a => n(a) === nn))
+        || DASH_CUSTOMERS.find(c => nn.endsWith(n(c.key)) || (c.aliases || []).some(a => nn.endsWith(n(a))))
+        || null;
+  }
+  function customerKey(value){ return cfg(value)?.key || String(value ?? '').trim(); }
+  function rowCustomer(row){
+    const direct = String(row?.customer ?? row?.Customer ?? row?.channel ?? row?.Channel ?? '').trim();
+    const fromDirect = cfg(direct);
+    if(fromDirect) return fromDirect.key;
+    const fromKey = cfg(row?.item_key || '');
+    if(fromKey) return fromKey.key;
+    return customerKey(direct);
+  }
+  function rowVal(row, field){
+    if(field === 'item') return row?.Item ?? row?.item ?? '';
+    if(field === 'code') return row?.CODE ?? row?.code ?? '';
+    if(field === 'assort') return row?.Assort ?? row?.assort ?? '';
+    if(field === 'location') return row?.Location ?? row?.location ?? '';
+    return '';
+  }
+  function buildKey(row, loose){
+    const c = rowCustomer(row);
+    const existing = String(row?.item_key ?? '').trim();
+    if(existing) return existing;
+    const loc = loose ? '' : rowVal(row, 'location');
+    return String(rowVal(row,'item') || '') + String(rowVal(row,'code') || '').toUpperCase() + String(rowVal(row,'assort') || '') + String(loc || '') + String(c || '');
+  }
+  function keyNorm(row, loose){ return n(buildKey(row, loose)); }
+  function countKeyNorm(row, loose, masterIndex){
+    const rawKey = n(row?.item_key || '');
+    if(rawKey) return rawKey;
+    const c = rowCustomer(row);
+    const loc = loose ? '' : rowVal(row, 'location');
+    const key = n(String(rowVal(row,'item') || '') + String(rowVal(row,'code') || '').toUpperCase() + String(rowVal(row,'assort') || '') + String(loc || '') + String(c || ''));
+    if(key) return key;
+    const byMasterId = String(row?.master_id ?? '').trim();
+    return masterIndex.byId.get(byMasterId) || '';
+  }
+  function latestByKey(rows, loose, masterIndex){
+    const map = new Map();
+    (rows || []).forEach(r => {
+      const key = countKeyNorm(r, loose, masterIndex);
+      if(!key) return;
+      const old = map.get(key);
+      const oldT = old ? Date.parse(old.created_at || old.updated_at || '') || num(old.id) : -1;
+      const newT = Date.parse(r.created_at || r.updated_at || '') || num(r.id);
+      if(!old || newT >= oldT) map.set(key, r);
+    });
+    return map;
+  }
+  async function fetchSafe(table){
+    try{ return await fetchAll(table); }
+    catch(e){ console.warn('โหลดตารางไม่ได้:', table, e); return []; }
+  }
+  function emptyStats(c){
+    return {key:c.key,label:c.label,total:0,counted:0,remaining:0,progress:'0.00',diffPlus:0,diffMinus:0,diffItems:0};
+  }
+
+  async function buildTrueDashboardStats(){
+    const fullMasters = await fetchSafe(FULL_MASTER_TABLE);
+    const looseMasters = await fetchSafe(LOOSE_MASTER_TABLE);
+    const fullCounts = await fetchSafe(FULL_COUNT_TABLE);
+    const looseCounts = await fetchSafe(LOOSE_COUNT_TABLE);
+
+    const stats = {};
+    DASH_CUSTOMERS.forEach(c => stats[c.key] = emptyStats(c));
+
+    const fullMasterIndex = { byId:new Map(), byKey:new Map(), keyCustomer:new Map() };
+    const looseMasterIndex = { byId:new Map(), byKey:new Map(), keyCustomer:new Map() };
+
+    function addMaster(row, loose, index){
+      const c = rowCustomer(row);
+      if(!stats[c]) return;
+      const key = keyNorm(row, loose);
+      if(!key) return;
+      if(index.byKey.has(key)) return; // กันข้อมูลซ้ำใน master เดียวกัน
+      index.byKey.set(key, row);
+      index.keyCustomer.set(key, c);
+      if(row?.id !== undefined && row?.id !== null) index.byId.set(String(row.id), key);
+      stats[c].total += 1;
+    }
+
+    fullMasters.forEach(r => addMaster(r, false, fullMasterIndex));
+    looseMasters.forEach(r => addMaster(r, true, looseMasterIndex));
+
+    const fullLatest = latestByKey(fullCounts, false, fullMasterIndex);
+    const looseLatest = latestByKey(looseCounts, true, looseMasterIndex);
+
+    function applyCounts(countMap, index){
+      countMap.forEach((r, key) => {
+        if(!index.byKey.has(key)) return; // นับเฉพาะ master data ชุดล่าสุดที่ยังมีอยู่จริง
+        const c = index.keyCustomer.get(key) || rowCustomer(r);
+        if(!stats[c]) return;
+        stats[c].counted += 1;
+        const systemQty = num(r.system_qty ?? r.System_Qty ?? r.Quantity ?? r.quantity ?? 0);
+        const countQty = num(r.count_qty ?? r.Count_Qty ?? 0);
+        const diff = countQty - systemQty;
+        if(diff !== 0){
+          stats[c].diffItems += 1;
+          if(diff > 0) stats[c].diffPlus += diff;
+          else stats[c].diffMinus += Math.abs(diff);
+        }
+      });
+    }
+
+    applyCounts(fullLatest, fullMasterIndex);
+    applyCounts(looseLatest, looseMasterIndex);
+
+    const list = DASH_CUSTOMERS.map(c => {
+      const s = stats[c.key];
+      s.remaining = Math.max(s.total - s.counted, 0);
+      s.progress = pct(s.counted, s.total);
+      return s;
+    });
+
+    const all = list.reduce((a,s) => {
+      a.total += s.total;
+      a.counted += s.counted;
+      a.remaining += s.remaining;
+      a.diffPlus += s.diffPlus;
+      a.diffMinus += s.diffMinus;
+      a.diffItems += s.diffItems;
+      return a;
+    }, {total:0,counted:0,remaining:0,diffPlus:0,diffMinus:0,diffItems:0});
+    all.progress = pct(all.counted, all.total);
+    return {stats:list, all};
+  }
+
+  function iconHtml(key, small){
+    if(typeof customerIconHtml === 'function') return customerIconHtml(key, !!small);
+    const cls = n(key).includes('BIG') ? 'bigc' : 'lotus';
+    return `<span class="cust-logo ${cls}${small ? ' sm' : ''}"></span>`;
+  }
+  function progressLine(s){
+    return `
+      <div class="customer-progress-line has-logo" data-customer="${esc(s.key)}">
+        ${iconHtml(s.key, true)}
+        <b>${esc(s.label)}</b>
+        <i><em style="width:${Math.min(Number(s.progress),100)}%"></em></i>
+        <strong>${s.progress}%</strong>
+      </div>`;
+  }
+  function dashCard(s){
+    return `
+      <div class="dash-customer-card has-logo" data-customer="${esc(s.key)}">
+        ${iconHtml(s.key, true)}
+        <b>${esc(s.label)}</b>
+        <strong>${s.progress}%</strong>
+        <p><em>${fmt(s.counted)}</em> / ${fmt(s.total)}</p>
+        <i><span style="width:${Math.min(Number(s.progress),100)}%"></span></i>
+      </div>`;
+  }
+
+  window.renderCountOverviewAll = async function(){
+    const {stats, all} = await buildTrueDashboardStats();
+    const block = `
+      <div class="role-count-head"><h3>ความคืบหน้าการนับ 7 ร้าน</h3></div>
+      <div class="count-summary-cards">
+        <div><small>นับแล้ว</small><b>${fmt(all.counted)}</b><span>ทั้งหมด</span></div>
+        <div><small>ยังไม่นับ</small><b>${fmt(all.remaining)}</b><span>ทั้งหมด</span></div>
+        <div><small>คิดเป็น %</small><b>${all.progress}%</b><span>ความคืบหน้า</span></div>
+      </div>
+      ${stats.map(progressLine).join('')}`;
+    const userBox = $('userCountOverview');
+    if(userBox) userBox.innerHTML = block;
+    const adminBox = $('adminCountOverview');
+    if(adminBox) adminBox.innerHTML = block;
+  };
+
+  window.refreshRoleDashboard = async function(){
+    const {stats, all} = await buildTrueDashboardStats();
+    const up = $('dashUpdateTime');
+    if(up) up.textContent = new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+    const main = $('dashMainProgress');
+    if(main){
+      const deg = Math.min(Number(all.progress),100) * 3.6;
+      main.innerHTML = `
+        <div class="dash-ring" style="background:conic-gradient(#d70914 ${deg}deg,#f4e6e7 0deg)"><b>${Math.round(Number(all.progress))}%</b></div>
+        <div class="dash-kpis">
+          <span><small>ผลการนับทั้งหมด</small><b>${fmt(all.counted)}</b></span>
+          <span><small>ยังไม่นับ</small><b>${fmt(all.remaining)}</b></span>
+          <span><small>Diff +</small><b>${fmt(all.diffPlus)}</b></span>
+          <span><small>Diff -</small><b>${fmt(all.diffMinus)}</b></span>
+          <span><small>Total</small><b>${fmt(all.total)}</b></span>
+          <span><small>Diff รายการ</small><b>${fmt(all.diffItems)}</b></span>
+        </div>`;
+    }
+
+    const cust = $('dashCustomerCards');
+    if(cust) cust.innerHTML = stats.map(dashCard).join('');
+
+    const check = $('dashCheckList');
+    if(check){
+      check.innerHTML = `
+        <div class="check-row"><span>ผลการนับทั้งหมด</span><b>${fmt(all.counted)} รายการ</b></div>
+        <div class="check-row"><span>ยังไม่นับทั้งหมด</span><b>${fmt(all.remaining)} รายการ</b></div>
+        <div class="check-row"><span>Diff +</span><b>${fmt(all.diffPlus)}</b></div>
+        <div class="check-row"><span>Diff -</span><b>${fmt(all.diffMinus)}</b></div>`;
+    }
+
+    await window.renderCountOverviewAll();
+    try{ if(typeof window.loadAdminLatestActivity === 'function') await window.loadAdminLatestActivity(); }catch(e){}
+  };
+
+  const oldRefreshAppData = window.refreshAppData;
+  window.refreshAppData = async function(){
+    try{
+      if(typeof loadMasterData === 'function') await loadMasterData();
+      await window.renderCountOverviewAll();
+      if($('dashboardPage') && getComputedStyle($('dashboardPage')).display !== 'none') await window.refreshRoleDashboard();
+      if(typeof showToast === 'function') showToast('ข้อมูลล่าสุดแล้ว');
+    }catch(e){
+      if(typeof oldRefreshAppData === 'function') return oldRefreshAppData();
+      alert('รีเฟรชไม่สำเร็จ: ' + (e?.message || e));
+    }
+  };
+
+  // รีเฟรช Dashboard ทุกครั้งหลังบันทึกนับ เพื่อให้ตรงกับหน้าที่นับจริงทันที
+  const oldSaveCount = window.saveCount;
+  if(typeof oldSaveCount === 'function'){
+    window.saveCount = async function(){
+      const result = await oldSaveCount.apply(this, arguments);
+      setTimeout(() => {
+        window.renderCountOverviewAll?.();
+        if($('dashboardPage') && getComputedStyle($('dashboardPage')).display !== 'none') window.refreshRoleDashboard?.();
+      }, 250);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => window.renderCountOverviewAll?.(), 700);
+    setTimeout(() => { if($('dashboardPage') && getComputedStyle($('dashboardPage')).display !== 'none') window.refreshRoleDashboard?.(); }, 900);
+  });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js?v=' + TRUE_DASH_VERSION).catch(() => {});
+    });
+  }
+})();
+</script>
+
+
+
+<!-- ===== FINAL PATCH v68: Other customer header / double topbar fix only ===== -->
+<style>
+/* ซ่อน topbar หลักเมื่ออยู่หน้า Other customer เพื่อไม่ให้หัวหน้าเว็บซ้อนกัน */
+body.other-customer-active #appPage > .topbar,
+body.other-customer-page-active #appPage > .topbar,
+body:has(#otherCustomerPage[style*="block"]) #appPage > .topbar{
+  display:none!important;
+  visibility:hidden!important;
+  height:0!important;
+  min-height:0!important;
+  max-height:0!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:hidden!important;
+}
+
+/* จัดเฉพาะหัวหน้า Other customer ให้สะอาด ไม่สูงเกิน และปุ่มไม่กระจาย */
+#otherCustomerPage.other-customer-page{
+  margin:0!important;
+  padding:16px 14px 24px!important;
+  background:#f7f7f7!important;
+}
+#otherCustomerPage .other-customer-head{
+  position:relative!important;
+  min-height:132px!important;
+  height:132px!important;
+  padding:0 18px!important;
+  display:grid!important;
+  grid-template-columns:54px 1fr 104px!important;
+  align-items:center!important;
+  gap:10px!important;
+  text-align:center!important;
+  overflow:hidden!important;
+}
+#otherCustomerPage .other-customer-head .hamb-mini{
+  position:static!important;
+  grid-column:1!important;
+  justify-self:start!important;
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  margin:0!important;
+  transform:none!important;
+}
+#otherCustomerPage .other-customer-head > div{
+  grid-column:2!important;
+  min-width:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+}
+#otherCustomerPage .other-customer-head b{
+  margin:0!important;
+  font-size:34px!important;
+  line-height:1.05!important;
+  letter-spacing:1.2px!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+#otherCustomerPage .other-customer-head .head-refresh-mini,
+#otherCustomerPage .other-customer-head .home-mini,
+#otherCustomerPage .other-customer-head .home-top-btn{
+  position:absolute!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  margin:0!important;
+  z-index:5!important;
+}
+#otherCustomerPage .other-customer-head .head-refresh-mini{
+  right:78px!important;
+  width:40px!important;
+  height:40px!important;
+  min-width:40px!important;
+  min-height:40px!important;
+  border-radius:14px!important;
+}
+#otherCustomerPage .other-customer-head .home-mini,
+#otherCustomerPage .other-customer-head .home-top-btn{
+  right:18px!important;
+  width:48px!important;
+  height:48px!important;
+  min-width:48px!important;
+  min-height:48px!important;
+  border-radius:16px!important;
+}
+#otherCustomerPage .other-customer-sheet{
+  margin:14px 0 0!important;
+}
+
+@media(max-width:720px){
+  #otherCustomerPage.other-customer-page{
+    padding:10px 10px 22px!important;
+  }
+  #otherCustomerPage .other-customer-head{
+    height:112px!important;
+    min-height:112px!important;
+    border-radius:22px!important;
+    grid-template-columns:44px 1fr 86px!important;
+    padding:0 12px!important;
+  }
+  #otherCustomerPage .other-customer-head .hamb-mini{
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    min-height:40px!important;
+    font-size:28px!important;
+  }
+  #otherCustomerPage .other-customer-head b{
+    font-size:24px!important;
+    letter-spacing:.8px!important;
+  }
+  #otherCustomerPage .other-customer-head .head-refresh-mini{
+    right:62px!important;
+    width:34px!important;
+    height:34px!important;
+    min-width:34px!important;
+    min-height:34px!important;
+    border-radius:12px!important;
+    font-size:16px!important;
+  }
+  #otherCustomerPage .other-customer-head .home-mini,
+  #otherCustomerPage .other-customer-head .home-top-btn{
+    right:12px!important;
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    border-radius:14px!important;
+    font-size:22px!important;
+  }
+  #otherCustomerPage .other-customer-sheet{
+    margin:12px 0 0!important;
+  }
+}
+
+@media(max-width:390px){
+  #otherCustomerPage .other-customer-head{
+    grid-template-columns:40px 1fr 78px!important;
+  }
+  #otherCustomerPage .other-customer-head b{
+    font-size:20px!important;
+    letter-spacing:.5px!important;
+  }
+  #otherCustomerPage .other-customer-head .head-refresh-mini{
+    right:58px!important;
+    width:32px!important;
+    height:32px!important;
+    min-width:32px!important;
+    min-height:32px!important;
+  }
+  #otherCustomerPage .other-customer-head .home-mini,
+  #otherCustomerPage .other-customer-head .home-top-btn{
+    right:10px!important;
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    min-height:40px!important;
+  }
+}
+</style>
+
+<script>
+(function(){
+  const VERSION = 'other-customer-header-v68';
+
+  function isOtherCustomerVisible(){
+    const page = document.getElementById('otherCustomerPage');
+    return !!(page && getComputedStyle(page).display !== 'none');
+  }
+
+  function syncOtherCustomerHeaderV68(pageName){
+    const topbar = document.querySelector('#appPage > .topbar');
+    const active = pageName === 'otherCustomer' || isOtherCustomerVisible();
+
+    document.body.classList.toggle('other-customer-active', active);
+    document.body.classList.toggle('other-customer-page-active', active);
+
+    if(topbar && active){
+      topbar.style.setProperty('display','none','important');
+      topbar.style.setProperty('visibility','hidden','important');
+      topbar.style.setProperty('height','0','important');
+      topbar.style.setProperty('padding','0','important');
+      topbar.style.setProperty('margin','0','important');
+    }
+  }
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(page){
+      const result = oldShowPage.apply(this, arguments);
+      setTimeout(() => syncOtherCustomerHeaderV68(page), 0);
+      setTimeout(() => syncOtherCustomerHeaderV68(page), 150);
+      return result;
+    };
+  }
+
+  const oldShowOther = window.showOtherCustomerPage;
+  if(typeof oldShowOther === 'function'){
+    window.showOtherCustomerPage = function(){
+      const result = oldShowOther.apply(this, arguments);
+      setTimeout(() => syncOtherCustomerHeaderV68('otherCustomer'), 0);
+      setTimeout(() => syncOtherCustomerHeaderV68('otherCustomer'), 150);
+      return result;
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(syncOtherCustomerHeaderV68, 100);
+    setTimeout(syncOtherCustomerHeaderV68, 700);
+  });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/service-worker.js?v=' + VERSION).catch(() => {});
+    });
+  }
+
+  window.syncOtherCustomerHeaderV68 = syncOtherCustomerHeaderV68;
+})();
+</script>
+<style>
+/* FIX HEADER MOBILE */
+.topbar{
+  height:64px!important;
+  min-height:64px!important;
+  padding:8px 10px!important;
+  align-items:center!important;
+  overflow:hidden!important;
+  z-index:9999!important;
+}
+
+.hamburger{
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  font-size:28px!important;
+  margin:0!important;
+}
+
+.brand{
+  margin:0!important;
+  min-width:0!important;
+  overflow:hidden!important;
+}
+
+.brand b{
+  font-size:22px!important;
+  line-height:1!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+
+.brand span{
+  font-size:12px!important;
+  line-height:1.1!important;
+  white-space:nowrap!important;
+}
+
+.notif-btn,
+.home-top-btn{
+  width:42px!important;
+  height:42px!important;
+  min-width:42px!important;
+  font-size:22px!important;
+  margin-left:auto!important;
+}
+
+/* กันเนื้อหาชน Header */
+main{
+  padding-top:12px!important;
+}
+
+/* FIX Title หน้า Count */
+.count-title-bar{
+  margin-top:0!important;
+  padding-top:0!important;
+  align-items:center!important;
+}
+
+#countTitle{
+  font-size:22px!important;
+  line-height:1.15!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+</style>
+
+
+<!-- ===== FINAL PATCH v70: ONE SOURCE OF TRUTH FOR COUNT PAGE + DASHBOARD ===== -->
+<style>
+/* Other Customer ให้อยู่กลางจริง และไม่ชน Header */
+#otherCustomerPage.other-customer-page{
+  min-height:calc(100vh - 20px)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+}
+#otherCustomerPage .other-customer-head{
+  width:100%!important;
+}
+#otherCustomerPage .other-customer-sheet{
+  width:min(620px, calc(100vw - 36px))!important;
+  margin:18px auto 0!important;
+  align-self:center!important;
+}
+@media(max-width:720px){
+  #otherCustomerPage .other-customer-sheet{
+    width:calc(100vw - 24px)!important;
+    margin:12px auto 0!important;
+  }
+}
+
+/* Count summary: กันข้อความสลับ / กันบรรทัดหาย */
+#countFilterSummary{
+  display:block!important;
+  line-height:1.65!important;
+  white-space:normal!important;
+  word-break:break-word!important;
+}
+#countTitle .count-mode-chip{
+  vertical-align:middle!important;
+}
+</style>
+
+<script>
+(function(){
+  'use strict';
+
+  const FIX_VERSION = 'v70-count-dashboard-one-source';
+  const FULL_MASTER_TABLE = typeof MASTER_TABLE !== 'undefined' ? MASTER_TABLE : 'master_data';
+  const FULL_COUNT_TABLE = typeof COUNT_TABLE !== 'undefined' ? COUNT_TABLE : 'stock_count';
+  const LOOSE_MASTER_TABLE = 'loose_master_data';
+  const LOOSE_COUNT_TABLE = 'stock_count_loose';
+
+  const CUSTOMERS = (Array.isArray(window.STOCK_CUSTOMERS) && window.STOCK_CUSTOMERS.length)
+    ? window.STOCK_CUSTOMERS.map(c => ({...c, aliases:c.aliases || []}))
+    : [
+      {key:'LOTUS', label:'LOTUS', aliases:['LOTUS','LT','โลตัส'], type:'main'},
+      {key:'BIG C', label:'BIG C', aliases:['BIG C','BIGC','BC','BIG'], type:'main'},
+      {key:'VILLA MARKET', label:'Villa Market', aliases:['VILLA MARKET','VILLAMARKET','VILLA'], type:'other'},
+      {key:'MAXMART', label:'Maxmart', aliases:['MAXMART','MAX MART','MAX'], type:'other'},
+      {key:'7-11', label:'7-11', aliases:['7-11','711','7ELEVEN','SEVEN','SEVENELEVEN'], type:'other'},
+      {key:'PTT', label:'PTT', aliases:['PTT'], type:'other'},
+      {key:'CJ', label:'CJ', aliases:['CJ','CJ MORE','CJMORE'], type:'other'}
+    ];
+
+  let currentFilter = 'all';
+  let dashboardCache = null;
+  let dashboardCacheAt = 0;
+
+  function byId(id){ return document.getElementById(id); }
+  function html(v){
+    if(typeof safe === 'function') return safe(v);
+    return String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  }
+  function js(v){
+    if(typeof safeForJs === 'function') return safeForJs(v);
+    return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');
+  }
+  function norm(v){ return String(v ?? '').toUpperCase().replace(/[\s\-_'".\/’`]+/g,''); }
+  function number(v){ const x = Number(String(v ?? 0).replace(/,/g,'').trim()); return Number.isFinite(x) ? x : 0; }
+  function fmt(v){ return Number(v || 0).toLocaleString('th-TH'); }
+  function percent(a,b){ return b ? ((a / b) * 100).toFixed(2) : '0.00'; }
+
+  function cfg(value){
+    const raw = String(value ?? '').trim();
+    const n = norm(raw);
+    return CUSTOMERS.find(c => c.key === raw || norm(c.key) === n || (c.aliases || []).some(a => norm(a) === n))
+        || CUSTOMERS.find(c => n.endsWith(norm(c.key)) || (c.aliases || []).some(a => n.endsWith(norm(a))))
+        || null;
+  }
+  function customerKey(value){ return cfg(value)?.key || String(value ?? '').trim(); }
+  function customerLabel(value){ const c = cfg(value); return c?.label || customerKey(value) || '-'; }
+  function rowCustomer(row){
+    const direct = String(row?.customer ?? row?.Customer ?? row?.channel ?? row?.Channel ?? '').trim();
+    const fromDirect = cfg(direct);
+    if(fromDirect) return fromDirect.key;
+    const fromKey = cfg(row?.item_key || '');
+    if(fromKey) return fromKey.key;
+    return customerKey(direct);
+  }
+  function isCustomer(row, customer){
+    if(!customer) return true;
+    return norm(rowCustomer(row)) === norm(customerKey(customer));
+  }
+  function val(row, field){
+    if(field === 'item') return row?.Item ?? row?.item ?? '';
+    if(field === 'code') return row?.CODE ?? row?.code ?? '';
+    if(field === 'assort') return row?.Assort ?? row?.assort ?? '';
+    if(field === 'location') return row?.Location ?? row?.location ?? '';
+    if(field === 'qty') return row?.Quantity ?? row?.quantity ?? row?.available_qty ?? row?.available_Qty ?? 0;
+    return '';
+  }
+  function keyFromRow(row, looseMode){
+    const existing = String(row?.item_key ?? '').trim();
+    if(existing) return existing;
+    const item = val(row,'item');
+    const code = String(val(row,'code') || '').toUpperCase();
+    const assort = val(row,'assort');
+    const location = looseMode ? '' : val(row,'location');
+    const customer = rowCustomer(row);
+    return String(item || '') + String(code || '') + String(assort || '') + String(location || '') + String(customer || '');
+  }
+  function savedKey(row, looseMode){
+    const k = norm(keyFromRow(row, !!looseMode));
+    if(k) return k;
+    return [val(row,'item'), val(row,'code'), val(row,'assort'), looseMode ? '' : val(row,'location'), rowCustomer(row)].map(norm).join('|');
+  }
+  function modeIsLoose(){ return window.currentCountWorkType === 'LOOSE'; }
+  function unitText(){ return modeIsLoose() ? 'คู่' : 'กล่อง'; }
+  function activeCountTable(){ return modeIsLoose() ? LOOSE_COUNT_TABLE : FULL_COUNT_TABLE; }
+  function activeMasterRows(){
+    try{
+      return modeIsLoose() ? (window.looseMasterRows || []) : (Array.isArray(masterRows) ? masterRows : []);
+    }catch(e){
+      return modeIsLoose() ? (window.looseMasterRows || []) : (window.masterRows || []);
+    }
+  }
+  function activeCountRows(){
+    try{ return Array.isArray(countRows) ? countRows : []; }
+    catch(e){ return window.countRows || []; }
+  }
+  function setCountRows(rows){
+    try{ countRows = rows || []; }catch(e){ window.countRows = rows || []; }
+  }
+  function setSavedKeys(keys){
+    try{ savedKeys = new Set(keys || []); }catch(e){ window.savedKeys = new Set(keys || []); }
+  }
+  function getSavedKeys(){
+    try{ return savedKeys instanceof Set ? savedKeys : new Set(); }
+    catch(e){ return window.savedKeys instanceof Set ? window.savedKeys : new Set(); }
+  }
+  function countRowCustomerMatch(row, customer, looseMode){
+    const rc = rowCustomer(row);
+    if(cfg(rc)) return norm(rc) === norm(customerKey(customer));
+    const k = savedKey(row, looseMode);
+    const c = cfg(k);
+    return c ? norm(c.key) === norm(customerKey(customer)) : false;
+  }
+
+  window.STOCK_CUSTOMERS = CUSTOMERS;
+  window.canonicalStockCustomer = customerKey;
+  window.isCustomerRow = isCustomer;
+  try{ isCustomerRow = window.isCustomerRow; }catch(e){}
+
+  window.makeSavedKey = function(row){ return savedKey(row, modeIsLoose()); };
+  try{ makeSavedKey = window.makeSavedKey; }catch(e){}
+  window.isSaved = function(row){ return getSavedKeys().has(savedKey(row, modeIsLoose())); };
+  try{ isSaved = window.isSaved; }catch(e){}
+  window.getSavedRow = function(row){
+    const k = savedKey(row, modeIsLoose());
+    return activeCountRows().find(r => savedKey(r, modeIsLoose()) === k) || null;
+  };
+  try{ getSavedRow = window.getSavedRow; }catch(e){}
+
+  async function fetchSafe(table){
+    try{
+      if(typeof fetchAll === 'function') return await fetchAll(table);
+      const { data, error } = await getSupabase().from(table).select('*');
+      if(error) throw error;
+      return data || [];
+    }catch(e){
+      console.warn('โหลดตารางไม่ได้:', table, e);
+      return [];
+    }
+  }
+  async function ensureFullMasterLoaded(){
+    let rows = [];
+    try{ rows = Array.isArray(masterRows) ? masterRows : []; }catch(e){ rows = window.masterRows || []; }
+    if(rows.length) return rows;
+    rows = await fetchSafe(FULL_MASTER_TABLE);
+    try{ masterRows = rows; }catch(e){ window.masterRows = rows; }
+    try{ if(typeof buildOfflineIndex === 'function') buildOfflineIndex(rows); }catch(e){}
+    try{ if(typeof renderMasterTable === 'function') renderMasterTable(rows); }catch(e){}
+    return rows;
+  }
+  async function loadCountHistoryFixed(customer){
+    const loose = modeIsLoose();
+    let rows = await fetchSafe(activeCountTable());
+    if(loose) rows = rows.filter(r => countRowCustomerMatch(r, customer, true));
+    setCountRows(rows);
+    setSavedKeys(rows.map(r => savedKey(r, loose)));
+  }
+  async function loadLooseMasterFixed(customer){
+    const rows = await fetchSafe(LOOSE_MASTER_TABLE);
+    window.looseMasterRows = rows.filter(r => isCustomer(r, customer));
+  }
+
+  function rowsForCurrentCustomer(){
+    const customer = customerKey(window.currentCountCustomer || currentCountCustomer || '');
+    return activeMasterRows().filter(r => isCustomer(r, customer));
+  }
+  function filteredRows(){
+    const rows = rowsForCurrentCustomer();
+    if(currentFilter === 'counted') return rows.filter(r => window.isSaved(r));
+    if(currentFilter === 'uncounted') return rows.filter(r => !window.isSaved(r));
+    return rows;
+  }
+  function filterLabel(){
+    if(currentFilter === 'counted') return 'นับแล้ว';
+    if(currentFilter === 'uncounted') return 'ยังไม่นับ';
+    return 'ทั้งหมด';
+  }
+  function setFilterUi(){
+    const text = byId('countFilterText');
+    if(text) text.textContent = filterLabel();
+    const menu = byId('countFilterMenu');
+    if(menu){
+      menu.querySelectorAll('button').forEach(btn => btn.classList.toggle('active', btn.dataset.filter === currentFilter));
+    }
+  }
+  function updateCountHeaderFixed(){
+    const c = customerKey(window.currentCountCustomer || currentCountCustomer || '');
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+    const title = byId('countTitle');
+    if(title){
+      title.innerHTML = `Stock Count ${html(customerLabel(c))} <span class="count-mode-chip ${modeIsLoose() ? '' : 'full'}">${modeIsLoose() ? 'งานเศษ' : 'เต็มกล่อง'} · หน่วย ${html(unitText())}</span>`;
+    }
+    setFilterUi();
+    updateCountSummaryFixed();
+  }
+  function updateCountSummaryFixed(){
+    const summary = byId('countFilterSummary');
+    if(!summary) return;
+    const rows = rowsForCurrentCustomer();
+    const counted = rows.filter(r => window.isSaved(r)).length;
+    const total = rows.length;
+    const remain = Math.max(total - counted, 0);
+    const shown = filteredRows().length;
+    summary.innerHTML = `ฟิลเตอร์: <b>${html(filterLabel())}</b> | แสดง ${fmt(shown)} รายการ | ทั้งหมด ${fmt(total)} | นับแล้ว ${fmt(counted)} | ยังไม่นับ ${fmt(remain)}`;
+  }
+  function emptyTextForFilter(){
+    if(currentFilter === 'counted') return 'ยังไม่มีรายการที่นับแล้ว';
+    if(currentFilter === 'uncounted') return 'ไม่มีรายการค้างนับ';
+    return 'ค้นหารหัสสินค้า หรือกดสแกน';
+  }
+
+  window.renderCountResult = function(result){
+    const box = byId('countResult');
+    if(!box) return;
+    const rows = Array.isArray(result) ? result : [];
+    box.className = rows.length ? '' : 'empty';
+    box.innerHTML = '';
+    if(!rows.length){
+      box.innerHTML = `<div class="empty">${html(emptyTextForFilter())}</div>`;
+      updateCountHeaderFixed();
+      return;
+    }
+    rows.forEach(r => {
+      const id = String(r.id ?? savedKey(r, modeIsLoose()));
+      const item = val(r,'item');
+      const code = val(r,'code');
+      const assort = val(r,'assort');
+      const location = val(r,'location');
+      const qty = val(r,'qty');
+      const savedRow = window.getSavedRow(r);
+      const isSavedRow = !!savedRow;
+      const savedQty = savedRow?.count_qty ?? '';
+      const locationHtml = modeIsLoose() ? '' : `<div><b>Location</b><span>${html(location || '-')}</span></div>`;
+      box.insertAdjacentHTML('beforeend', `
+        <div class="result-card ${isSavedRow ? 'saved-card' : ''} ${modeIsLoose() ? 'loose-count-card' : ''}" id="card_${html(id)}">
+          <div class="shoe-badge">${modeIsLoose() ? 'คู่' : '👟'}</div>
+          ${isSavedRow ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
+          <div class="result-grid count-result-grid">
+            <div class="system-qty-card"><b>System Qty <span class="unit-badge-count">${html(unitText())}</span></b><span>${html(qty)}</span></div>
+            <div><b>Item</b><span>${html(item)}</span></div>
+            <div><b>CODE</b><span>${html(code)}</span></div>
+            <div><b>Assort</b><span>${html(assort)}</span></div>
+            ${locationHtml}
+          </div>
+          <div class="count-form">
+            <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้ (${html(unitText())})" id="count_${html(id)}" value="${html(savedQty)}">
+            <button class="save-btn" id="save_${html(id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>${isSavedRow ? 'อัปเดต' : 'บันทึก'}</button>
+            <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
+          </div>
+        </div>
+      `);
+    });
+    updateCountHeaderFixed();
+  };
+  try{ renderCountResult = window.renderCountResult; }catch(e){}
+
+  window.searchOfflineRows = function(keyword, customer = currentCountCustomer){
+    const q = norm(keyword);
+    if(!q) return [];
+    const rows = activeMasterRows().filter(r => isCustomer(r, customer));
+    const exact = rows.filter(r => {
+      const item = norm(val(r,'item'));
+      const code = norm(val(r,'code'));
+      const assort = norm(val(r,'assort'));
+      const location = norm(val(r,'location'));
+      const k = savedKey(r, modeIsLoose());
+      if(modeIsLoose()) return q === item + code + assort || q === k;
+      return q === item + code + assort || q === item + code + assort + location || q === k;
+    });
+    if(exact.length) return exact;
+    return rows.filter(r => [
+      keyFromRow(r, modeIsLoose()),
+      val(r,'item'), val(r,'code'), val(r,'assort'),
+      modeIsLoose() ? '' : val(r,'location'), rowCustomer(r)
+    ].map(norm).some(v => v && v.includes(q)));
+  };
+  try{ searchOfflineRows = window.searchOfflineRows; }catch(e){}
+
+  window.searchForCount = function(){
+    if(typeof closeCountSuggest === 'function') closeCountSuggest();
+    const keyword = byId('countSearch')?.value || '';
+    const box = byId('countResult');
+    if(!box) return;
+    if(!keyword.trim()){
+      box.className = 'empty';
+      box.innerHTML = '<div class="empty">กรุณากรอกข้อมูลเพื่อค้นหา</div>';
+      updateCountHeaderFixed();
+      return;
+    }
+    const result = window.searchOfflineRows(keyword, currentCountCustomer);
+    if(!result.length){
+      box.className = 'empty';
+      box.innerHTML = `<div class="empty">ไม่มีข้อมูลที่ตรงกับ: ${html(keyword)}</div>`;
+      updateCountHeaderFixed();
+      return;
+    }
+    window.renderCountResult(result);
+  };
+
+  window.showCountSuggest = function(){
+    const input = byId('countSearch');
+    const box = byId('countSuggest');
+    if(!input || !box) return;
+    const q = norm(input.value);
+    if(q.length < 2){ if(typeof closeCountSuggest === 'function') closeCountSuggest(); return; }
+    const rows = window.searchOfflineRows(input.value, currentCountCustomer).slice(0, 50);
+    if(!rows.length){
+      box.innerHTML = '<div class="count-suggest-empty">ไม่พบข้อมูล</div>';
+      box.classList.add('show');
+      return;
+    }
+    box.innerHTML = rows.map(r => {
+      const item = val(r,'item');
+      const code = val(r,'code');
+      const assort = val(r,'assort');
+      const location = val(r,'location');
+      const qty = val(r,'qty');
+      const value = modeIsLoose() ? `${item}${code}${assort}` : `${item}${code}${assort}${location || ''}`;
+      const text = modeIsLoose() ? `${item}${code}${assort} | Qty ${qty} ${unitText()}` : `${item}${code}${assort} | ${location} | Qty ${qty} ${unitText()}`;
+      return `<button type="button" onclick="selectCountSuggest('${js(value)}')">${html(text)}</button>`;
+    }).join('');
+    box.classList.add('show');
+  };
+
+  window.applyCountFilter = function(filter){
+    currentFilter = ['all','counted','uncounted'].includes(filter) ? filter : 'all';
+    byId('countFilterMenu')?.classList.remove('show');
+    const input = byId('countSearch');
+    if(input) input.value = '';
+    if(typeof closeCountSuggest === 'function') closeCountSuggest();
+    setFilterUi();
+    window.renderCountResult(filteredRows());
+  };
+  window.toggleCountFilterMenu = function(){
+    byId('countFilterMenu')?.classList.toggle('show');
+    setFilterUi();
+  };
+
+  async function openCountPage(customer, loose){
+    const c = customerKey(customer);
+    window.currentCountWorkType = loose ? 'LOOSE' : 'FULL_BOX';
+    try{ currentCountCustomer = c; }catch(e){}
+    window.currentCountCustomer = c;
+    currentFilter = 'all';
+    if(typeof setLoading === 'function') setLoading(true, loose ? `กำลังโหลดงานเศษ ${customerLabel(c)}...` : `กำลังโหลดเต็มกล่อง ${customerLabel(c)}...`);
+    try{
+      if(loose) await loadLooseMasterFixed(c);
+      else await ensureFullMasterLoaded();
+      await loadCountHistoryFixed(c);
+      const search = byId('countSearch');
+      if(search) search.value = '';
+      if(typeof closeCountSuggest === 'function') closeCountSuggest();
+      if(typeof showPage === 'function') showPage('count');
+      const box = byId('countResult');
+      if(box){
+        box.className = 'empty';
+        box.innerHTML = `<div class="empty">ค้นหารหัสสินค้า หรือกดสแกน<br><small>${html(customerLabel(c))} · ${loose ? 'งานเศษ · หน่วยคู่' : 'เต็มกล่อง · หน่วยกล่อง'}</small></div>`;
+      }
+      updateCountHeaderFixed();
+      setTimeout(updateCountHeaderFixed, 80);
+      setTimeout(updateCountHeaderFixed, 250);
+    }catch(err){
+      alert('โหลดข้อมูลไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      if(typeof setLoading === 'function') setLoading(false);
+    }
+  }
+  window.showCountPage = function(customer){ return openCountPage(customer, false); };
+  window.showLooseCountPage = function(customer){ return openCountPage(customer, true); };
+
+  async function flexibleWrite(table, oldRow, payload, row){
+    const optional = ['customer','count_type','location'];
+    let body = {...payload};
+    for(let attempt = 0; attempt <= optional.length; attempt++){
+      let query;
+      if(oldRow){
+        query = getSupabase().from(table).update(body);
+        if(oldRow.id) query = query.eq('id', oldRow.id);
+        else if(payload.item_key) query = query.eq('item_key', payload.item_key);
+        else query = query.eq('master_id', row.id);
+        query = query.select('*').maybeSingle();
+      }else{
+        query = getSupabase().from(table).insert(body).select('*').single();
+      }
+      const res = await query;
+      if(!res.error) return res;
+      const msg = res.error.message || '';
+      const col = optional.find(k => Object.prototype.hasOwnProperty.call(body,k) && new RegExp(k,'i').test(msg));
+      if(!col) return res;
+      delete body[col];
+    }
+  }
+
+  window.saveCount = async function(row){
+    const id = String(row.id ?? savedKey(row, modeIsLoose()));
+    const input = byId('count_' + id);
+    if(!input) return alert('ไม่พบช่องจำนวนที่นับได้');
+    const raw = String(input.value ?? '').trim();
+    const qty = number(raw);
+    if(raw === '') return alert('กรุณาใส่จำนวนที่นับได้');
+    if(qty < 0) return alert('จำนวนต้องไม่ติดลบ');
+
+    const c = customerKey(currentCountCustomer || rowCustomer(row));
+    const payload = {
+      master_id: row.id ?? null,
+      item_key: keyFromRow(row, modeIsLoose()) || null,
+      item: val(row,'item') || null,
+      code: val(row,'code') || null,
+      assort: val(row,'assort') || null,
+      system_qty: number(val(row,'qty')),
+      count_qty: qty,
+      counted_by: currentUser || null,
+      customer: c
+    };
+    if(!modeIsLoose()) payload.location = val(row,'location') || null;
+    if(modeIsLoose()) payload.count_type = 'LOOSE';
+
+    const table = activeCountTable();
+    const oldRow = window.getSavedRow(row);
+    const res = await flexibleWrite(table, oldRow, payload, row);
+    if(res?.error) return alert((oldRow ? 'อัปเดตไม่สำเร็จ: ' : 'บันทึกไม่สำเร็จ: ') + (res.error.message || res.error));
+
+    const saved = res?.data || payload;
+    const oldKey = savedKey(row, modeIsLoose());
+    const nextRows = activeCountRows();
+    if(oldRow){
+      setCountRows(nextRows.map(r => savedKey(r, modeIsLoose()) === oldKey ? {...r, ...saved, ...payload} : r));
+    }else{
+      setCountRows([...nextRows, saved]);
+    }
+    setSavedKeys(activeCountRows().map(r => savedKey(r, modeIsLoose())));
+
+    const btn = byId('save_' + id);
+    if(btn) btn.textContent = 'อัปเดต';
+    const card = byId('card_' + id);
+    if(card){
+      card.classList.add('saved-card');
+      if(!card.querySelector('.saved-status')) card.insertAdjacentHTML('afterbegin','<div class="saved-status">บันทึกแล้ว</div>');
+    }
+    updateCountHeaderFixed();
+    dashboardCache = null;
+    setTimeout(() => { window.renderCountOverviewAll?.(); window.refreshRoleDashboard?.(); }, 250);
+    if(typeof showToast === 'function') showToast(oldRow ? 'อัปเดตสำเร็จ' : 'บันทึกสำเร็จ');
+  };
+  try{ saveCount = window.saveCount; }catch(e){}
+
+  async function buildDashboardStatsFixed(force){
+    if(!force && dashboardCache && Date.now() - dashboardCacheAt < 2500) return dashboardCache;
+
+    const fullMasters = await fetchSafe(FULL_MASTER_TABLE);
+    try{ masterRows = fullMasters; }catch(e){ window.masterRows = fullMasters; }
+    const looseMasters = await fetchSafe(LOOSE_MASTER_TABLE);
+    const fullCounts = await fetchSafe(FULL_COUNT_TABLE);
+    const looseCounts = await fetchSafe(LOOSE_COUNT_TABLE);
+
+    const stats = {};
+    CUSTOMERS.forEach(c => stats[c.key] = {key:c.key,label:c.label || c.key,total:0,counted:0,remaining:0,progress:'0.00',diffPlus:0,diffMinus:0,diffItems:0});
+
+    function countMasterList(masterList, countList, loose){
+      const savedSetByCustomer = {};
+      CUSTOMERS.forEach(c => savedSetByCustomer[c.key] = new Set());
+      (countList || []).forEach(r => {
+        let c = rowCustomer(r);
+        if(!stats[c]){
+          const keyCfg = cfg(savedKey(r, loose));
+          c = keyCfg?.key || c;
+        }
+        if(!stats[c]) return;
+        savedSetByCustomer[c].add(savedKey(r, loose));
+
+        const systemQty = number(r.system_qty ?? r.System_Qty ?? r.Quantity ?? r.quantity ?? 0);
+        const countQty = number(r.count_qty ?? r.Count_Qty ?? 0);
+        const diff = countQty - systemQty;
+        if(diff !== 0){
+          stats[c].diffItems += 1;
+          if(diff > 0) stats[c].diffPlus += diff;
+          else stats[c].diffMinus += Math.abs(diff);
+        }
+      });
+
+      (masterList || []).forEach(r => {
+        const c = rowCustomer(r);
+        if(!stats[c]) return;
+        stats[c].total += 1;
+        if(savedSetByCustomer[c].has(savedKey(r, loose))) stats[c].counted += 1;
+      });
+    }
+
+    countMasterList(fullMasters, fullCounts, false);
+    countMasterList(looseMasters, looseCounts, true);
+
+    const list = CUSTOMERS.map(c => {
+      const s = stats[c.key];
+      s.remaining = Math.max(s.total - s.counted, 0);
+      s.progress = percent(s.counted, s.total);
+      return s;
+    });
+    const all = list.reduce((a,s) => {
+      a.total += s.total; a.counted += s.counted; a.remaining += s.remaining;
+      a.diffPlus += s.diffPlus; a.diffMinus += s.diffMinus; a.diffItems += s.diffItems;
+      return a;
+    }, {total:0,counted:0,remaining:0,diffPlus:0,diffMinus:0,diffItems:0,progress:'0.00'});
+    all.progress = percent(all.counted, all.total);
+    dashboardCache = {stats:list, all};
+    dashboardCacheAt = Date.now();
+    return dashboardCache;
+  }
+
+  function iconHtml(customer, small){
+    if(typeof window.customerIconHtml === 'function') return window.customerIconHtml(customer, !!small);
+    return '';
+  }
+  function progressLine(s){
+    return `
+      <div class="customer-progress-line has-logo" data-customer="${html(s.key)}">
+        ${iconHtml(s.key, true)}
+        <b>${html(s.label)}</b>
+        <i><em style="width:${Math.min(number(s.progress),100)}%"></em></i>
+        <strong>${s.progress}%</strong>
+        <span>นับแล้ว ${fmt(s.counted)} / ทั้งหมด ${fmt(s.total)} · ยังไม่นับ ${fmt(s.remaining)}</span>
+      </div>`;
+  }
+  function dashCard(s){
+    return `
+      <div class="dash-customer-card has-logo" data-customer="${html(s.key)}">
+        ${iconHtml(s.key, true)}
+        <b>${html(s.label)}</b>
+        <strong>${s.progress}%</strong>
+        <p><em>${fmt(s.counted)}</em> / ${fmt(s.total)} <small>ยังไม่นับ ${fmt(s.remaining)}</small></p>
+        <i><span style="width:${Math.min(number(s.progress),100)}%"></span></i>
+      </div>`;
+  }
+
+  window.renderCountOverviewAll = async function(){
+    const {stats, all} = await buildDashboardStatsFixed(false);
+    const block = `
+      <div class="role-count-head"><h3>ความคืบหน้าการนับ 7 ร้าน</h3></div>
+      <div class="count-summary-cards">
+        <div><small>นับแล้ว</small><b>${fmt(all.counted)}</b><span>ทั้งหมด</span></div>
+        <div><small>ยังไม่นับ</small><b>${fmt(all.remaining)}</b><span>ทั้งหมด</span></div>
+        <div><small>คิดเป็น %</small><b>${all.progress}%</b><span>ความคืบหน้า</span></div>
+      </div>
+      ${stats.map(progressLine).join('')}`;
+    const user = byId('userCountOverview');
+    if(user) user.innerHTML = block;
+    const admin = byId('adminCountOverview');
+    if(admin) admin.innerHTML = block;
+  };
+
+  window.refreshRoleDashboard = async function(){
+    const {stats, all} = await buildDashboardStatsFixed(true);
+    const up = byId('dashUpdateTime');
+    if(up) up.textContent = new Date().toLocaleString('th-TH',{timeZone:'Asia/Bangkok',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+
+    const main = byId('dashMainProgress');
+    if(main){
+      const deg = Math.min(number(all.progress),100) * 3.6;
+      main.innerHTML = `
+        <div class="dash-ring" style="background:conic-gradient(#d70914 ${deg}deg,#f4e6e7 0deg)"><b>${Math.round(number(all.progress))}%</b></div>
+        <div class="dash-kpis">
+          <span><small>ผลการนับทั้งหมด</small><b>${fmt(all.counted)}</b></span>
+          <span><small>ยังไม่นับ</small><b>${fmt(all.remaining)}</b></span>
+          <span><small>Diff +</small><b>${fmt(all.diffPlus)}</b></span>
+          <span><small>Diff -</small><b>${fmt(all.diffMinus)}</b></span>
+          <span><small>Total</small><b>${fmt(all.total)}</b></span>
+          <span><small>Diff รายการ</small><b>${fmt(all.diffItems)}</b></span>
+        </div>`;
+    }
+    const cards = byId('dashCustomerCards');
+    if(cards) cards.innerHTML = stats.map(dashCard).join('');
+    const check = byId('dashCheckList');
+    if(check){
+      check.innerHTML = `
+        <div class="check-row"><span>ผลการนับทั้งหมด</span><b>${fmt(all.counted)} รายการ</b></div>
+        <div class="check-row"><span>ยังไม่นับทั้งหมด</span><b>${fmt(all.remaining)} รายการ</b></div>
+        <div class="check-row"><span>Diff +</span><b>${fmt(all.diffPlus)}</b></div>
+        <div class="check-row"><span>Diff -</span><b>${fmt(all.diffMinus)}</b></div>`;
+    }
+    await window.renderCountOverviewAll();
+  };
+
+  window.refreshAppData = async function(){
+    try{
+      dashboardCache = null;
+      if(typeof loadMasterData === 'function') await loadMasterData();
+      await window.renderCountOverviewAll();
+      const dash = byId('dashboardPage');
+      if(dash && getComputedStyle(dash).display !== 'none') await window.refreshRoleDashboard();
+      updateCountHeaderFixed();
+      if(typeof showToast === 'function') showToast('ข้อมูลล่าสุดแล้ว');
+    }catch(e){
+      alert('รีเฟรชไม่สำเร็จ: ' + (e?.message || e));
+    }
+  };
+
+  function syncCountButtons(){
+    document.querySelectorAll('button').forEach(btn => {
+      const txt = (btn.textContent || '').toUpperCase();
+      const onclick = btn.getAttribute('onclick') || '';
+      const isLooseButton = btn.classList.contains('loose-count-btn') || txt.includes('งานเศษ') || txt.includes('เศษ');
+      const isCountButton = txt.includes('STOCK COUNT') || onclick.includes('showCountPage') || onclick.includes('showLooseCountPage');
+      if(!isCountButton && !isLooseButton) return;
+      const customer = txt.includes('LOTUS') || txt.includes('โลตัส') ? 'LOTUS'
+        : txt.includes('BIG') || txt.includes('BIG C') || txt.includes('BIGC') ? 'BIG C'
+        : '';
+      if(!customer) return;
+      btn.setAttribute('onclick', isLooseButton ? `showLooseCountPage('${customer}')` : `showCountPage('${customer}')`);
+    });
+  }
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(page){
+      const result = oldShowPage.apply(this, arguments);
+      setTimeout(syncCountButtons, 0);
+      if(page === 'count') setTimeout(updateCountHeaderFixed, 0);
+      return result;
+    };
+  }
+
+  document.addEventListener('click', event => {
+    if(!event.target.closest('.count-filter-wrap')) byId('countFilterMenu')?.classList.remove('show');
+  });
+  document.addEventListener('DOMContentLoaded', () => {
+    setTimeout(syncCountButtons, 100);
+    setTimeout(syncCountButtons, 800);
+    setTimeout(() => window.renderCountOverviewAll?.(), 900);
+    setTimeout(updateCountHeaderFixed, 1000);
+  });
+  window.addEventListener('load', () => {
+    setTimeout(syncCountButtons, 500);
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/service-worker.js?v=' + FIX_VERSION).catch(() => {});
+    }
+  });
+
+  window.__countFixV70 = {
+    version: FIX_VERSION,
+    updateCountHeaderFixed,
+    buildDashboardStatsFixed,
+    refreshDashboard: window.refreshRoleDashboard
+  };
 })();
 </script>
 
