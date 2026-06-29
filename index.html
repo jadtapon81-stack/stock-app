@@ -14556,5 +14556,161 @@ button.master-duplicate-alert::before,
 }
 </style>
 
+
+
+<!-- ===== PRODUCTION STRICT PATCH v77: HEADER HAMBURGER + REFRESH OVERLAP ONLY ===== -->
+<style>
+/* Scope เฉพาะหัวแดงหน้า Home และ topbar มือถือ เพื่อแก้ hamburger ไม่ขึ้น + refresh ทับ GAMBOL เท่านั้น */
+@media (max-width:560px){
+  #homePage .role-red-head > .hamb-mini{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    position:absolute!important;
+    left:14px!important;
+    top:calc(20px + env(safe-area-inset-top))!important;
+    width:40px!important;
+    height:40px!important;
+    min-width:40px!important;
+    min-height:40px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:90!important;
+    color:#fff!important;
+    background:transparent!important;
+    border:0!important;
+    font-size:30px!important;
+    line-height:1!important;
+  }
+
+  #homePage .role-red-head > div:not([class]){
+    position:absolute!important;
+    left:60px!important;
+    right:112px!important;
+    top:calc(20px + env(safe-area-inset-top))!important;
+    margin:0!important;
+    padding:0!important;
+    min-width:0!important;
+    max-width:none!important;
+    text-align:center!important;
+    z-index:20!important;
+    overflow:hidden!important;
+    pointer-events:none!important;
+  }
+
+  #homePage .role-red-head > div:not([class]) b,
+  #homePage .role-red-head > div:not([class]) span{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:clip!important;
+  }
+
+  #homePage .role-red-head .role-admin-badge{
+    position:absolute!important;
+    right:12px!important;
+    top:calc(18px + env(safe-area-inset-top))!important;
+    z-index:95!important;
+  }
+
+  #homePage .role-red-head .head-refresh-mini{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    position:absolute!important;
+    right:24px!important;
+    top:calc(66px + env(safe-area-inset-top))!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:92!important;
+    transform:none!important;
+  }
+
+  body:not(.final-mobile-home):not(.final-mobile-dashboard):not(.final-mobile-other) #appPage > .topbar,
+  body.force-mobile-topbar #appPage > .topbar{
+    display:grid!important;
+    visibility:visible!important;
+  }
+
+  #appPage > .topbar > .hamburger{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    color:#fff!important;
+    z-index:20!important;
+  }
+}
+</style>
+<script>
+(function(){
+  function isVisible(el){
+    return !!el && getComputedStyle(el).display !== 'none' && getComputedStyle(el).visibility !== 'hidden';
+  }
+
+  function fixProductionHeaderV77(){
+    var home = document.getElementById('homePage');
+    var dash = document.getElementById('dashboardPage');
+    var other = document.getElementById('otherCustomerPage');
+    var topbar = document.querySelector('#appPage > .topbar');
+    var homeVisible = isVisible(home);
+    var dashVisible = isVisible(dash);
+    var otherVisible = isVisible(other);
+
+    document.body.classList.toggle('force-mobile-topbar', !homeVisible && !dashVisible && !otherVisible);
+
+    if(topbar && !homeVisible && !dashVisible && !otherVisible){
+      topbar.style.removeProperty('display');
+      topbar.style.removeProperty('visibility');
+      topbar.style.removeProperty('height');
+      topbar.style.removeProperty('padding');
+      topbar.style.removeProperty('margin');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(fixProductionHeaderV77, 80);
+    setTimeout(fixProductionHeaderV77, 600);
+  });
+
+  var oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(){
+      var result = oldShowPage.apply(this, arguments);
+      setTimeout(fixProductionHeaderV77, 80);
+      setTimeout(fixProductionHeaderV77, 400);
+      return result;
+    };
+  }
+
+  var oldShowFgPage = window.showFgPage;
+  if(typeof oldShowFgPage === 'function'){
+    window.showFgPage = function(){
+      var result = oldShowFgPage.apply(this, arguments);
+      setTimeout(fixProductionHeaderV77, 80);
+      setTimeout(fixProductionHeaderV77, 400);
+      return result;
+    };
+  }
+
+  var oldShowCountPage = window.showCountPage;
+  if(typeof oldShowCountPage === 'function'){
+    window.showCountPage = function(){
+      var result = oldShowCountPage.apply(this, arguments);
+      setTimeout(fixProductionHeaderV77, 80);
+      setTimeout(fixProductionHeaderV77, 400);
+      return result;
+    };
+  }
+})();
+</script>
+
 </body>
 </html>
