@@ -15356,5 +15356,180 @@ button.master-duplicate-alert::before,
 })();
 </script>
 
+
+<!-- ===== PRODUCTION PATCH v81: mobile count customer label + dashboard single progress bar only ===== -->
+<style>
+@media (max-width:720px){
+  /* Scope: Dashboard customer cards only - force one visible progress bar */
+  #dashCustomerCards .dash-customer-card > i{
+    display:block!important;
+    position:relative!important;
+    grid-column:1 / -1!important;
+    width:100%!important;
+    height:8px!important;
+    min-height:8px!important;
+    max-height:8px!important;
+    padding:0!important;
+    margin-top:4px!important;
+    line-height:0!important;
+    font-size:0!important;
+    color:transparent!important;
+    background:transparent!important;
+    border:0!important;
+    box-shadow:none!important;
+    overflow:hidden!important;
+    border-radius:999px!important;
+    z-index:5!important;
+  }
+  #dashCustomerCards .dash-customer-card > i > span{
+    display:block!important;
+    position:static!important;
+    height:100%!important;
+    min-height:8px!important;
+    max-height:8px!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:999px!important;
+    box-shadow:none!important;
+    transform:none!important;
+    text-indent:-9999px!important;
+    overflow:hidden!important;
+    color:transparent!important;
+  }
+  #dashCustomerCards .dash-customer-card > i::before,
+  #dashCustomerCards .dash-customer-card > i::after,
+  #dashCustomerCards .dash-customer-card > i > span::before,
+  #dashCustomerCards .dash-customer-card > i > span::after{
+    content:none!important;
+    display:none!important;
+  }
+}
+</style>
+<script>
+(function(){
+  'use strict';
+
+  var CUSTOMER_CFG_V81 = [
+    {key:'LOTUS', label:'LOTUS', aliases:['LOTUS','โลตัส']},
+    {key:'BIG C', label:'BIG C', aliases:['BIG C','BIGC','บิ๊กซี']},
+    {key:'VILLA MARKET', label:'Villa Market', aliases:['VILLA MARKET','VILLAMARKET','VILLA']},
+    {key:'MAXMART', label:'Maxmart', aliases:['MAXMART','MAX MART']},
+    {key:'7-11', label:'7-11', aliases:['7-11','711','SEVEN','SEVEN ELEVEN']},
+    {key:'PTT', label:'PTT', aliases:['PTT']},
+    {key:'CJ', label:'CJ', aliases:['CJ']}
+  ];
+
+  function n81(v){ return String(v == null ? '' : v).toUpperCase().replace(/\s+/g,'').replace(/-/g,''); }
+  function cfg81(v){
+    var s = n81(v);
+    for(var i=0;i<CUSTOMER_CFG_V81.length;i++){
+      var c = CUSTOMER_CFG_V81[i];
+      if(n81(c.key) === s || n81(c.label) === s) return c;
+      for(var j=0;j<c.aliases.length;j++) if(n81(c.aliases[j]) === s) return c;
+    }
+    return null;
+  }
+  function key81(v){
+    var c = cfg81(v);
+    return c ? c.key : String(v == null ? '' : v).trim();
+  }
+  function label81(v){
+    var c = cfg81(v);
+    return c ? c.label : (String(v == null ? '' : v).trim() || '-');
+  }
+  function esc81(v){
+    return String(v == null ? '' : v).replace(/[&<>'"]/g,function(ch){return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch];});
+  }
+  function currentCustomer81(){
+    var c = window.currentCountCustomer || '';
+    try{ if(!c && typeof currentCountCustomer !== 'undefined') c = currentCountCustomer; }catch(e){}
+    return key81(c || 'LOTUS');
+  }
+  function setCustomer81(customer){
+    var c = key81(customer || currentCustomer81());
+    window.currentCountCustomer = c;
+    try{ currentCountCustomer = c; }catch(e){}
+    return c;
+  }
+  function countResultHasRealCard81(box){
+    return !!(box && (box.querySelector('.result-card') || box.querySelector('.mobile-item-card') || box.querySelector('[id^="card_"]')));
+  }
+  function fixCountEmptyCustomerLabel81(customer){
+    var c = setCustomer81(customer || currentCustomer81());
+    var box = document.getElementById('countResult');
+    if(!box || countResultHasRealCard81(box)) return;
+    var txt = (box.textContent || '').trim();
+    var known = CUSTOMER_CFG_V81.some(function(x){ return txt === x.label || txt === x.key || n81(txt) === n81(x.label) || n81(txt) === n81(x.key); });
+    var isEmptyHint = box.querySelector('.empty') && (known || /เริ่มนับ|ค้นหา|สแกน|LOTUS|BIG C|VILLA|MAXMART|7-11|PTT|CJ/i.test(txt));
+    if(isEmptyHint){
+      box.innerHTML = '<div class="empty">' + esc81(label81(c)) + '</div>';
+    }
+  }
+
+  var oldShowCountPage81 = window.showCountPage;
+  if(typeof oldShowCountPage81 === 'function' && !oldShowCountPage81.__v81Wrapped){
+    var wrappedShowCount81 = function(customer){
+      var c = setCustomer81(customer || 'LOTUS');
+      var result = oldShowCountPage81.apply(this, arguments);
+      setCustomer81(c);
+      setTimeout(function(){ fixCountEmptyCustomerLabel81(c); }, 80);
+      setTimeout(function(){ fixCountEmptyCustomerLabel81(c); }, 350);
+      setTimeout(function(){ fixCountEmptyCustomerLabel81(c); }, 900);
+      return result;
+    };
+    wrappedShowCount81.__v81Wrapped = true;
+    window.showCountPage = wrappedShowCount81;
+  }
+
+  var oldClearCountSearch81 = window.clearCountSearch;
+  if(typeof oldClearCountSearch81 === 'function' && !oldClearCountSearch81.__v81Wrapped){
+    var wrappedClear81 = function(){
+      var c = currentCustomer81();
+      var result = oldClearCountSearch81.apply(this, arguments);
+      setCustomer81(c);
+      setTimeout(function(){ fixCountEmptyCustomerLabel81(c); }, 20);
+      return result;
+    };
+    wrappedClear81.__v81Wrapped = true;
+    window.clearCountSearch = wrappedClear81;
+  }
+
+  function fixDashboardBars81(){
+    var cards = document.querySelectorAll('#dashCustomerCards .dash-customer-card');
+    cards.forEach(function(card){
+      var bar = card.querySelector(':scope > i');
+      if(!bar) return;
+      var spans = Array.from(bar.querySelectorAll('span'));
+      if(spans.length > 1){
+        spans.slice(1).forEach(function(s){ s.remove(); });
+      }
+      bar.childNodes.forEach(function(node){
+        if(node.nodeType === 3) node.textContent = '';
+      });
+    });
+  }
+
+  ['showPage','refreshRoleDashboard','renderCountOverviewAll'].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn === 'function' && !oldFn.__v81DashWrapped){
+      var wrapped = function(){
+        var res = oldFn.apply(this, arguments);
+        setTimeout(fixDashboardBars81, 60);
+        setTimeout(fixDashboardBars81, 350);
+        return res;
+      };
+      wrapped.__v81DashWrapped = true;
+      window[name] = wrapped;
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ fixCountEmptyCustomerLabel81(currentCustomer81()); fixDashboardBars81(); }, 300);
+    setTimeout(function(){ fixCountEmptyCustomerLabel81(currentCustomer81()); fixDashboardBars81(); }, 1200);
+  });
+})();
+</script>
+
 </body>
 </html>
