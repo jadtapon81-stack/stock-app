@@ -15531,5 +15531,102 @@ button.master-duplicate-alert::before,
 })();
 </script>
 
+
+<script>
+/* ===== PATCH V82: REMOVE COUNT EMPTY PLACEHOLDER TEXT ONLY ===== */
+(function(){
+  'use strict';
+
+  var CUSTOMER_EMPTY_RE = /(LOTUS|BIG\s*C|VILLA|VILLA\s*MARKET|MAXMART|MAX\s*MART|7-11|711|PTT|CJ|ค้นหารหัสสินค้า|กดสแกน|เริ่มนับ|งานเศษ|ยังไม่มีข้อมูลใน\s*loose_master_data)/i;
+
+  function hasCountRealResultV82(box){
+    if(!box) return false;
+    return !!(
+      box.querySelector('.result-card') ||
+      box.querySelector('.saved-card') ||
+      box.querySelector('.mobile-item-card') ||
+      box.querySelector('[id^="card_"]') ||
+      box.querySelector('.count-form')
+    );
+  }
+
+  function removeCountEmptyPlaceholderV82(){
+    var box = document.getElementById('countResult');
+    if(!box || hasCountRealResultV82(box)) return;
+
+    var text = (box.textContent || '').replace(/\s+/g,' ').trim();
+    var hasOnlyEmptyBox = !!box.querySelector('.empty') || box.classList.contains('empty');
+
+    if(hasOnlyEmptyBox && (!text || CUSTOMER_EMPTY_RE.test(text))){
+      box.innerHTML = '';
+      box.className = '';
+    }
+  }
+
+  var oldClearV82 = window.clearCountSearch;
+  if(typeof oldClearV82 === 'function' && !oldClearV82.__removeEmptyV82){
+    var wrappedClearV82 = function(){
+      var res = oldClearV82.apply(this, arguments);
+      setTimeout(removeCountEmptyPlaceholderV82, 0);
+      setTimeout(removeCountEmptyPlaceholderV82, 50);
+      setTimeout(removeCountEmptyPlaceholderV82, 300);
+      return res;
+    };
+    wrappedClearV82.__removeEmptyV82 = true;
+    window.clearCountSearch = wrappedClearV82;
+  }
+
+  var oldShowCountV82 = window.showCountPage;
+  if(typeof oldShowCountV82 === 'function' && !oldShowCountV82.__removeEmptyV82){
+    var wrappedShowCountV82 = function(){
+      var res = oldShowCountV82.apply(this, arguments);
+      setTimeout(removeCountEmptyPlaceholderV82, 0);
+      setTimeout(removeCountEmptyPlaceholderV82, 80);
+      setTimeout(removeCountEmptyPlaceholderV82, 350);
+      setTimeout(removeCountEmptyPlaceholderV82, 1000);
+      return res;
+    };
+    wrappedShowCountV82.__removeEmptyV82 = true;
+    window.showCountPage = wrappedShowCountV82;
+  }
+
+  var oldShowPageV82 = window.showPage;
+  if(typeof oldShowPageV82 === 'function' && !oldShowPageV82.__removeEmptyV82){
+    var wrappedShowPageV82 = function(){
+      var res = oldShowPageV82.apply(this, arguments);
+      setTimeout(removeCountEmptyPlaceholderV82, 80);
+      setTimeout(removeCountEmptyPlaceholderV82, 400);
+      return res;
+    };
+    wrappedShowPageV82.__removeEmptyV82 = true;
+    window.showPage = wrappedShowPageV82;
+  }
+
+  function attachObserverV82(){
+    var box = document.getElementById('countResult');
+    if(!box || box.__removeEmptyObserverV82) return;
+    box.__removeEmptyObserverV82 = true;
+    var obs = new MutationObserver(function(){
+      if(box.__removeEmptyLockV82) return;
+      box.__removeEmptyLockV82 = true;
+      setTimeout(function(){
+        removeCountEmptyPlaceholderV82();
+        box.__removeEmptyLockV82 = false;
+      }, 20);
+    });
+    obs.observe(box, {childList:true, subtree:true, characterData:true, attributes:true, attributeFilter:['class']});
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    attachObserverV82();
+    setTimeout(attachObserverV82, 500);
+    setTimeout(removeCountEmptyPlaceholderV82, 500);
+    setTimeout(removeCountEmptyPlaceholderV82, 1500);
+  });
+
+  window.removeCountEmptyPlaceholderV82 = removeCountEmptyPlaceholderV82;
+})();
+</script>
+
 </body>
 </html>
