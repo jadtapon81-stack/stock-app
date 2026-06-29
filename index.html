@@ -14712,5 +14712,260 @@ button.master-duplicate-alert::before,
 })();
 </script>
 
+
+
+<!-- ===== PRODUCTION STRICT PATCH v78: SHOW TOPBAR ON WORK PAGES + OTHER BUTTON TEXT ONLY ===== -->
+<style>
+/* Scope เฉพาะปัญหาที่สั่ง: ปุ่ม Hamburger/Home/Refresh ของ topbar ในหน้า Master/Count/FG และข้อความปุ่ม Other customer */
+@media (max-width:720px){
+  body.v78-work-topbar #appPage > header.topbar,
+  body.v78-work-topbar #appPage > .topbar{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    height:calc(78px + env(safe-area-inset-top))!important;
+    min-height:calc(78px + env(safe-area-inset-top))!important;
+    padding:calc(12px + env(safe-area-inset-top)) 14px 12px!important;
+    margin:0!important;
+    grid-template-columns:42px minmax(0,1fr) 38px 58px!important;
+    align-items:center!important;
+    gap:8px!important;
+    overflow:visible!important;
+    z-index:3000!important;
+  }
+
+  body.v78-work-topbar #appPage > .topbar > .hamburger{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:1!important;
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    margin:0!important;
+    padding:0!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    place-items:center!important;
+    z-index:3!important;
+  }
+
+  body.v78-work-topbar #appPage > .topbar > .brand{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:2!important;
+    min-width:0!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+
+  body.v78-work-topbar #appPage > .topbar > .brand b,
+  body.v78-work-topbar #appPage > .topbar > .brand span{
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  body.v78-work-topbar #appPage > .topbar > .refresh-top-btn{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:3!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:4!important;
+  }
+
+  body.v78-work-topbar #appPage > .topbar > .home-top-btn{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:4!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    width:58px!important;
+    height:38px!important;
+    min-width:58px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:4!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn > span,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > span,
+  #homePage .role-menu-grid > button[onclick*="Other"] > span,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > span,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > span{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:2!important;
+    min-width:0!important;
+    color:#111827!important;
+    -webkit-text-fill-color:#111827!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn > span > b,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > span > b,
+  #homePage .role-menu-grid > button[onclick*="Other"] > span > b,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > span > b,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > span > b{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    color:#111827!important;
+    -webkit-text-fill-color:#111827!important;
+  }
+
+  #homePage .role-menu-grid > button.other-customer-btn > span > span,
+  #homePage .role-menu-grid > button.other-customer-menu-btn > span > span,
+  #homePage .role-menu-grid > button[onclick*="Other"] > span > span,
+  #homePage .role-menu-grid > button[onclick*="otherCustomer"] > span > span,
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomer"] > span > span{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    color:#6b7280!important;
+    -webkit-text-fill-color:#6b7280!important;
+  }
+}
+</style>
+<script>
+(function(){
+  function shown(el){
+    if(!el) return false;
+    var s = getComputedStyle(el);
+    return s.display !== 'none' && s.visibility !== 'hidden' && el.offsetParent !== null;
+  }
+
+  function ensureTopbarButtonsV78(){
+    var topbar = document.querySelector('#appPage > header.topbar, #appPage > .topbar');
+    if(!topbar) return;
+
+    var homePage = document.getElementById('homePage');
+    var dashboardPage = document.getElementById('dashboardPage');
+    var countPage = document.getElementById('countPage');
+    var fgPage = document.getElementById('fgPage');
+    var masterPage = document.getElementById('masterPage');
+    var otherPage = document.getElementById('otherCustomerPage');
+
+    var shouldShowTopbar = shown(countPage) || shown(fgPage) || shown(masterPage) || shown(otherPage);
+    var shouldHideMainTopbar = shown(homePage) || shown(dashboardPage);
+
+    document.body.classList.toggle('v78-work-topbar', shouldShowTopbar && !shouldHideMainTopbar);
+
+    if(shouldShowTopbar && !shouldHideMainTopbar){
+      document.body.classList.remove('final-mobile-home','final-mobile-dashboard','hide-main-topbar');
+      topbar.style.setProperty('display','grid','important');
+      topbar.style.setProperty('visibility','visible','important');
+      topbar.style.setProperty('opacity','1','important');
+      topbar.style.removeProperty('height');
+      topbar.style.removeProperty('padding');
+      topbar.style.removeProperty('margin');
+
+      var hamburger = topbar.querySelector('.hamburger');
+      var homeBtn = topbar.querySelector('.home-top-btn');
+      var refreshBtn = topbar.querySelector('.refresh-top-btn');
+
+      if(hamburger){
+        hamburger.style.setProperty('display','grid','important');
+        hamburger.style.setProperty('visibility','visible','important');
+        hamburger.style.setProperty('opacity','1','important');
+      }
+
+      if(!refreshBtn){
+        refreshBtn = document.createElement('button');
+        refreshBtn.className = 'notif-btn refresh-top-btn';
+        refreshBtn.type = 'button';
+        refreshBtn.setAttribute('aria-label','Refresh');
+        refreshBtn.textContent = '↻';
+        refreshBtn.onclick = function(){
+          if(typeof window.refreshAppData === 'function') window.refreshAppData();
+          else location.reload();
+        };
+        if(homeBtn) topbar.insertBefore(refreshBtn, homeBtn);
+        else topbar.appendChild(refreshBtn);
+      }
+
+      if(refreshBtn){
+        refreshBtn.style.setProperty('display','grid','important');
+        refreshBtn.style.setProperty('visibility','visible','important');
+        refreshBtn.style.setProperty('opacity','1','important');
+      }
+
+      if(homeBtn){
+        homeBtn.style.setProperty('display','grid','important');
+        homeBtn.style.setProperty('visibility','visible','important');
+        homeBtn.style.setProperty('opacity','1','important');
+      }
+    }
+  }
+
+  function ensureOtherButtonTextV78(){
+    var btns = Array.from(document.querySelectorAll('#homePage .role-menu-grid > button.other-customer-btn, #homePage .role-menu-grid > button.other-customer-menu-btn, #homePage .role-menu-grid > button[onclick*="Other"], #homePage .role-menu-grid > button[onclick*="otherCustomer"], #homePage .role-menu-grid > button[onclick*="showOtherCustomer"]'));
+    btns.forEach(function(btn){
+      var labelWrap = btn.querySelector(':scope > span');
+      if(!labelWrap){
+        labelWrap = document.createElement('span');
+        btn.appendChild(labelWrap);
+      }
+      var title = labelWrap.querySelector('b');
+      if(!title){
+        title = document.createElement('b');
+        labelWrap.insertBefore(title, labelWrap.firstChild);
+      }
+      if(!String(title.textContent || '').trim()) title.textContent = 'Other customer';
+      var desc = Array.from(labelWrap.querySelectorAll('span')).find(function(s){ return s !== labelWrap; });
+      if(!desc){
+        desc = document.createElement('span');
+        labelWrap.appendChild(desc);
+      }
+      if(!String(desc.textContent || '').trim()) desc.textContent = 'ลูกค้าอื่น';
+    });
+  }
+
+  function runV78(){
+    ensureTopbarButtonsV78();
+    ensureOtherButtonTextV78();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(runV78, 80);
+    setTimeout(runV78, 400);
+    setTimeout(runV78, 1200);
+  });
+
+  ['showPage','showCountPage','showFgPage','showMasterPage','showOtherCustomerPage'].forEach(function(name){
+    var old = window[name];
+    if(typeof old === 'function' && !old.__v78Wrapped){
+      var wrapped = function(){
+        var result = old.apply(this, arguments);
+        setTimeout(runV78, 60);
+        setTimeout(runV78, 350);
+        return result;
+      };
+      wrapped.__v78Wrapped = true;
+      window[name] = wrapped;
+    }
+  });
+})();
+</script>
+
 </body>
 </html>
