@@ -672,10 +672,35 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
         const savedRow = getSavedRow(r)
         const saved = !!savedRow
         const savedQty = savedRow?.count_qty ?? ''
+        const countedBy = savedRow?.counted_by ?? '-'
+          const systemQty = Number(qty || 0)
+          const countQty = Number(savedRow?.count_qty ?? 0)
+          const diffQty = saved ? countQty - systemQty : ''
+
+          const countedAt = savedRow?.created_at
+            ? new Date(savedRow.created_at).toLocaleString('th-TH', {
+                timeZone: 'Asia/Bangkok',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })
+            : '-'
         box.insertAdjacentHTML('beforeend', `
           <div class="result-card ${saved ? 'saved-card' : ''}" id="card_${safe(r.id)}">
             <div class="shoe-badge">👟</div>
-            ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
+            ${saved ? `
+              <div class="saved-status">บันทึกแล้ว</div>
+
+              <div class="count-history-box">
+                <div>👤 ผู้นับ : <b>${safe(countedBy)}</b></div>
+                <div>📦 นับได้ : <b>${safe(countQty)}</b></div>
+                <div>📊 System : <b>${safe(systemQty)}</b></div>
+                <div>➖ Diff : <b>${safe(diffQty)}</b></div>
+                <div>🕒 ${safe(countedAt)}</div>
+              </div>
+              ` : ''}
             <div class="result-grid count-result-grid">
               <div class="system-qty-card"><b>System Qty</b><span>${safe(qty)}</span></div>
               <div><b>Item</b><span>${safe(item)}</span></div>
@@ -1325,7 +1350,19 @@ function searchOfflineRows(keyword, customer = currentCountCustomer) {
     .scanner-modal{display:none;position:fixed;inset:0;z-index:2800;padding:22px;background:rgba(17,18,35,.72);align-items:center;justify-content:center;backdrop-filter:blur(8px)}.scanner-modal.show{display:flex}.scanner-box{width:100%;max-width:440px;background:#fff;border-radius:28px;padding:16px;text-align:center;box-shadow:0 30px 80px rgba(0,0,0,.25)}#scannerReader{width:100%;min-height:260px;border-radius:20px;overflow:hidden;background:#020617}#scannerReader video,.scanner-box video{width:100%!important;max-height:360px;object-fit:cover;border-radius:20px}.scanner-box p{color:var(--muted)}.scanner-close{width:100%;border:0;border-radius:18px;padding:14px;background:#ff4d63;color:white;font-weight:900;font-size:17px}.loading{display:none;position:fixed;inset:0;z-index:3000;align-items:center;justify-content:center;background:rgba(17,18,35,.55);color:white;font-size:20px;font-weight:800;backdrop-filter:blur(5px)}.toast{position:fixed;left:50%;bottom:104px;transform:translateX(-50%) translateY(80px);background:#151827;color:white;padding:14px 22px;border-radius:999px;opacity:0;transition:.25s;z-index:4000}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
     .bottom-nav-modern{position:fixed;left:12px;right:12px;bottom:calc(10px + env(safe-area-inset-bottom));z-index:1200;height:70px;padding:8px 10px;display:grid;grid-template-columns:1fr 1fr 74px 1fr 1fr;align-items:center;background:rgba(255,255,255,.94);border:1px solid rgba(235,238,247,.9);border-radius:24px;box-shadow:0 18px 40px rgba(43,38,80,.18);backdrop-filter:blur(18px)}.bottom-nav-modern button{border:0;background:transparent;color:#8a91a3;font-size:11px;font-weight:800}.bottom-nav-modern span{display:block;font-size:22px;line-height:1}.bottom-nav-modern b{display:block;margin-top:2px}.bottom-nav-modern button:first-child{color:#a121e8}.bottom-nav-modern .scan-fab{width:64px;height:64px;margin:-30px auto 0;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#7d3df2,#d119d0);color:#fff;box-shadow:0 12px 28px rgba(161,33,232,.35);border:6px solid #fff}.bottom-nav-modern .scan-fab span{font-size:30px}
+.count-history-box{
+    margin:10px 0 12px;
+    padding:12px 14px;
+    border-radius:16px;
+    background:#f6fff9;
+    border:1px solid #86efac;
+    line-height:1.8;
+    font-size:14px;
+}
 
+.count-history-box b{
+    font-weight:700;
+}
     @media (max-width:720px){
       body{background:#f7f8ff}.topbar{height:calc(78px + env(safe-area-inset-top));padding-left:18px;padding-right:18px}.hamburger{width:52px;height:52px}.brand b{font-size:22px}.brand span{font-size:13px}main{padding:14px 12px 100px}.title{font-size:24px}.hero-glass{margin-left:-12px;margin-right:-12px}.ring-grid{gap:8px}.ring-stat span{width:58px;height:58px;font-size:18px;line-height:58px}.quick-item{grid-template-columns:50px 1fr 20px}.search-row,.count-search-row{grid-template-columns:1fr 92px;gap:8px}.search-row .clear{grid-column:1 / -1}.search-row button{min-height:54px}.table-wrap{display:none}.mobile-cards{display:block}.mobile-card-grid{grid-template-columns:repeat(3,1fr)}.result-grid{grid-template-columns:1fr 1fr;padding-right:30px}.count-form{grid-template-columns:1fr 1fr}.count-form input{grid-column:1 / -1}.fg-form-grid{grid-template-columns:1fr 1fr}.fg-form-actions{grid-template-columns:1fr}.test-panel{grid-template-columns:1fr}.side-menu{width:84vw;left:-88vw}.compact-online{display:block}
     }
@@ -1980,6 +2017,7 @@ body{
     padding:15px 14px;
   }
 }
+
 
 
 
@@ -15625,6 +15663,381 @@ button.master-duplicate-alert::before,
   });
 
   window.removeCountEmptyPlaceholderV82 = removeCountEmptyPlaceholderV82;
+})();
+</script>
+
+
+
+<script>
+/* ===== FINAL PATCH: SHOW COUNT HISTORY UNDER SAVED STATUS ===== */
+(function(){
+  'use strict';
+
+  function safeFinal(v){
+    if(typeof safe === 'function') return safe(v);
+    return String(v ?? '').replace(/[&<>'"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];
+    });
+  }
+
+  function unitFinal(){
+    try{
+      if(typeof countUnit === 'function') return countUnit();
+    }catch(e){}
+    return (window.currentCountWorkType === 'LOOSE') ? 'คู่' : 'กล่อง';
+  }
+
+  function keyFinal(row){
+    try{
+      if(typeof savedKeyAll === 'function') return savedKeyAll(row);
+      if(typeof makeLooseSavedKeyNoLocation === 'function') return makeLooseSavedKeyNoLocation(row);
+      if(typeof makeSavedKey === 'function') return makeSavedKey(row);
+    }catch(e){}
+
+    var masterId = row?.master_id ?? row?.id ?? '';
+    var itemKey = row?.item_key ?? '';
+    var item = row?.item ?? row?.Item ?? '';
+    var code = row?.code ?? row?.CODE ?? '';
+    var assort = row?.assort ?? row?.Assort ?? '';
+    var location = row?.location ?? row?.Location ?? '';
+    return [masterId,itemKey,item,code,assort,location].map(function(v){return String(v ?? '').trim();}).join('|');
+  }
+
+  window.getSavedRow = function(r){
+    var key = keyFinal(r);
+    var rows = (typeof countRows !== 'undefined' && Array.isArray(countRows)) ? countRows : [];
+    return rows
+      .filter(function(row){ return keyFinal(row) === key; })
+      .sort(function(a,b){ return new Date(b.created_at || 0) - new Date(a.created_at || 0); })[0] || null;
+  };
+
+  function historyHtmlFinal(savedRow, systemQty){
+    if(!savedRow) return '';
+    var countedBy = savedRow.counted_by ?? savedRow.created_by ?? '-';
+    var countQty = Number(savedRow.count_qty ?? 0);
+    var sysQty = Number(systemQty ?? savedRow.system_qty ?? 0);
+    var diffQty = countQty - sysQty;
+    var countedAt = savedRow.created_at
+      ? new Date(savedRow.created_at).toLocaleString('th-TH', {
+          timeZone: 'Asia/Bangkok',
+          day: '2-digit', month: '2-digit', year: 'numeric',
+          hour: '2-digit', minute: '2-digit'
+        })
+      : '-';
+
+    return `
+      <div class="count-history-box">
+        <div>👤 ผู้นับ : <b>${safeFinal(countedBy)}</b></div>
+        <div>📦 นับได้ : <b>${safeFinal(countQty)}</b></div>
+        <div>📊 System : <b>${safeFinal(sysQty)}</b></div>
+        <div>➖ Diff : <b>${safeFinal(diffQty)}</b></div>
+        <div>🕒 ${safeFinal(countedAt)}</div>
+      </div>`;
+  }
+
+  window.renderCountResult = function(result){
+    var box = document.getElementById('countResult');
+    if(!box) return;
+    box.className = '';
+    box.innerHTML = '';
+
+    (result || []).forEach(function(r){
+      var item = r.Item ?? r.item ?? '';
+      var code = r.CODE ?? r.code ?? '';
+      var assort = r.Assort ?? r.assort ?? '';
+      var location = r.Location ?? r.location ?? '';
+      var qty = r.Quantity ?? r.quantity ?? 0;
+      var savedRow = window.getSavedRow(r);
+      var saved = !!savedRow;
+      var savedQty = savedRow?.count_qty ?? '';
+      var unit = unitFinal();
+      var badge = (window.currentCountWorkType === 'LOOSE') ? 'คู่' : '👟';
+
+      box.insertAdjacentHTML('beforeend', `
+        <div class="result-card ${saved ? 'saved-card' : ''} ${window.currentCountWorkType === 'LOOSE' ? 'loose-count-card' : ''}" id="card_${safeFinal(r.id)}">
+          <div class="shoe-badge">${safeFinal(badge)}</div>
+          ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' + historyHtmlFinal(savedRow, qty) : ''}
+          <div class="result-grid count-result-grid">
+            <div class="system-qty-card"><b>System Qty <span class="unit-badge-count">${safeFinal(unit)}</span></b><span>${safeFinal(qty)}</span></div>
+            <div><b>Item</b><span>${safeFinal(item)}</span></div>
+            <div><b>CODE</b><span>${safeFinal(code)}</span></div>
+            <div><b>Assort</b><span>${safeFinal(assort)}</span></div>
+            <div><b>Location</b><span>${safeFinal(location)}</span></div>
+          </div>
+          <div class="count-form">
+            <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้ (${safeFinal(unit)})" id="count_${safeFinal(r.id)}" value="${safeFinal(savedQty)}">
+            <button class="save-btn" id="save_${safeFinal(r.id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>${saved ? 'อัปเดต' : 'บันทึก'}</button>
+            <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
+          </div>
+        </div>`);
+    });
+  };
+
+  var oldSaveCountFinal = window.saveCount;
+  if(typeof oldSaveCountFinal === 'function' && !oldSaveCountFinal.__historyFinalPatch){
+    var wrappedSaveCountFinal = async function(r){
+      var res = await oldSaveCountFinal.apply(this, arguments);
+      try{
+        if(typeof loadCountRowsByMode === 'function') await loadCountRowsByMode();
+        else if(typeof loadCountHistory === 'function') await loadCountHistory();
+        window.renderCountResult([r]);
+      }catch(e){
+        console.warn('refresh count history failed', e);
+      }
+      return res;
+    };
+    wrappedSaveCountFinal.__historyFinalPatch = true;
+    window.saveCount = wrappedSaveCountFinal;
+  }
+
+  var style = document.createElement('style');
+  style.textContent = `
+    .count-history-box{
+      margin:10px 0 14px;
+      padding:12px 14px;
+      border-radius:16px;
+      background:#ffffff;
+      border:1px solid #86efac;
+      color:#14532d;
+      line-height:1.8;
+      font-size:14px;
+      font-weight:600;
+    }
+    .count-history-box b{color:#111827;font-weight:900;}
+  `;
+  document.head.appendChild(style);
+})();
+</script>
+
+
+
+<script>
+(function(){
+  function safeAdmin(v){
+    return String(v ?? '').replace(/[&<>'"]/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c];
+    });
+  }
+  function jsAdmin(v){
+    return String(v ?? '').replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' ');
+  }
+  function valAdmin(r, names){
+    for(var i=0;i<names.length;i++){
+      var n=names[i];
+      if(r && r[n] !== undefined && r[n] !== null) return r[n];
+    }
+    return '';
+  }
+  function isAdminMaster(){
+    try{ if(typeof isMooUser === 'function') return !!isMooUser(); }catch(e){}
+    try{ return String(window.currentUser || currentUser || localStorage.getItem('stock_user') || '').trim().toUpperCase() === 'MOO'; }catch(e){}
+    return false;
+  }
+  function finalSavedKey(row){
+    try{ if(typeof savedKeyAll === 'function') return savedKeyAll(row); }catch(e){}
+    try{ if(typeof makeLooseSavedKeyNoLocation === 'function') return makeLooseSavedKeyNoLocation(row); }catch(e){}
+    try{ if(typeof makeSavedKey === 'function') return makeSavedKey(row); }catch(e){}
+    var masterId = row?.master_id ?? row?.id ?? '';
+    var itemKey = row?.item_key ?? '';
+    var item = row?.item ?? row?.Item ?? '';
+    var code = row?.code ?? row?.CODE ?? '';
+    var assort = row?.assort ?? row?.Assort ?? '';
+    var location = row?.location ?? row?.Location ?? '';
+    return [masterId,itemKey,item,code,assort,location].map(function(v){return String(v ?? '').trim();}).join('|');
+  }
+  window.getSavedRow = function(r){
+    var key = finalSavedKey(r);
+    var rows = (typeof countRows !== 'undefined' && Array.isArray(countRows)) ? countRows : [];
+    return rows
+      .filter(function(row){ return finalSavedKey(row) === key; })
+      .sort(function(a,b){ return new Date(b.created_at || 0) - new Date(a.created_at || 0); })[0] || null;
+  };
+  function unitAdmin(){
+    try{ if(typeof countUnit === 'function') return countUnit(); }catch(e){}
+    return (window.currentCountWorkType === 'LOOSE') ? 'คู่' : 'กล่อง';
+  }
+
+  // หน้า Stock Count: แสดงแค่สถานะบันทึกแล้ว ไม่แสดงประวัติผู้นับตรงนี้แล้ว
+  window.renderCountResult = function(result){
+    var box = document.getElementById('countResult');
+    if(!box) return;
+    box.className = '';
+    box.innerHTML = '';
+    (result || []).forEach(function(r){
+      var item = r.Item ?? r.item ?? '';
+      var code = r.CODE ?? r.code ?? '';
+      var assort = r.Assort ?? r.assort ?? '';
+      var location = r.Location ?? r.location ?? '';
+      var qty = r.Quantity ?? r.quantity ?? 0;
+      var savedRow = window.getSavedRow(r);
+      var saved = !!savedRow;
+      var savedQty = savedRow?.count_qty ?? '';
+      var unit = unitAdmin();
+      var badge = (window.currentCountWorkType === 'LOOSE') ? 'คู่' : '👟';
+      box.insertAdjacentHTML('beforeend', `
+        <div class="result-card ${saved ? 'saved-card' : ''} ${window.currentCountWorkType === 'LOOSE' ? 'loose-count-card' : ''}" id="card_${safeAdmin(r.id)}">
+          <div class="shoe-badge">${safeAdmin(badge)}</div>
+          ${saved ? '<div class="saved-status">บันทึกแล้ว</div>' : ''}
+          <div class="result-grid count-result-grid">
+            <div class="system-qty-card"><b>System Qty <span class="unit-badge-count">${safeAdmin(unit)}</span></b><span>${safeAdmin(qty)}</span></div>
+            <div><b>Item</b><span>${safeAdmin(item)}</span></div>
+            <div><b>CODE</b><span>${safeAdmin(code)}</span></div>
+            <div><b>Assort</b><span>${safeAdmin(assort)}</span></div>
+            <div><b>Location</b><span>${safeAdmin(location)}</span></div>
+          </div>
+          <div class="count-form">
+            <input type="number" inputmode="decimal" placeholder="จำนวนที่นับได้ (${safeAdmin(unit)})" id="count_${safeAdmin(r.id)}" value="${safeAdmin(savedQty)}">
+            <button class="save-btn" id="save_${safeAdmin(r.id)}" onclick='saveCount(${JSON.stringify(r).replace(/'/g, "&#39;")})'>${saved ? 'อัปเดต' : 'บันทึก'}</button>
+            <button class="scan-btn" type="button" onclick="openScanner('countSearch')">สแกน</button>
+          </div>
+        </div>`);
+    });
+  };
+
+  function masterCountHistoryHtml(row){
+    if(!isAdminMaster()) return '';
+    var savedRow = window.getSavedRow(row);
+    if(!savedRow){
+      return '<div class="master-count-history empty-history">ยังไม่มีประวัติการนับ</div>';
+    }
+    var systemQty = Number(valAdmin(row, ['Quantity','quantity']) || savedRow.system_qty || 0);
+    var countQty = Number(savedRow.count_qty ?? 0);
+    var diffQty = countQty - systemQty;
+    var countedBy = savedRow.counted_by ?? savedRow.created_by ?? '-';
+    var countedAt = savedRow.created_at
+      ? new Date(savedRow.created_at).toLocaleString('th-TH', {timeZone:'Asia/Bangkok', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'})
+      : '-';
+    return `
+      <div class="master-count-history">
+        <div>👤 ผู้นับ : <b>${safeAdmin(countedBy)}</b></div>
+        <div>📦 นับได้ : <b>${safeAdmin(countQty)}</b></div>
+        <div>📊 System : <b>${safeAdmin(systemQty)}</b></div>
+        <div>➖ Diff : <b>${safeAdmin(diffQty)}</b></div>
+        <div>🕒 ${safeAdmin(countedAt)}</div>
+      </div>`;
+  }
+  function masterCountHistoryPlain(row){
+    if(!isAdminMaster()) return '';
+    var savedRow = window.getSavedRow(row);
+    if(!savedRow) return '<span class="master-history-muted">ยังไม่มี</span>';
+    var systemQty = Number(valAdmin(row, ['Quantity','quantity']) || savedRow.system_qty || 0);
+    var countQty = Number(savedRow.count_qty ?? 0);
+    var diffQty = countQty - systemQty;
+    var countedBy = savedRow.counted_by ?? savedRow.created_by ?? '-';
+    var countedAt = savedRow.created_at
+      ? new Date(savedRow.created_at).toLocaleString('th-TH', {timeZone:'Asia/Bangkok', day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'})
+      : '-';
+    return `<div class="master-history-cell">👤 ${safeAdmin(countedBy)}<br>📦 ${safeAdmin(countQty)} | Diff ${safeAdmin(diffQty)}<br><small>${safeAdmin(countedAt)}</small></div>`;
+  }
+
+  // หน้า Master Data: แอดมินเท่านั้นที่เห็นประวัติการนับ
+  window.renderMasterTable = function(rows){
+    var masterCount = document.getElementById('masterCount');
+    var body = document.getElementById('masterBody');
+    var cards = document.getElementById('masterCards');
+    if(!body || !cards) return;
+    var admin = isAdminMaster();
+    if(masterCount) masterCount.textContent = (rows || []).length.toLocaleString('th-TH');
+    var headRow = document.querySelector('#masterPage thead tr');
+    if(headRow){
+      headRow.innerHTML = `
+        <th>Item</th>
+        <th>CODE</th>
+        <th>Assort</th>
+        <th>Location</th>
+        <th>Quantity</th>
+        <th>item_key</th>
+        ${admin ? '<th>ประวัตินับล่าสุด</th>' : ''}
+        <th class="master-actions-col">แก้ไข</th>`;
+    }
+    body.innerHTML = '';
+    cards.innerHTML = '';
+    (rows || []).forEach(function(r){
+      var id = valAdmin(r, ['id']);
+      var item = valAdmin(r, ['Item','item']);
+      var code = valAdmin(r, ['CODE','code']);
+      var assort = valAdmin(r, ['Assort','assort']);
+      var location = valAdmin(r, ['Location','location']);
+      var qty = valAdmin(r, ['Quantity','quantity']);
+      var key = valAdmin(r, ['item_key','Item_Key']);
+      body.insertAdjacentHTML('beforeend', `
+        <tr>
+          <td>${safeAdmin(item)}</td>
+          <td>${safeAdmin(code)}</td>
+          <td>${safeAdmin(assort)}</td>
+          <td>${safeAdmin(location)}</td>
+          <td>${safeAdmin(qty)}</td>
+          <td>${safeAdmin(key)}</td>
+          ${admin ? `<td>${masterCountHistoryPlain(r)}</td>` : ''}
+          <td class="master-actions-col"><button type="button" class="master-edit-btn" onclick="openMasterEdit('${jsAdmin(id)}')">แก้ไข</button></td>
+        </tr>`);
+      cards.insertAdjacentHTML('beforeend', `
+        <article class="mobile-item-card">
+          <div class="mobile-card-top">
+            <div><b>${safeAdmin(item)}</b><span>${safeAdmin(key || '-')}</span></div>
+            <strong>${safeAdmin(qty)}</strong>
+          </div>
+          <div class="mobile-card-grid">
+            <div><small>CODE</small><p>${safeAdmin(code)}</p></div>
+            <div><small>Assort</small><p>${safeAdmin(assort)}</p></div>
+            <div><small>Location</small><p>${safeAdmin(location)}</p></div>
+          </div>
+          ${admin ? masterCountHistoryHtml(r) : ''}
+          <button type="button" class="master-edit-btn mobile-master-edit" onclick="openMasterEdit('${jsAdmin(id)}')">แก้ไขข้อมูลนี้</button>
+        </article>`);
+    });
+  };
+
+  // Popup แก้ไข Master: แอดมินเห็นประวัตินับล่าสุดด้วย
+  var oldOpenMasterEditAdmin = window.openMasterEdit;
+  if(typeof oldOpenMasterEditAdmin === 'function'){
+    window.openMasterEdit = function(id){
+      oldOpenMasterEditAdmin.apply(this, arguments);
+      try{
+        var modal = document.getElementById('masterEditModal');
+        var row = (window.masterRows || (typeof masterRows !== 'undefined' ? masterRows : []) || []).find(function(x){return String(x.id) === String(id);});
+        if(!modal || !row) return;
+        var actions = modal.querySelector('.master-edit-actions');
+        var box = document.getElementById('masterAdminCountHistory');
+        if(!box && actions){
+          actions.insertAdjacentHTML('beforebegin', '<div id="masterAdminCountHistory"></div>');
+          box = document.getElementById('masterAdminCountHistory');
+        }
+        if(box){
+          box.style.display = isAdminMaster() ? 'block' : 'none';
+          box.innerHTML = isAdminMaster() ? '<label class="master-history-label">ประวัติการนับล่าสุด</label>' + masterCountHistoryHtml(row) : '';
+        }
+      }catch(e){ console.warn('master count history render failed', e); }
+    };
+  }
+
+  // ซ่อนปุ่ม Master สำหรับคนที่ไม่ใช่แอดมิน
+  function applyMasterAdminVisibility(){
+    var admin = isAdminMaster();
+    document.querySelectorAll('#btnMaster, .admin-only').forEach(function(el){ el.style.display = admin ? '' : 'none'; });
+  }
+  document.addEventListener('DOMContentLoaded', function(){
+    applyMasterAdminVisibility();
+    setTimeout(function(){
+      applyMasterAdminVisibility();
+      try{
+        if(Array.isArray(masterRows) && masterRows.length) window.renderMasterTable(masterRows);
+      }catch(e){}
+    }, 700);
+  });
+
+  var css = document.createElement('style');
+  css.textContent = `
+    .master-count-history{margin:12px 0 0;padding:12px 14px;border-radius:16px;background:#fff;border:1px solid #fecaca;color:#7f1d1d;line-height:1.75;font-size:13px;font-weight:700;}
+    .master-count-history b{color:#111827;font-weight:900;}
+    .master-count-history.empty-history{color:#6b7280;border-color:#e5e7eb;background:#f9fafb;}
+    .master-history-cell{min-width:160px;text-align:left;font-size:12px;line-height:1.55;color:#7f1d1d;font-weight:700;}
+    .master-history-cell small{color:#6b7280;font-weight:600;}
+    .master-history-muted{color:#9ca3af;font-size:12px;}
+    .master-history-label{display:block;margin:14px 0 6px;color:#6b7280;font-size:13px;font-weight:900;}
+    #masterAdminCountHistory{grid-column:1 / -1;}
+  `;
+  document.head.appendChild(css);
 })();
 </script>
 
