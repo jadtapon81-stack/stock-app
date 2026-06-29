@@ -15033,5 +15033,328 @@ button.master-duplicate-alert::before,
 }
 </style>
 
+
+
+<!-- ===== PRODUCTION STRICT PATCH v80: MOBILE ONLY TOPBAR + HOME LOGO + OTHER TEXT ===== -->
+<style>
+@media (max-width:720px){
+  /* แก้เฉพาะมือถือ: ให้ topbar แสดงเฉพาะหน้าใช้งาน ไม่กระทบ Desktop */
+  body.v80-mobile-work-topbar #appPage > header.topbar,
+  body.v80-mobile-work-topbar #appPage > .topbar{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    height:calc(78px + env(safe-area-inset-top))!important;
+    min-height:calc(78px + env(safe-area-inset-top))!important;
+    padding:calc(12px + env(safe-area-inset-top)) 14px 12px!important;
+    margin:0!important;
+    grid-template-columns:42px minmax(0,1fr) 38px 58px!important;
+    align-items:center!important;
+    gap:8px!important;
+    overflow:visible!important;
+    position:sticky!important;
+    top:0!important;
+    z-index:6000!important;
+  }
+
+  body.v80-mobile-work-topbar #appPage > .topbar > .hamburger,
+  body.v80-mobile-work-topbar #appPage > header.topbar > .hamburger{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:1!important;
+    width:42px!important;
+    height:42px!important;
+    min-width:42px!important;
+    min-height:42px!important;
+    margin:0!important;
+    padding:0!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    place-items:center!important;
+    z-index:6001!important;
+    pointer-events:auto!important;
+  }
+
+  body.v80-mobile-work-topbar #appPage > .topbar > .brand,
+  body.v80-mobile-work-topbar #appPage > header.topbar > .brand{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:2!important;
+    min-width:0!important;
+    margin:0!important;
+    overflow:hidden!important;
+  }
+
+  body.v80-mobile-work-topbar #appPage > .topbar > .refresh-top-btn,
+  body.v80-mobile-work-topbar #appPage > header.topbar > .refresh-top-btn{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:3!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:6001!important;
+    pointer-events:auto!important;
+  }
+
+  body.v80-mobile-work-topbar #appPage > .topbar > .home-top-btn,
+  body.v80-mobile-work-topbar #appPage > header.topbar > .home-top-btn{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    grid-column:4!important;
+    position:static!important;
+    inset:auto!important;
+    transform:none!important;
+    width:58px!important;
+    height:38px!important;
+    min-width:58px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:6001!important;
+    pointer-events:auto!important;
+  }
+
+  /* แก้เฉพาะหัว Home มือถือ: ไม่ให้ refresh ทับ GAMBOL และให้คำแสดงครบ */
+  #homePage .role-red-head > div:not([class]){
+    position:absolute!important;
+    left:78px!important;
+    right:122px!important;
+    top:calc(28px + env(safe-area-inset-top))!important;
+    margin:0!important;
+    padding:0!important;
+    min-width:0!important;
+    max-width:none!important;
+    text-align:center!important;
+    overflow:visible!important;
+    z-index:20!important;
+    pointer-events:none!important;
+  }
+
+  #homePage .role-red-head > div:not([class]) b{
+    display:block!important;
+    width:100%!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    font-size:30px!important;
+    line-height:.94!important;
+    letter-spacing:-1px!important;
+  }
+
+  #homePage .role-red-head > div:not([class]) span{
+    display:block!important;
+    width:100%!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    font-size:14px!important;
+    line-height:1.1!important;
+    letter-spacing:2.6px!important;
+    margin-top:5px!important;
+  }
+
+  #homePage .role-red-head .head-refresh-mini{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    position:absolute!important;
+    right:14px!important;
+    top:calc(86px + env(safe-area-inset-top))!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:96!important;
+    transform:none!important;
+    pointer-events:auto!important;
+  }
+
+  /* แก้เฉพาะปุ่ม Other ใน Home: ให้คำอธิบายกลับมา */
+  #homePage .role-menu-grid .other-customer-btn,
+  #homePage .role-menu-grid .other-customer-menu-btn{
+    grid-column:1 / -1!important;
+    display:grid!important;
+    grid-template-columns:62px minmax(0,1fr)!important;
+    align-items:center!important;
+    text-align:left!important;
+    gap:12px!important;
+  }
+
+  #homePage .role-menu-grid .other-customer-btn > span,
+  #homePage .role-menu-grid .other-customer-menu-btn > span{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    min-width:0!important;
+    color:#111827!important;
+    -webkit-text-fill-color:#111827!important;
+    position:relative!important;
+    z-index:3!important;
+  }
+
+  #homePage .role-menu-grid .other-customer-btn > span > b,
+  #homePage .role-menu-grid .other-customer-menu-btn > span > b{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    color:#111827!important;
+    -webkit-text-fill-color:#111827!important;
+  }
+
+  #homePage .role-menu-grid .other-customer-btn > span > span,
+  #homePage .role-menu-grid .other-customer-menu-btn > span > span{
+    display:block!important;
+    visibility:visible!important;
+    opacity:1!important;
+    color:#6b7280!important;
+    -webkit-text-fill-color:#6b7280!important;
+  }
+}
+</style>
+<script>
+(function(){
+  function isShown(el){
+    if(!el) return false;
+    var cs = window.getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0';
+  }
+
+  function pageVisible(id){
+    return isShown(document.getElementById(id));
+  }
+
+  function ensureMobileTopbarV80(){
+    if(!window.matchMedia || !window.matchMedia('(max-width:720px)').matches) return;
+
+    var topbar = document.querySelector('#appPage > header.topbar, #appPage > .topbar');
+    if(!topbar) return;
+
+    var homeVisible = pageVisible('homePage');
+    var dashVisible = pageVisible('dashboardPage');
+    var workVisible = pageVisible('countPage') || pageVisible('fgPage') || pageVisible('masterPage') || pageVisible('otherCustomerPage');
+    var shouldShow = workVisible && !homeVisible && !dashVisible;
+
+    document.body.classList.toggle('v80-mobile-work-topbar', shouldShow);
+
+    if(shouldShow){
+      document.body.classList.remove('final-mobile-home','final-mobile-dashboard','final-mobile-other','hide-main-topbar');
+      topbar.style.setProperty('display','grid','important');
+      topbar.style.setProperty('visibility','visible','important');
+      topbar.style.setProperty('opacity','1','important');
+
+      var hamburger = topbar.querySelector('.hamburger');
+      if(hamburger){
+        hamburger.style.setProperty('display','grid','important');
+        hamburger.style.setProperty('visibility','visible','important');
+        hamburger.style.setProperty('opacity','1','important');
+      }
+
+      var homeBtn = topbar.querySelector('.home-top-btn');
+      if(!homeBtn){
+        homeBtn = document.createElement('button');
+        homeBtn.className = 'home-top-btn';
+        homeBtn.type = 'button';
+        homeBtn.innerHTML = '⌂<small>HOME</small>';
+        homeBtn.onclick = function(){ if(typeof window.showPage === 'function') window.showPage('home'); };
+        topbar.appendChild(homeBtn);
+      }
+
+      var refreshBtn = topbar.querySelector('.refresh-top-btn');
+      if(!refreshBtn){
+        refreshBtn = document.createElement('button');
+        refreshBtn.className = 'notif-btn refresh-top-btn';
+        refreshBtn.type = 'button';
+        refreshBtn.setAttribute('aria-label','Refresh');
+        refreshBtn.textContent = '↻';
+        refreshBtn.onclick = function(){
+          if(typeof window.refreshAppData === 'function') window.refreshAppData();
+          else location.reload();
+        };
+        topbar.insertBefore(refreshBtn, homeBtn);
+      }
+
+      [homeBtn, refreshBtn].forEach(function(btn){
+        if(!btn) return;
+        btn.style.setProperty('display','grid','important');
+        btn.style.setProperty('visibility','visible','important');
+        btn.style.setProperty('opacity','1','important');
+      });
+    }
+  }
+
+  function ensureOtherTextV80(){
+    var btns = Array.from(document.querySelectorAll('#homePage .role-menu-grid .other-customer-btn, #homePage .role-menu-grid .other-customer-menu-btn'));
+    btns.forEach(function(btn){
+      var wrap = btn.querySelector(':scope > span');
+      if(!wrap){
+        wrap = document.createElement('span');
+        btn.appendChild(wrap);
+      }
+      var title = wrap.querySelector(':scope > b');
+      if(!title){
+        title = document.createElement('b');
+        wrap.insertBefore(title, wrap.firstChild);
+      }
+      if(!String(title.textContent || '').trim()) title.textContent = 'Other customer';
+
+      var desc = Array.from(wrap.children).find(function(el){ return el.tagName === 'SPAN'; });
+      if(!desc){
+        desc = document.createElement('span');
+        wrap.appendChild(desc);
+      }
+      if(!String(desc.textContent || '').trim()) desc.textContent = 'ลูกค้าอื่น';
+
+      wrap.style.setProperty('display','block','important');
+      title.style.setProperty('display','block','important');
+      desc.style.setProperty('display','block','important');
+    });
+  }
+
+  function runV80(){
+    ensureMobileTopbarV80();
+    ensureOtherTextV80();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(runV80, 80);
+    setTimeout(runV80, 350);
+    setTimeout(runV80, 1200);
+  });
+
+  ['showPage','showCountPage','showFgPage','showOtherCustomerPage'].forEach(function(name){
+    var oldFn = window[name];
+    if(typeof oldFn === 'function' && !oldFn.__v80Wrapped){
+      var wrapped = function(){
+        var result = oldFn.apply(this, arguments);
+        setTimeout(runV80, 60);
+        setTimeout(runV80, 300);
+        return result;
+      };
+      wrapped.__v80Wrapped = true;
+      window[name] = wrapped;
+    }
+  });
+
+  setInterval(runV80, 1200);
+})();
+</script>
+
 </body>
 </html>
