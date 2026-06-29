@@ -13669,7 +13669,7 @@ body:has(#otherCustomerPage[style*="block"]) #appPage > .topbar{
       if($('countSearch')) $('countSearch').value = '';
       if(typeof closeCountSuggest === 'function') closeCountSuggest();
       if($('countTitle')) $('countTitle').innerHTML = 'Stock Count ' + esc(customerLabel(c));
-      if($('countResult')) $('countResult').innerHTML = '<div class="empty">ค้นหา Item / CODE / item_key / Location หรือสแกน เพื่อเริ่มนับ ' + esc(customerLabel(c)) + '</div>';
+      if($('countResult')) $('countResult').innerHTML = '';
       if(typeof prevShowPage === 'function') prevShowPage.call(window, 'count');
       syncBody('count');
     }finally{ if(typeof setLoading === 'function') setLoading(false); }
@@ -15530,40 +15530,6 @@ button.master-duplicate-alert::before,
   });
 })();
 </script>
-<script>
-/* PATCH: REMOVE COUNT EMPTY CUSTOMER TEXT ONLY */
-(function(){
-  function removeCountEmptyTextOnly(){
-    var box = document.getElementById('countResult');
-    if(!box) return;
 
-    var text = (box.textContent || '').trim();
-    var hasRealCard = !!box.querySelector('.result-card, .count-card, table, tbody tr');
-
-    if(!hasRealCard && /LOTUS|BIG C|VILLA|MAXMART|7-11|PTT|CJ|เริ่มนับ|ค้นหา|สแกน/i.test(text)){
-      box.innerHTML = '';
-    }
-  }
-
-  var oldClear = window.clearCountSearch;
-  window.clearCountSearch = function(){
-    var result = oldClear ? oldClear.apply(this, arguments) : undefined;
-    setTimeout(removeCountEmptyTextOnly, 30);
-    return result;
-  };
-
-  var oldShowCountPage = window.showCountPage;
-  window.showCountPage = function(){
-    var result = oldShowCountPage ? oldShowCountPage.apply(this, arguments) : undefined;
-    setTimeout(removeCountEmptyTextOnly, 50);
-    setTimeout(removeCountEmptyTextOnly, 300);
-    return result;
-  };
-
-  document.addEventListener('DOMContentLoaded', function(){
-    setTimeout(removeCountEmptyTextOnly, 800);
-  });
-})();
-</script>
 </body>
 </html>
