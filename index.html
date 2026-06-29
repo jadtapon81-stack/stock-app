@@ -14967,5 +14967,71 @@ button.master-duplicate-alert::before,
 })();
 </script>
 
+
+
+<!-- ===== PRODUCTION STRICT PATCH v79: HOME LOGO TEXT + REFRESH POSITION ONLY ===== -->
+<style>
+@media (max-width:560px){
+  /* แก้เฉพาะหัวแดงหน้า Home: ให้ GAMBOL / MODERNTRADE แสดงเต็มขึ้น และไม่โดนปุ่มรีเฟรชทับ */
+  #homePage .role-red-head > div:not([class]){
+    position:absolute!important;
+    left:74px!important;
+    right:112px!important;
+    top:calc(22px + env(safe-area-inset-top))!important;
+    margin:0!important;
+    padding:0!important;
+    min-width:0!important;
+    max-width:none!important;
+    text-align:center!important;
+    z-index:20!important;
+    overflow:visible!important;
+    pointer-events:none!important;
+  }
+
+  #homePage .role-red-head > div:not([class]) b{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    font-size:31px!important;
+    line-height:.95!important;
+    letter-spacing:-1px!important;
+  }
+
+  #homePage .role-red-head > div:not([class]) span{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    font-size:16px!important;
+    line-height:1.12!important;
+    letter-spacing:3px!important;
+    margin-top:5px!important;
+  }
+
+  #homePage .role-red-head .head-refresh-mini{
+    display:grid!important;
+    visibility:visible!important;
+    opacity:1!important;
+    position:absolute!important;
+    right:20px!important;
+    top:calc(64px + env(safe-area-inset-top))!important;
+    width:38px!important;
+    height:38px!important;
+    min-width:38px!important;
+    min-height:38px!important;
+    margin:0!important;
+    padding:0!important;
+    place-items:center!important;
+    z-index:96!important;
+    transform:none!important;
+  }
+}
+</style>
+
 </body>
 </html>
