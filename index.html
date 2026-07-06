@@ -7837,21 +7837,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       if(moveError) throw moveError;
 
       // stock_transaction ถ้าคอลัมน์ไม่ตรง จะข้าม ไม่ให้ FG fail
-      try{
-        await getSupabase().from('stock_transaction').insert({
-          item_key:itemKey,
-          Item:item,
-          CODE:code,
-          Assort:Number.isNaN(Number(assort)) ? assort : Number(assort),
-          Location:location,
-          Quantity:moveQty,
-          customer:customer,
-          movement_type:movementType,
-          created_by:currentUser || null
-        });
-      }catch(e){
-        console.warn('เพิ่ม stock_transaction ไม่สำเร็จ แต่ FG บันทึกแล้ว', e);
-      }
+     
 
       try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){}
       try{ if(typeof updateHomeStats === 'function') await updateHomeStats(); }catch(e){}
