@@ -16041,5 +16041,1914 @@ button.master-duplicate-alert::before,
 })();
 </script>
 
+
+<script>
+/* ===== PRODUCTION PATCH V83: FULL BOX LOCATION DROPDOWN ONLY ===== */
+(function(){
+  'use strict';
+
+  var SELECT_ID = 'countLocationSelectV83';
+  var ROW_ID = 'countLocationRowV83';
+
+  function byId(id){ return document.getElementById(id); }
+  function txt(v){ return String(v == null ? '' : v).trim(); }
+  function norm(v){ return txt(v).toUpperCase().replace(/\s+/g,'').replace(/-/g,''); }
+
+  function getRows(){
+    try{
+      if(Array.isArray(window.masterRows)) return window.masterRows;
+      if(Array.isArray(masterRows)) return masterRows;
+    }catch(e){}
+    return [];
+  }
+
+  function getCustomer(){
+    try{
+      var c = window.currentCountCustomer || currentCountCustomer || '';
+      return txt(c);
+    }catch(e){
+      return txt(window.currentCountCustomer || '');
+    }
+  }
+
+  function rowCustomer(r){
+    return txt(r.customer ?? r.Customer ?? r.channel ?? r.Channel ?? '');
+  }
+
+  function rowLocation(r){
+    return txt(r.Location ?? r.location ?? '');
+  }
+
+  function isSameCustomer(r, c){
+    if(!c) return true;
+    var rc = norm(rowCustomer(r));
+    var cc = norm(c);
+    var key = norm(r.item_key);
+    return rc === cc || key.endsWith(cc);
+  }
+
+  function isFullBoxMode(){
+    return String(window.currentCountWorkType || 'FULL_BOX').toUpperCase() !== 'LOOSE';
+  }
+
+  function getSelectedLocation(){
+    var sel = byId(SELECT_ID);
+    return sel ? txt(sel.value) : '';
+  }
+
+  function ensureLocationDropdown(){
+    var countPage = byId('countPage');
+    var searchRow = countPage ? countPage.querySelector('.count-search-row') : null;
+    if(!countPage || !searchRow) return null;
+
+    var row = byId(ROW_ID);
+    if(!row){
+      row = document.createElement('div');
+      row.id = ROW_ID;
+      row.className = 'count-location-row-v83';
+      row.innerHTML =
+        '<label for="' + SELECT_ID + '">Location</label>' +
+        '<select id="' + SELECT_ID + '">' +
+          '<option value="">ทุก Location</option>' +
+        '</select>';
+      searchRow.insertAdjacentElement('afterend', row);
+
+      var sel = byId(SELECT_ID);
+      if(sel){
+        sel.addEventListener('change', function(){
+          if(typeof window.searchForCount === 'function'){
+            var input = byId('countSearch');
+            if(input && txt(input.value)) window.searchForCount();
+          }
+        });
+      }
+    }
+    return row;
+  }
+
+  function renderLocationOptions(){
+    var row = ensureLocationDropdown();
+    var sel = byId(SELECT_ID);
+    if(!row || !sel) return;
+
+    if(!isFullBoxMode()){
+      sel.value = '';
+      row.style.display = 'none';
+      return;
+    }
+
+    row.style.display = '';
+    var selected = sel.value;
+    var customer = getCustomer();
+    var locations = [];
+
+    getRows().forEach(function(r){
+      if(!isSameCustomer(r, customer)) return;
+      var loc = rowLocation(r);
+      if(loc && locations.indexOf(loc) === -1) locations.push(loc);
+    });
+
+    locations.sort(function(a,b){ return a.localeCompare(b, 'th'); });
+
+    sel.innerHTML = '<option value="">ทุก Location</option>' +
+      locations.map(function(loc){
+        var safe = String(loc).replace(/[&<>"']/g, function(ch){
+          return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+        });
+        return '<option value="' + safe + '">' + safe + '</option>';
+      }).join('');
+
+    if(selected && locations.indexOf(selected) !== -1) sel.value = selected;
+  }
+
+  function filterBySelectedLocation(rows){
+    if(!isFullBoxMode()) return rows || [];
+    var loc = getSelectedLocation();
+    if(!loc) return rows || [];
+    var nloc = norm(loc);
+    return (rows || []).filter(function(r){
+      return norm(rowLocation(r)) === nloc;
+    });
+  }
+
+  var oldSearchOfflineRowsV83 = window.searchOfflineRows;
+  if(typeof oldSearchOfflineRowsV83 === 'function' && !oldSearchOfflineRowsV83.__locationDropdownV83){
+    var wrappedSearchOfflineRowsV83 = function(keyword, customer){
+      var rows = oldSearchOfflineRowsV83.apply(this, arguments);
+      return filterBySelectedLocation(rows);
+    };
+    wrappedSearchOfflineRowsV83.__locationDropdownV83 = true;
+    window.searchOfflineRows = wrappedSearchOfflineRowsV83;
+    try{ searchOfflineRows = window.searchOfflineRows; }catch(e){}
+  }
+
+  var oldShowCountPageV83 = window.showCountPage;
+  if(typeof oldShowCountPageV83 === 'function' && !oldShowCountPageV83.__locationDropdownV83){
+    var wrappedShowCountPageV83 = async function(customer){
+      var res = await oldShowCountPageV83.apply(this, arguments);
+      setTimeout(renderLocationOptions, 0);
+      setTimeout(renderLocationOptions, 250);
+      return res;
+    };
+    wrappedShowCountPageV83.__locationDropdownV83 = true;
+    window.showCountPage = wrappedShowCountPageV83;
+  }
+
+  var oldShowLooseCountPageV83 = window.showLooseCountPage;
+  if(typeof oldShowLooseCountPageV83 === 'function' && !oldShowLooseCountPageV83.__locationDropdownV83){
+    var wrappedShowLooseCountPageV83 = async function(customer){
+      var res = await oldShowLooseCountPageV83.apply(this, arguments);
+      setTimeout(renderLocationOptions, 0);
+      return res;
+    };
+    wrappedShowLooseCountPageV83.__locationDropdownV83 = true;
+    window.showLooseCountPage = wrappedShowLooseCountPageV83;
+  }
+
+  var oldLoadMasterDataV83 = window.loadMasterData;
+  if(typeof oldLoadMasterDataV83 === 'function' && !oldLoadMasterDataV83.__locationDropdownV83){
+    var wrappedLoadMasterDataV83 = async function(){
+      var res = await oldLoadMasterDataV83.apply(this, arguments);
+      setTimeout(renderLocationOptions, 0);
+      return res;
+    };
+    wrappedLoadMasterDataV83.__locationDropdownV83 = true;
+    window.loadMasterData = wrappedLoadMasterDataV83;
+  }
+
+  var oldShowPageV83 = window.showPage;
+  if(typeof oldShowPageV83 === 'function' && !oldShowPageV83.__locationDropdownV83){
+    var wrappedShowPageV83 = function(page){
+      var res = oldShowPageV83.apply(this, arguments);
+      if(page === 'count') setTimeout(renderLocationOptions, 0);
+      return res;
+    };
+    wrappedShowPageV83.__locationDropdownV83 = true;
+    window.showPage = wrappedShowPageV83;
+  }
+
+  var style = document.createElement('style');
+  style.textContent = `
+    .count-location-row-v83{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      margin:-4px 0 10px;
+    }
+    .count-location-row-v83 label{
+      font-weight:900;
+      color:#6b7280;
+      font-size:14px;
+      white-space:nowrap;
+    }
+    .count-location-row-v83 select{
+      width:100%;
+      border:1.5px solid #e5e7eb;
+      border-radius:16px;
+      padding:12px 14px;
+      font-family:inherit;
+      font-size:15px;
+      font-weight:800;
+      color:#111827;
+      background:#fff;
+      outline:0;
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(renderLocationOptions, 500);
+    setTimeout(renderLocationOptions, 1500);
+  });
+
+  window.refreshCountLocationDropdownV83 = renderLocationOptions;
+})();
+</script>
+
+
+
+<script>
+/* ===== PRODUCTION PATCH V84: FULL BOX LOCATION FREE INPUT + DATALIST ONLY ===== */
+(function(){
+  'use strict';
+
+  var ROW_ID = 'countLocationRowV83';
+  var INPUT_ID = 'countLocationInputV84';
+  var LIST_ID = 'countLocationListV84';
+  var typingTimer = null;
+
+  function byId(id){ return document.getElementById(id); }
+  function txt(v){ return String(v == null ? '' : v).trim(); }
+  function norm(v){ return txt(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g,''); }
+  function safe(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+    });
+  }
+
+  function getRows(){
+    try{
+      if(Array.isArray(window.masterRows)) return window.masterRows;
+      if(Array.isArray(masterRows)) return masterRows;
+    }catch(e){}
+    return [];
+  }
+
+  function getCustomer(){
+    try{
+      return txt(window.currentCountCustomer || currentCountCustomer || '');
+    }catch(e){
+      return txt(window.currentCountCustomer || '');
+    }
+  }
+
+  function isLooseMode(){
+    return String(window.currentCountWorkType || 'FULL_BOX').toUpperCase() === 'LOOSE';
+  }
+
+  function val(row, field){
+    if(field === 'item') return row && (row.Item ?? row.item ?? '');
+    if(field === 'code') return row && (row.CODE ?? row.code ?? '');
+    if(field === 'assort') return row && (row.Assort ?? row.assort ?? '');
+    if(field === 'location') return row && (row.Location ?? row.location ?? '');
+    if(field === 'customer') return row && (row.customer ?? row.Customer ?? row.channel ?? row.Channel ?? '');
+    return '';
+  }
+
+  function sameCustomer(row, customer){
+    if(!customer) return true;
+    var c1 = norm(val(row, 'customer') || customer);
+    var c2 = norm(customer);
+    var key = norm(row && row.item_key);
+    return c1 === c2 || key.endsWith(c2);
+  }
+
+  function selectedLocation(){
+    var input = byId(INPUT_ID);
+    return input ? txt(input.value) : '';
+  }
+
+  function ensureLocationInput(){
+    var countPage = byId('countPage');
+    var searchRow = countPage ? countPage.querySelector('.count-search-row') : null;
+    if(!countPage || !searchRow) return null;
+
+    var row = byId(ROW_ID);
+    if(!row){
+      row = document.createElement('div');
+      row.id = ROW_ID;
+      row.className = 'count-location-row-v83 count-location-row-v84';
+      searchRow.insertAdjacentElement('afterend', row);
+    }
+
+    if(!byId(INPUT_ID)){
+      row.innerHTML =
+        '<label for="' + INPUT_ID + '">Location</label>' +
+        '<input id="' + INPUT_ID + '" list="' + LIST_ID + '" autocomplete="off" placeholder="เลือกหรือพิมพ์ Location เอง">' +
+        '<datalist id="' + LIST_ID + '"></datalist>';
+
+      var input = byId(INPUT_ID);
+      if(input){
+        input.addEventListener('input', function(){
+          clearTimeout(typingTimer);
+          typingTimer = setTimeout(function(){
+            var q = byId('countSearch');
+            if(q && txt(q.value) && typeof window.searchForCount === 'function') window.searchForCount();
+          }, 180);
+        });
+        input.addEventListener('change', function(){
+          var q = byId('countSearch');
+          if(q && txt(q.value) && typeof window.searchForCount === 'function') window.searchForCount();
+        });
+      }
+    }
+    return row;
+  }
+
+  function renderLocationInputOptions(){
+    var row = ensureLocationInput();
+    var input = byId(INPUT_ID);
+    var list = byId(LIST_ID);
+    if(!row || !input || !list) return;
+
+    if(isLooseMode()){
+      input.value = '';
+      row.style.display = 'none';
+      return;
+    }
+
+    row.style.display = '';
+    var customer = getCustomer();
+    var set = new Set();
+    getRows().forEach(function(r){
+      if(!sameCustomer(r, customer)) return;
+      var loc = txt(val(r, 'location'));
+      if(loc) set.add(loc);
+    });
+
+    var locations = Array.from(set).sort(function(a,b){ return a.localeCompare(b, 'th'); });
+    list.innerHTML = locations.map(function(loc){ return '<option value="' + safe(loc) + '"></option>'; }).join('');
+  }
+
+  function buildNewItemKey(row, loc){
+    var customer = val(row, 'customer') || getCustomer();
+    if(typeof window.buildCanonicalItemKey === 'function'){
+      try{ return window.buildCanonicalItemKey(val(row,'item'), val(row,'code'), val(row,'assort'), loc, customer, false); }catch(e){}
+    }
+    if(typeof window.buildItemKey === 'function'){
+      try{ return window.buildItemKey(val(row,'item'), val(row,'code'), val(row,'assort'), loc, customer); }catch(e){}
+    }
+    return txt(val(row,'item')) + txt(val(row,'code')).toUpperCase() + txt(val(row,'assort')) + txt(loc) + txt(customer);
+  }
+
+  function applyLocationToRows(rows){
+    rows = rows || [];
+    if(isLooseMode()) return rows;
+
+    var loc = selectedLocation();
+    if(!loc) return rows;
+
+    var nloc = norm(loc);
+    var matched = rows.filter(function(r){ return norm(val(r, 'location')) === nloc; });
+    if(matched.length) return matched;
+
+    var seen = new Set();
+    var out = [];
+    rows.forEach(function(r){
+      var key = [val(r,'item'), val(r,'code'), val(r,'assort'), val(r,'customer') || getCustomer()].map(norm).join('|');
+      if(seen.has(key)) return;
+      seen.add(key);
+      var copy = Object.assign({}, r);
+      copy.Location = loc;
+      copy.location = loc;
+      copy.customer = val(copy,'customer') || getCustomer();
+      copy.item_key = buildNewItemKey(copy, loc);
+      copy.__manual_location_v84 = true;
+      out.push(copy);
+    });
+    return out;
+  }
+
+  var oldSearchOfflineRowsV84 = window.searchOfflineRows;
+  if(typeof oldSearchOfflineRowsV84 === 'function' && !oldSearchOfflineRowsV84.__locationFreeInputV84){
+    var wrappedSearchOfflineRowsV84 = function(keyword, customer){
+      var rows = oldSearchOfflineRowsV84.apply(this, arguments);
+      return applyLocationToRows(rows);
+    };
+    wrappedSearchOfflineRowsV84.__locationFreeInputV84 = true;
+    window.searchOfflineRows = wrappedSearchOfflineRowsV84;
+    try{ searchOfflineRows = window.searchOfflineRows; }catch(e){}
+  }
+
+  var oldShowCountPageV84 = window.showCountPage;
+  if(typeof oldShowCountPageV84 === 'function' && !oldShowCountPageV84.__locationFreeInputV84){
+    var wrappedShowCountPageV84 = async function(customer){
+      var res = await oldShowCountPageV84.apply(this, arguments);
+      setTimeout(renderLocationInputOptions, 0);
+      setTimeout(renderLocationInputOptions, 300);
+      return res;
+    };
+    wrappedShowCountPageV84.__locationFreeInputV84 = true;
+    window.showCountPage = wrappedShowCountPageV84;
+  }
+
+  var oldShowLooseCountPageV84 = window.showLooseCountPage;
+  if(typeof oldShowLooseCountPageV84 === 'function' && !oldShowLooseCountPageV84.__locationFreeInputV84){
+    var wrappedShowLooseCountPageV84 = async function(){
+      var res = await oldShowLooseCountPageV84.apply(this, arguments);
+      setTimeout(renderLocationInputOptions, 0);
+      return res;
+    };
+    wrappedShowLooseCountPageV84.__locationFreeInputV84 = true;
+    window.showLooseCountPage = wrappedShowLooseCountPageV84;
+  }
+
+  var oldLoadMasterDataV84 = window.loadMasterData;
+  if(typeof oldLoadMasterDataV84 === 'function' && !oldLoadMasterDataV84.__locationFreeInputV84){
+    var wrappedLoadMasterDataV84 = async function(){
+      var res = await oldLoadMasterDataV84.apply(this, arguments);
+      setTimeout(renderLocationInputOptions, 0);
+      return res;
+    };
+    wrappedLoadMasterDataV84.__locationFreeInputV84 = true;
+    window.loadMasterData = wrappedLoadMasterDataV84;
+  }
+
+  var oldShowPageV84 = window.showPage;
+  if(typeof oldShowPageV84 === 'function' && !oldShowPageV84.__locationFreeInputV84){
+    var wrappedShowPageV84 = function(page){
+      var res = oldShowPageV84.apply(this, arguments);
+      if(page === 'count') setTimeout(renderLocationInputOptions, 0);
+      return res;
+    };
+    wrappedShowPageV84.__locationFreeInputV84 = true;
+    window.showPage = wrappedShowPageV84;
+  }
+
+  var style = document.createElement('style');
+  style.textContent = `
+    .count-location-row-v84 input{
+      width:100%;
+      border:1.5px solid #e5e7eb;
+      border-radius:16px;
+      padding:12px 14px;
+      font-family:inherit;
+      font-size:15px;
+      font-weight:800;
+      color:#111827;
+      background:#fff;
+      outline:0;
+    }
+  `;
+  document.head.appendChild(style);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(renderLocationInputOptions, 500);
+    setTimeout(renderLocationInputOptions, 1500);
+  });
+
+  window.refreshCountLocationDropdownV83 = renderLocationInputOptions;
+  window.refreshCountLocationInputV84 = renderLocationInputOptions;
+})();
+</script>
+
+
+
+<script>
+/* ===== PRODUCTION PATCH V85: COUNT CARD LOCATION DROPDOWN ONLY ===== */
+(function(){
+  'use strict';
+
+  var LIST_ID = 'countCardLocationListV85';
+  var OBS_FLAG = '__countCardLocationObserverV85';
+
+  function byId(id){ return document.getElementById(id); }
+  function txt(v){ return String(v == null ? '' : v).trim(); }
+  function norm(v){ return txt(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g,''); }
+  function safe(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+    });
+  }
+  function js(v){ return String(v == null ? '' : v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\r?\n/g,' '); }
+
+  function rows(){
+    try{
+      if(Array.isArray(window.masterRows)) return window.masterRows;
+      if(typeof masterRows !== 'undefined' && Array.isArray(masterRows)) return masterRows;
+    }catch(e){}
+    return [];
+  }
+
+  function currentCustomer(){
+    try{ return txt(window.currentCountCustomer || currentCountCustomer || ''); }
+    catch(e){ return txt(window.currentCountCustomer || ''); }
+  }
+
+  function val(r, f){
+    if(!r) return '';
+    if(f === 'item') return r.Item ?? r.item ?? '';
+    if(f === 'code') return r.CODE ?? r.code ?? '';
+    if(f === 'assort') return r.Assort ?? r.assort ?? '';
+    if(f === 'location') return r.Location ?? r.location ?? '';
+    if(f === 'customer') return r.customer ?? r.Customer ?? r.channel ?? r.Channel ?? '';
+    return '';
+  }
+
+  function sameCustomer(r, c){
+    c = txt(c);
+    if(!c) return true;
+    var rc = txt(val(r,'customer')) || c;
+    var key = norm(r && r.item_key);
+    return norm(rc) === norm(c) || key.endsWith(norm(c));
+  }
+
+  function getCardId(card){
+    var raw = (card && card.id || '').replace(/^card_/, '');
+    return raw;
+  }
+
+  function extractCardValues(card){
+    var out = {item:'', code:'', assort:'', location:'', customer: currentCustomer()};
+    if(!card) return out;
+    card.querySelectorAll('.count-result-grid > div, .result-grid > div').forEach(function(cell){
+      var label = txt(cell.querySelector('b') ? cell.querySelector('b').textContent : '').toLowerCase();
+      var span = cell.querySelector('span');
+      var value = txt(span ? span.textContent : cell.textContent.replace(cell.querySelector('b') ? cell.querySelector('b').textContent : '', ''));
+      if(label === 'item') out.item = value;
+      if(label === 'code') out.code = value;
+      if(label === 'assort') out.assort = value;
+      if(label === 'location') out.location = value;
+    });
+    return out;
+  }
+
+  function locationOptionsFor(values){
+    var strict = new Set();
+    var broad = new Set();
+    rows().forEach(function(r){
+      if(!sameCustomer(r, values.customer)) return;
+      var loc = txt(val(r,'location'));
+      if(!loc) return;
+      broad.add(loc);
+      if(norm(val(r,'item')) === norm(values.item) &&
+         norm(val(r,'code')) === norm(values.code) &&
+         norm(val(r,'assort')) === norm(values.assort)){
+        strict.add(loc);
+      }
+    });
+    var arr = Array.from(strict.size ? strict : broad);
+    return arr.sort(function(a,b){ return a.localeCompare(b, 'th'); });
+  }
+
+  function ensureSharedDatalist(values){
+    var list = byId(LIST_ID);
+    if(!list){
+      list = document.createElement('datalist');
+      list.id = LIST_ID;
+      document.body.appendChild(list);
+    }
+    var opts = locationOptionsFor(values);
+    list.innerHTML = opts.map(function(loc){ return '<option value="' + safe(loc) + '"></option>'; }).join('');
+    return list;
+  }
+
+  function findLocationCell(card){
+    var found = null;
+    if(!card) return null;
+    card.querySelectorAll('.count-result-grid > div, .result-grid > div').forEach(function(cell){
+      if(found) return;
+      var b = cell.querySelector('b');
+      if(txt(b ? b.textContent : '').toLowerCase() === 'location') found = cell;
+    });
+    return found;
+  }
+
+  function upgradeCard(card){
+    if(!card || card.getAttribute('data-location-dropdown-v85') === '1') return;
+    var cell = findLocationCell(card);
+    if(!cell) return;
+
+    var values = extractCardValues(card);
+    ensureSharedDatalist(values);
+    var original = values.location;
+    var id = getCardId(card);
+    var inputId = 'countCardLocation_' + id;
+
+    cell.innerHTML =
+      '<b>Location</b>' +
+      '<input class="count-card-location-input-v85" id="' + safe(inputId) + '" list="' + LIST_ID + '" autocomplete="off" value="' + safe(original) + '" data-original-location="' + safe(original) + '" placeholder="เลือกหรือพิมพ์ Location">';
+
+    var input = byId(inputId);
+    if(input){
+      input.addEventListener('focus', function(){ ensureSharedDatalist(extractCardValues(card)); });
+      input.addEventListener('input', function(){ card.setAttribute('data-selected-location-v85', txt(input.value)); });
+      input.addEventListener('change', function(){ card.setAttribute('data-selected-location-v85', txt(input.value)); });
+      card.setAttribute('data-selected-location-v85', txt(input.value));
+    }
+    card.setAttribute('data-location-dropdown-v85', '1');
+  }
+
+  function upgradeAllCards(){
+    var box = byId('countResult');
+    if(!box) return;
+    box.querySelectorAll('.result-card').forEach(upgradeCard);
+  }
+
+  function findMatchingRowForLocation(r, loc){
+    loc = txt(loc);
+    if(!loc || !r) return null;
+    var customer = txt(val(r,'customer')) || currentCustomer();
+    return rows().find(function(x){
+      return sameCustomer(x, customer) &&
+        norm(val(x,'item')) === norm(val(r,'item')) &&
+        norm(val(x,'code')) === norm(val(r,'code')) &&
+        norm(val(x,'assort')) === norm(val(r,'assort')) &&
+        norm(val(x,'location')) === norm(loc);
+    }) || null;
+  }
+
+  function buildItemKey(row, loc){
+    var customer = txt(val(row,'customer')) || currentCustomer();
+    if(typeof window.buildCanonicalItemKey === 'function'){
+      try{ return window.buildCanonicalItemKey(val(row,'item'), val(row,'code'), val(row,'assort'), loc, customer, false); }catch(e){}
+    }
+    if(typeof window.buildItemKey === 'function'){
+      try{ return window.buildItemKey(val(row,'item'), val(row,'code'), val(row,'assort'), loc, customer); }catch(e){}
+    }
+    return txt(val(row,'item')) + txt(val(row,'code')).toUpperCase() + txt(val(row,'assort')) + txt(loc) + txt(customer);
+  }
+
+  function applySelectedLocationToRow(r){
+    if(!r) return r;
+    var id = r.id;
+    var input = byId('countCardLocation_' + id);
+    if(!input) return r;
+    var loc = txt(input.value);
+    if(!loc) return r;
+
+    var matched = findMatchingRowForLocation(r, loc);
+    if(matched){
+      Object.assign(r, matched);
+      return r;
+    }
+
+    r.Location = loc;
+    r.location = loc;
+    r.customer = txt(val(r,'customer')) || currentCustomer();
+    r.item_key = buildItemKey(r, loc);
+    r.__manual_location_v85 = true;
+    return r;
+  }
+
+  var oldRenderCountResultV85 = window.renderCountResult;
+  if(typeof oldRenderCountResultV85 === 'function' && !oldRenderCountResultV85.__locationDropdownV85){
+    var wrappedRenderCountResultV85 = function(){
+      var res = oldRenderCountResultV85.apply(this, arguments);
+      setTimeout(upgradeAllCards, 0);
+      setTimeout(upgradeAllCards, 80);
+      return res;
+    };
+    wrappedRenderCountResultV85.__locationDropdownV85 = true;
+    window.renderCountResult = wrappedRenderCountResultV85;
+    try{ renderCountResult = window.renderCountResult; }catch(e){}
+  }
+
+  var oldSaveCountV85 = window.saveCount;
+  if(typeof oldSaveCountV85 === 'function' && !oldSaveCountV85.__locationDropdownV85){
+    var wrappedSaveCountV85 = function(r){
+      applySelectedLocationToRow(r);
+      return oldSaveCountV85.apply(this, arguments);
+    };
+    wrappedSaveCountV85.__locationDropdownV85 = true;
+    window.saveCount = wrappedSaveCountV85;
+    try{ saveCount = window.saveCount; }catch(e){}
+  }
+
+  function startObserver(){
+    var box = byId('countResult');
+    if(!box || box[OBS_FLAG]) return;
+    box[OBS_FLAG] = true;
+    var obs = new MutationObserver(function(){ setTimeout(upgradeAllCards, 0); });
+    obs.observe(box, { childList:true, subtree:true });
+    setTimeout(upgradeAllCards, 0);
+  }
+
+  var oldSearchForCountV85 = window.searchForCount;
+  if(typeof oldSearchForCountV85 === 'function' && !oldSearchForCountV85.__locationDropdownV85){
+    var wrappedSearchForCountV85 = function(){
+      var res = oldSearchForCountV85.apply(this, arguments);
+      setTimeout(upgradeAllCards, 0);
+      setTimeout(upgradeAllCards, 120);
+      return res;
+    };
+    wrappedSearchForCountV85.__locationDropdownV85 = true;
+    window.searchForCount = wrappedSearchForCountV85;
+    try{ searchForCount = window.searchForCount; }catch(e){}
+  }
+
+  var css = document.createElement('style');
+  css.textContent = `
+    .count-card-location-input-v85{
+      width:100%;
+      margin-top:4px;
+      border:0;
+      background:transparent;
+      text-align:center;
+      font:inherit;
+      font-weight:900;
+      color:#111827;
+      outline:0;
+      padding:2px 4px;
+    }
+  `;
+  document.head.appendChild(css);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(startObserver, 500);
+    setTimeout(upgradeAllCards, 900);
+  });
+  setTimeout(startObserver, 1200);
+
+  window.refreshCountCardLocationDropdownV85 = upgradeAllCards;
+})();
+</script>
+
+
+<script>
+/* ===== PRODUCTION PATCH V86: COUNT CARD LOCATION + QTY PROMINENT FORM ONLY ===== */
+(function(){
+  'use strict';
+
+  var ROW_STORE = '__countCardRowsV86';
+  var OBS_FLAG = '__countCardV86Observer';
+
+  function byId(id){ return document.getElementById(id); }
+  function txt(v){ return String(v == null ? '' : v).trim(); }
+  function norm(v){ return txt(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g,''); }
+  function safe(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function(ch){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[ch];
+    });
+  }
+  function js(v){
+    return String(v == null ? '' : v)
+      .replace(/\\/g,'\\\\')
+      .replace(/'/g,"\\'")
+      .replace(/\r?\n/g,' ');
+  }
+
+  function getRows(){
+    try{
+      if(Array.isArray(window.masterRows)) return window.masterRows;
+      if(typeof masterRows !== 'undefined' && Array.isArray(masterRows)) return masterRows;
+    }catch(e){}
+    return [];
+  }
+
+  function val(row, field){
+    if(!row) return '';
+    if(field === 'item') return row.Item ?? row.item ?? '';
+    if(field === 'code') return row.CODE ?? row.code ?? '';
+    if(field === 'assort') return row.Assort ?? row.assort ?? '';
+    if(field === 'location') return row.Location ?? row.location ?? '';
+    if(field === 'customer') return row.customer ?? row.Customer ?? row.channel ?? row.Channel ?? '';
+    if(field === 'qty') return row.Quantity ?? row.quantity ?? row.system_qty ?? '';
+    if(field === 'source_file_name') return row.source_file_name ?? row.file_name ?? '';
+    return row[field] ?? '';
+  }
+
+  function currentCustomer(){
+    try{ return txt(window.currentCountCustomer || currentCountCustomer || ''); }catch(e){ return txt(window.currentCountCustomer || ''); }
+  }
+
+  function sameCustomer(row, customer){
+    if(!customer) return true;
+    var c1 = norm(val(row,'customer'));
+    var c2 = norm(customer);
+    var key = norm(row && row.item_key);
+    return c1 === c2 || key.endsWith(c2);
+  }
+
+  function isLooseMode(){
+    return String(window.currentCountWorkType || 'FULL_BOX').toUpperCase() === 'LOOSE';
+  }
+
+  function rowKey(row, idx){
+    var id = txt(row && row.id);
+    if(id) return id;
+    return 'row_' + idx + '_' + norm(val(row,'item') + val(row,'code') + val(row,'assort') + val(row,'location') + val(row,'customer'));
+  }
+
+  function getSaved(row){
+    try{
+      if(typeof window.getSavedRow === 'function') return window.getSavedRow(row);
+      if(typeof getSavedRow === 'function') return getSavedRow(row);
+    }catch(e){}
+    try{
+      var itemKey = txt(row && row.item_key);
+      var rows = Array.isArray(window.countRows) ? window.countRows : (typeof countRows !== 'undefined' && Array.isArray(countRows) ? countRows : []);
+      return rows.find(function(x){ return txt(x.item_key) === itemKey && itemKey; }) || null;
+    }catch(e){}
+    return null;
+  }
+
+  function locationOptionsFor(row){
+    var customer = txt(val(row,'customer')) || currentCustomer();
+    var item = norm(val(row,'item'));
+    var code = norm(val(row,'code'));
+    var assort = norm(val(row,'assort'));
+    var set = [];
+
+    getRows().forEach(function(r){
+      if(!sameCustomer(r, customer)) return;
+      if(norm(val(r,'item')) !== item) return;
+      if(norm(val(r,'code')) !== code) return;
+      if(norm(val(r,'assort')) !== assort) return;
+      var loc = txt(val(r,'location'));
+      if(loc && set.indexOf(loc) === -1) set.push(loc);
+    });
+
+    var original = txt(val(row,'location'));
+    if(original && set.indexOf(original) === -1) set.unshift(original);
+    set.sort(function(a,b){ return a.localeCompare(b, 'th'); });
+    return set;
+  }
+
+  function findMatchingLocationRow(row, loc){
+    loc = txt(loc);
+    if(!row || !loc) return null;
+    var customer = txt(val(row,'customer')) || currentCustomer();
+    var item = norm(val(row,'item'));
+    var code = norm(val(row,'code'));
+    var assort = norm(val(row,'assort'));
+
+    return getRows().find(function(r){
+      return sameCustomer(r, customer) &&
+        norm(val(r,'item')) === item &&
+        norm(val(r,'code')) === code &&
+        norm(val(r,'assort')) === assort &&
+        norm(val(r,'location')) === norm(loc);
+    }) || null;
+  }
+
+  function buildKey(row, loc){
+    var customer = txt(val(row,'customer')) || currentCustomer();
+    if(typeof window.buildCanonicalItemKey === 'function'){
+      try{ return window.buildCanonicalItemKey(val(row,'item'), val(row,'code'), val(row,'assort'), loc, customer, false); }catch(e){}
+    }
+    if(typeof window.buildItemKey === 'function'){
+      try{ return window.buildItemKey(val(row,'item'), val(row,'code'), val(row,'assort'), loc, customer); }catch(e){}
+    }
+    return txt(val(row,'item')) + txt(val(row,'code')).toUpperCase() + txt(val(row,'assort')) + txt(loc) + txt(customer);
+  }
+
+  function applyCardInputsToRow(row){
+    if(!row) return row;
+    var key = row.__v86Key || rowKey(row, 0);
+    var locInput = byId('countLocation_' + key);
+    var loc = locInput ? txt(locInput.value) : txt(val(row,'location'));
+    if(loc){
+      var matched = findMatchingLocationRow(row, loc);
+      if(matched){
+        var originalKey = row.__v86Key;
+        Object.assign(row, matched);
+        row.__v86Key = originalKey;
+      }else{
+        row.Location = loc;
+        row.location = loc;
+        row.item_key = buildKey(row, loc);
+        row.__manual_location_v86 = true;
+      }
+    }
+    row.customer = txt(val(row,'customer')) || currentCustomer();
+    row.Customer = row.customer;
+    return row;
+  }
+
+  function savedBoxHtml(row, saved){
+    if(!saved) return '';
+    var countedBy = saved.counted_by || saved.Counted_by || '-';
+    var countedAt = saved.created_at || saved.counted_at || '';
+    var timeText = '-';
+    if(countedAt){
+      try{
+        timeText = new Date(countedAt).toLocaleString('th-TH', {
+          timeZone:'Asia/Bangkok', day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'
+        });
+      }catch(e){ timeText = countedAt; }
+    }
+    return '' +
+      '<div class="count-saved-confirm-v86">' +
+        '<div class="count-saved-main-v86">✓ รายการรหัสนี้นับไปแล้ว</div>' +
+        '<div class="count-saved-sub-v86">ผู้นับ: ' + safe(countedBy) + ' | เวลา: ' + safe(timeText) + '</div>' +
+      '</div>';
+  }
+
+  function cardHtml(row, idx){
+    window[ROW_STORE] = window[ROW_STORE] || {};
+    var key = rowKey(row, idx);
+    row.__v86Key = key;
+    window[ROW_STORE][key] = row;
+
+    var item = val(row,'item');
+    var code = val(row,'code');
+    var assort = val(row,'assort');
+    var loc = val(row,'location');
+    var customer = txt(val(row,'customer')) || currentCustomer();
+    var systemQty = val(row,'qty') || 0;
+    var saved = getSaved(row);
+    var savedQty = saved ? (saved.count_qty ?? saved.Count_qty ?? '') : '';
+    var options = locationOptionsFor(row).map(function(x){ return '<option value="' + safe(x) + '"></option>'; }).join('');
+
+    return '' +
+      '<div class="result-card count-card-v86 ' + (saved ? 'saved-card count-card-saved-v86' : '') + '" id="card_' + safe(key) + '" data-v86-key="' + safe(key) + '">' +
+        '<div class="count-product-box-v86">' +
+          '<div class="count-product-head-v86"><span class="count-product-icon-v86">▧</span><b>ข้อมูลสินค้า</b></div>' +
+          '<div class="count-product-row-v86"><span>รหัสสินค้า (Item)</span><strong>' + safe(item) + '</strong></div>' +
+          '<div class="count-product-row-v86"><span>รหัส (CODE)</span><strong>' + safe(code) + '</strong></div>' +
+          '<div class="count-product-row-v86"><span>ขนาด (Assort)</span><strong>' + safe(assort) + '</strong></div>' +
+          '<div class="count-product-row-v86"><span>ร้านค้า (Customer)</span><strong>' + safe(customer) + '</strong></div>' +
+          '<div class="count-product-row-v86 count-system-row-v86"><span>จำนวนในระบบ</span><strong>' + safe(systemQty) + '</strong></div>' +
+        '</div>' +
+
+        '<div class="count-input-pair-v86">' +
+          '<div class="count-input-card-v86">' +
+            '<div class="count-input-title-v86"><span>⌖</span><b>Location ที่นับ</b></div>' +
+            '<input class="count-location-input-v86 count-card-location-input-v85" id="countLocation_' + safe(key) + '" list="countLocationList_' + safe(key) + '" autocomplete="off" value="' + safe(loc) + '" placeholder="เลือกหรือพิมพ์ Location">' +
+            '<datalist id="countLocationList_' + safe(key) + '">' + options + '</datalist>' +
+          '</div>' +
+
+          '<div class="count-input-card-v86">' +
+            '<div class="count-input-title-v86"><span>▧</span><b>จำนวนที่นับ (กล่อง)</b></div>' +
+            '<input class="count-qty-input-v86" type="number" inputmode="decimal" placeholder="0" id="count_' + safe(key) + '" value="' + safe(savedQty) + '">' +
+          '</div>' +
+        '</div>' +
+
+        '<button class="save-btn count-save-btn-v86" id="save_' + safe(key) + '" onclick="saveCount(window.' + ROW_STORE + '[\'' + js(key) + '\'])">บันทึก</button>' +
+        '<button class="scan-btn count-scan-hidden-v86" type="button" onclick="openScanner(\'countSearch\')">สแกน</button>' +
+        savedBoxHtml(row, saved) +
+      '</div>';
+  }
+
+  function renderV86(result){
+    var box = byId('countResult');
+    if(!box) return;
+    window[ROW_STORE] = {};
+    box.innerHTML = (result || []).map(cardHtml).join('');
+  }
+
+  function markSaved(row){
+    if(!row) return;
+    var key = row.__v86Key || rowKey(row, 0);
+    var card = byId('card_' + key);
+    if(!card) return;
+    card.classList.add('saved-card','count-card-saved-v86');
+    var old = card.querySelector('.count-saved-confirm-v86');
+    if(old) old.remove();
+    card.insertAdjacentHTML('beforeend',
+      '<div class="count-saved-confirm-v86">' +
+        '<div class="count-saved-main-v86">✓ รายการรหัสนี้นับไปแล้ว</div>' +
+        '<div class="count-saved-sub-v86">บันทึก Location และจำนวนเรียบร้อย</div>' +
+      '</div>'
+    );
+    var btn = byId('save_' + key);
+    if(btn) btn.textContent = 'อัปเดต';
+  }
+
+  var oldRender = window.renderCountResult;
+  window.renderCountResult = function(result){
+    renderV86(result || []);
+  };
+  try{ renderCountResult = window.renderCountResult; }catch(e){}
+
+  var oldSave = window.saveCount;
+  if(typeof oldSave === 'function'){
+    window.saveCount = async function(row){
+      row = applyCardInputsToRow(row);
+      var res = oldSave.apply(this, arguments);
+      try{ if(res && typeof res.then === 'function') await res; }catch(e){ throw e; }
+      setTimeout(function(){ markSaved(row); }, 120);
+      setTimeout(function(){ markSaved(row); }, 600);
+      return res;
+    };
+    try{ saveCount = window.saveCount; }catch(e){}
+  }
+
+  function hideTopLocationFilter(){
+    var row = byId('countLocationRowV83');
+    if(row) row.style.display = 'none';
+  }
+
+  var oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(){
+      var res = oldShowPage.apply(this, arguments);
+      setTimeout(hideTopLocationFilter, 0);
+      setTimeout(hideTopLocationFilter, 300);
+      return res;
+    };
+    try{ showPage = window.showPage; }catch(e){}
+  }
+
+  var oldShowCountPage = window.showCountPage;
+  if(typeof oldShowCountPage === 'function'){
+    window.showCountPage = function(){
+      var res = oldShowCountPage.apply(this, arguments);
+      setTimeout(hideTopLocationFilter, 0);
+      setTimeout(hideTopLocationFilter, 300);
+      return res;
+    };
+    try{ showCountPage = window.showCountPage; }catch(e){}
+  }
+
+  function observer(){
+    var box = byId('countResult');
+    if(!box || box[OBS_FLAG]) return;
+    box[OBS_FLAG] = true;
+    var mo = new MutationObserver(function(){ hideTopLocationFilter(); });
+    mo.observe(box, {childList:true, subtree:true});
+  }
+
+  var css = document.createElement('style');
+  css.textContent = `
+    #countLocationRowV83{display:none !important;}
+
+    .count-card-v86{
+      padding:18px !important;
+      border-radius:22px !important;
+      background:#fff !important;
+      border:1px solid #f1f5f9 !important;
+      box-shadow:0 12px 28px rgba(15,23,42,.08) !important;
+    }
+
+    .count-card-v86 .shoe-badge,
+    .count-card-v86 .saved-status,
+    .count-card-v86 .count-history-box,
+    .count-card-v86 .result-grid,
+    .count-card-v86 .count-form{
+      display:none !important;
+    }
+
+    .count-product-box-v86{
+      padding:16px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid #eef2f7;
+      box-shadow:0 6px 18px rgba(15,23,42,.06);
+      margin-bottom:16px;
+    }
+
+    .count-product-head-v86{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      color:#d71920;
+      font-weight:900;
+      font-size:18px;
+      margin-bottom:12px;
+    }
+
+    .count-product-icon-v86{
+      width:34px;
+      height:34px;
+      border-radius:999px;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      color:#d71920;
+      background:#fff1f2;
+      font-size:18px;
+    }
+
+    .count-product-row-v86{
+      display:grid;
+      grid-template-columns:1fr auto;
+      gap:12px;
+      align-items:center;
+      padding:12px 0;
+      border-top:1px solid #eef2f7;
+      font-size:15px;
+    }
+
+    .count-product-row-v86:first-of-type{border-top:0;}
+    .count-product-row-v86 span{color:#6b7280;font-weight:800;}
+    .count-product-row-v86 strong{color:#111827;font-weight:900;font-size:18px;text-align:right;}
+    .count-system-row-v86 strong{color:#d71920;}
+
+    .count-input-pair-v86{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    .count-input-card-v86{
+      padding:14px;
+      border-radius:18px;
+      background:#fff;
+      border:1.8px solid rgba(215,25,32,.28);
+      box-shadow:0 8px 18px rgba(15,23,42,.06);
+    }
+
+    .count-input-title-v86{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#d71920;
+      font-size:14px;
+      font-weight:900;
+      margin-bottom:10px;
+      min-height:26px;
+    }
+
+    .count-input-title-v86 span{
+      width:28px;
+      height:28px;
+      border-radius:999px;
+      background:#fff1f2;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      color:#d71920;
+      font-size:16px;
+    }
+
+    .count-location-input-v86,
+    .count-qty-input-v86{
+      width:100% !important;
+      min-height:58px !important;
+      border:1.8px solid #ef4444 !important;
+      border-radius:12px !important;
+      background:#fff !important;
+      color:#111827 !important;
+      font-size:25px !important;
+      font-weight:900 !important;
+      text-align:left !important;
+      padding:10px 12px !important;
+      box-shadow:none !important;
+      outline:0 !important;
+    }
+
+    .count-location-input-v86:focus,
+    .count-qty-input-v86:focus{
+      border-color:#d71920 !important;
+      box-shadow:0 0 0 4px rgba(215,25,32,.12) !important;
+    }
+
+    .count-save-btn-v86{
+      width:100%;
+      min-height:56px;
+      border:0;
+      border-radius:14px;
+      background:linear-gradient(135deg,#ef233c,#c1121f) !important;
+      color:#fff;
+      font-size:20px;
+      font-weight:900;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      margin-top:10px;
+    }
+    .count-save-btn-v86:before{content:'▣';font-size:20px;}
+
+    .count-scan-hidden-v86{display:none !important;}
+
+    .count-saved-confirm-v86{
+      margin-top:14px;
+      padding:14px 16px;
+      border-radius:16px;
+      border:2px solid #16a34a;
+      background:#f0fdf4;
+      color:#166534;
+      text-align:center;
+      box-shadow:0 6px 16px rgba(22,163,74,.12);
+    }
+
+    .count-saved-main-v86{
+      font-size:18px;
+      font-weight:900;
+    }
+
+    .count-saved-sub-v86{
+      margin-top:4px;
+      font-size:12px;
+      font-weight:800;
+      color:#15803d;
+    }
+
+    .count-card-saved-v86{
+      border:2px solid #16a34a !important;
+      background:linear-gradient(180deg,#ffffff 0%,#f7fff9 100%) !important;
+    }
+
+    @media (max-width:720px){
+      .count-card-v86{padding:14px !important;border-radius:18px !important;}
+      .count-product-box-v86{padding:14px;border-radius:16px;margin-bottom:12px;}
+      .count-product-head-v86{font-size:16px;}
+      .count-product-row-v86{font-size:13px;padding:10px 0;}
+      .count-product-row-v86 strong{font-size:16px;}
+      .count-input-pair-v86{grid-template-columns:1fr 1fr;gap:8px;}
+      .count-input-card-v86{padding:10px;border-radius:14px;}
+      .count-input-title-v86{font-size:12px;gap:6px;margin-bottom:8px;}
+      .count-input-title-v86 span{width:24px;height:24px;font-size:14px;}
+      .count-location-input-v86,
+      .count-qty-input-v86{min-height:52px !important;font-size:22px !important;padding:8px 10px !important;}
+      .count-save-btn-v86{min-height:54px;font-size:18px;border-radius:13px;}
+    }
+  `;
+  document.head.appendChild(css);
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(hideTopLocationFilter, 300);
+    setTimeout(observer, 600);
+  });
+  setTimeout(hideTopLocationFilter, 800);
+  setTimeout(observer, 1000);
+
+  window.renderCountResultV86 = renderV86;
+})();
+</script>
+
+
+<script>
+/* ===== PRODUCTION PATCH V87: KEEP ALL COUNT RESULT CARDS AFTER SAVE ONLY ===== */
+(function(){
+  'use strict';
+
+  var STORE_NAME = '__countCardRowsV86';
+  var lastCountRowsV87 = [];
+  var savingV87 = false;
+
+  function byId(id){ return document.getElementById(id); }
+
+  function readRowsFromDom(){
+    try{
+      var store = window[STORE_NAME] || {};
+      var cards = Array.prototype.slice.call(document.querySelectorAll('#countResult .count-card-v86[data-v86-key]'));
+      var rows = cards.map(function(card){ return store[card.getAttribute('data-v86-key')]; }).filter(Boolean);
+      return rows;
+    }catch(e){
+      return [];
+    }
+  }
+
+  function rememberRows(rows){
+    if(Array.isArray(rows) && rows.length > 1){
+      lastCountRowsV87 = rows.slice();
+      return;
+    }
+
+    var domRows = readRowsFromDom();
+    if(domRows.length > 1){
+      lastCountRowsV87 = domRows.slice();
+    }
+  }
+
+  function hasOnlyOneCardAfterSave(){
+    var box = byId('countResult');
+    if(!box) return false;
+    return box.querySelectorAll('.count-card-v86, .result-card').length === 1;
+  }
+
+  function restoreRowsIfCollapsed(rows){
+    if(!Array.isArray(rows) || rows.length <= 1) return;
+    if(!hasOnlyOneCardAfterSave()) return;
+
+    if(typeof window.renderCountResultV86 === 'function'){
+      window.renderCountResultV86(rows);
+    }else if(typeof window.renderCountResult === 'function'){
+      window.renderCountResult(rows);
+    }
+  }
+
+  var oldRenderV87 = window.renderCountResult;
+  if(typeof oldRenderV87 === 'function'){
+    window.renderCountResult = function(result){
+      if(!savingV87) rememberRows(result);
+      return oldRenderV87.apply(this, arguments);
+    };
+    try{ renderCountResult = window.renderCountResult; }catch(e){}
+  }
+
+  var oldSaveV87 = window.saveCount;
+  if(typeof oldSaveV87 === 'function'){
+    window.saveCount = async function(row){
+      var beforeRows = readRowsFromDom();
+      if(beforeRows.length <= 1 && lastCountRowsV87.length > 1){
+        beforeRows = lastCountRowsV87.slice();
+      }
+      if(beforeRows.length > 1) lastCountRowsV87 = beforeRows.slice();
+
+      savingV87 = true;
+      try{
+        var res = oldSaveV87.apply(this, arguments);
+        if(res && typeof res.then === 'function') await res;
+      }finally{
+        savingV87 = false;
+      }
+
+      if(beforeRows.length > 1){
+        setTimeout(function(){ restoreRowsIfCollapsed(beforeRows); }, 80);
+        setTimeout(function(){ restoreRowsIfCollapsed(beforeRows); }, 250);
+        setTimeout(function(){ restoreRowsIfCollapsed(beforeRows); }, 700);
+      }
+    };
+    try{ saveCount = window.saveCount; }catch(e){}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ rememberRows(); }, 1200);
+  });
+})();
+</script>
+
+
+<script>
+/* ===== PRODUCTION PATCH V88: KEEP SCROLL POSITION AFTER SAVE ONLY ===== */
+(function(){
+  'use strict';
+
+  function getScrollTopV88(){
+    return window.pageYOffset || document.documentElement.scrollTop || document.body.scrollTop || 0;
+  }
+
+  function findCardTopV88(row){
+    try{
+      var id = row && row.id;
+      if(id === undefined || id === null) return null;
+      var card = document.getElementById('card_' + id) ||
+                 document.querySelector('[data-v86-key="' + String(id).replace(/"/g,'\\"') + '"]') ||
+                 document.querySelector('[id="card_' + String(id).replace(/"/g,'\\"') + '"]');
+      if(!card) return null;
+      return card.getBoundingClientRect().top;
+    }catch(e){
+      return null;
+    }
+  }
+
+  function restoreScrollV88(savedScroll, savedCardTop, row){
+    try{
+      var target = savedScroll;
+      var nowCardTop = findCardTopV88(row);
+      if(savedCardTop !== null && nowCardTop !== null){
+        target = getScrollTopV88() + (nowCardTop - savedCardTop);
+      }
+      window.scrollTo({ top: Math.max(0, target), behavior: 'auto' });
+    }catch(e){
+      window.scrollTo(0, savedScroll || 0);
+    }
+  }
+
+  var oldSaveV88 = window.saveCount;
+  if(typeof oldSaveV88 === 'function'){
+    window.saveCount = async function(row){
+      var savedScroll = getScrollTopV88();
+      var savedCardTop = findCardTopV88(row);
+      var result;
+
+      try{
+        result = oldSaveV88.apply(this, arguments);
+        if(result && typeof result.then === 'function') await result;
+      }finally{
+        restoreScrollV88(savedScroll, savedCardTop, row);
+        setTimeout(function(){ restoreScrollV88(savedScroll, savedCardTop, row); }, 60);
+        setTimeout(function(){ restoreScrollV88(savedScroll, savedCardTop, row); }, 180);
+        setTimeout(function(){ restoreScrollV88(savedScroll, savedCardTop, row); }, 450);
+        setTimeout(function(){ restoreScrollV88(savedScroll, savedCardTop, row); }, 900);
+      }
+
+      return result;
+    };
+    try{ saveCount = window.saveCount; }catch(e){}
+  }
+})();
+</script>
+
+<script>
+/* ===== PRODUCTION PATCH V89: ADMIN COUNT LOCATION CONTROL ONLY ===== */
+(function(){
+  'use strict';
+
+  var SETTINGS_TABLE = 'count_settings';
+  var LOCATION_TABLE = 'count_location_settings';
+  var CUSTOMERS = ['LOTUS','BIG C','Villa Market','Maxmart','7-11','PTT','CJ'];
+  var policyCache = {};
+  var activePolicy = { customer:'', allowEditLocation:true, restrictLocation:false, allowedLocations:[] };
+  var adminLocations = [];
+  var countObserverStarted = false;
+
+  function byId(id){ return document.getElementById(id); }
+  function text(v){ return String(v == null ? '' : v).trim(); }
+  function norm(v){ return text(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g,''); }
+  function esc(v){ return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+  function isAdminV89(){ try{ return typeof window.isAdminUser === 'function' && window.isAdminUser(); }catch(e){ return false; } }
+  function currentCustomerV89(){
+    try{ return text(window.currentCountCustomer || currentCountCustomer || ''); }
+    catch(e){ return text(window.currentCountCustomer || ''); }
+  }
+  function rowsV89(){
+    try{
+      if(Array.isArray(window.masterRows) && window.masterRows.length) return window.masterRows;
+      if(typeof masterRows !== 'undefined' && Array.isArray(masterRows)) return masterRows;
+    }catch(e){}
+    return [];
+  }
+  function rowCustomer(r){ return text(r && (r.customer ?? r.Customer ?? r.channel ?? r.Channel)); }
+  function rowLocation(r){ return text(r && (r.Location ?? r.location)); }
+  function sameCustomer(r,c){
+    var rc = norm(rowCustomer(r));
+    var cc = norm(c);
+    var key = norm(r && r.item_key);
+    return rc === cc || (!!cc && key.endsWith(cc));
+  }
+  function canonicalCustomerV89(c){
+    var n = norm(c);
+    if(n === 'LOTUS') return 'LOTUS';
+    if(n === 'BIGC') return 'BIG C';
+    if(n === 'VILLAMARKET' || n === 'VILLA') return 'Villa Market';
+    if(n === 'MAXMART' || n === 'MAX') return 'Maxmart';
+    if(n === '711') return '7-11';
+    if(n === 'PTT') return 'PTT';
+    if(n === 'CJ') return 'CJ';
+    return text(c);
+  }
+
+  function ensureSettingsPage(){
+    if(byId('countSettingsPageV89')) return;
+    var main = document.querySelector('#appPage main') || document.querySelector('main');
+    if(!main) return;
+    main.insertAdjacentHTML('beforeend', `
+      <section id="countSettingsPageV89" class="page-card count-settings-page-v89" style="display:none;">
+        <div class="count-settings-wrap-v89">
+          <div class="count-settings-head-v89">
+            <div>
+              <h2>ตั้งค่าการนับสต็อก</h2>
+              <p>กำหนดสิทธิ์การแก้ไข Location และเลือก Location ที่อนุญาตให้แต่ละร้านนับ</p>
+            </div>
+            <button type="button" onclick="showPage('home')">กลับ Home</button>
+          </div>
+
+          <div class="count-settings-card-v89">
+            <label class="count-settings-label-v89">Customer</label>
+            <select id="countSettingCustomerV89" onchange="loadCustomerCountSettingV89()">
+              ${CUSTOMERS.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('')}
+            </select>
+          </div>
+
+          <div class="count-settings-card-v89 count-settings-toggle-card-v89">
+            <div>
+              <b>ล็อกการแก้ไข Location</b>
+              <span>เปิด = ไม่สามารถแก้ Location ได้ ทั้งรายการที่นับแล้วและยังไม่นับ</span>
+            </div>
+            <label class="count-switch-v89">
+              <input id="allowEditLocationV89" type="checkbox">
+              <span></span>
+            </label>
+          </div>
+
+          <div class="count-settings-card-v89 count-settings-toggle-card-v89">
+            <div>
+              <b>จำกัด Location ที่อนุญาตให้นับ</b>
+              <span>เปิด = ระบบจะอนุญาตเฉพาะ Location ที่เลือกด้านล่าง</span>
+            </div>
+            <label class="count-switch-v89">
+              <input id="restrictLocationV89" type="checkbox" onchange="toggleLocationListV89()">
+              <span></span>
+            </label>
+          </div>
+
+          <div class="count-settings-card-v89">
+            <div class="count-settings-location-head-v89">
+              <div>
+                <b>Location จาก Master Data</b>
+                <span id="countSettingLocationSummaryV89">กำลังโหลด...</span>
+              </div>
+              <div>
+                <button type="button" onclick="selectAllLocationsV89(true)">เลือกทั้งหมด</button>
+                <button type="button" onclick="selectAllLocationsV89(false)">ล้างทั้งหมด</button>
+              </div>
+            </div>
+            <div id="locationSettingListV89" class="count-settings-location-grid-v89"></div>
+          </div>
+
+          <button id="saveCountSettingBtnV89" class="count-settings-save-v89" type="button" onclick="saveCustomerCountSettingV89()">บันทึกการตั้งค่า</button>
+        </div>
+      </section>
+    `);
+  }
+
+  function ensureAdminButtons(){
+    if(!isAdminV89()) return;
+    var homeGrid = document.querySelector('#homePage .admin-menu-grid');
+    if(homeGrid && !byId('adminCountSettingBtnV89')){
+      homeGrid.insertAdjacentHTML('beforeend', '<button id="adminCountSettingBtnV89" onclick="openCountSettingsV89()"><i>⚙</i><b>COUNT SETTING</b><span>กำหนด Location การนับ</span></button>');
+    }
+    var side = byId('sideMenu');
+    if(side && !byId('sideCountSettingBtnV89')){
+      var logout = side.querySelector('.menu-btn.logout');
+      var html = '<button id="sideCountSettingBtnV89" class="menu-btn admin-only" onclick="openCountSettingsV89()">⚙ ตั้งค่าการนับสต็อก</button>';
+      if(logout) logout.insertAdjacentHTML('beforebegin', html); else side.insertAdjacentHTML('beforeend', html);
+    }
+  }
+
+  async function ensureMasterRowsForSettings(){
+    var rows = rowsV89();
+    if(rows.length) return rows;
+    if(typeof window.fetchAll === 'function'){
+      try{ return await window.fetchAll('master_data'); }catch(e){}
+    }
+    if(typeof fetchAll === 'function'){
+      try{ return await fetchAll('master_data'); }catch(e){}
+    }
+    var all = [], from = 0, size = 1000;
+    while(true){
+      var res = await getSupabase().from('master_data').select('*').range(from, from + size - 1);
+      if(res.error) throw res.error;
+      var part = res.data || [];
+      all = all.concat(part);
+      if(part.length < size) break;
+      from += size;
+    }
+    return all;
+  }
+
+  async function loadPolicy(customer, force){
+    customer = canonicalCustomerV89(customer);
+    if(!force && policyCache[customer]) return policyCache[customer];
+
+    var settingRes = await getSupabase().from(SETTINGS_TABLE).select('customer,allow_edit_location,restrict_location').eq('customer', customer).maybeSingle();
+    if(settingRes.error) throw settingRes.error;
+
+    var locRes = await getSupabase().from(LOCATION_TABLE).select('location,is_allowed').eq('customer', customer);
+    if(locRes.error) throw locRes.error;
+
+    var policy = {
+      customer: customer,
+      allowEditLocation: settingRes.data ? settingRes.data.allow_edit_location !== false : true,
+      restrictLocation: settingRes.data ? settingRes.data.restrict_location === true : false,
+      allowedLocations: (locRes.data || []).filter(function(r){ return r.is_allowed === true; }).map(function(r){ return text(r.location); }).filter(Boolean)
+    };
+    policyCache[customer] = policy;
+    return policy;
+  }
+
+  async function renderAdminLocations(customer){
+    var rows = await ensureMasterRowsForSettings();
+    adminLocations = [];
+    rows.forEach(function(r){
+      if(!sameCustomer(r, customer)) return;
+      var loc = rowLocation(r);
+      if(loc && !adminLocations.some(function(x){ return norm(x) === norm(loc); })) adminLocations.push(loc);
+    });
+    adminLocations.sort(function(a,b){ return a.localeCompare(b,'th'); });
+
+    var savedRes = await getSupabase().from(LOCATION_TABLE).select('location,is_allowed').eq('customer', customer);
+    if(savedRes.error) throw savedRes.error;
+    var savedMap = {};
+    (savedRes.data || []).forEach(function(r){ savedMap[norm(r.location)] = r.is_allowed === true; });
+
+    var box = byId('locationSettingListV89');
+    if(!box) return;
+    box.innerHTML = adminLocations.length ? adminLocations.map(function(loc){
+      var checked = Object.prototype.hasOwnProperty.call(savedMap,norm(loc)) ? savedMap[norm(loc)] : true;
+      return '<label class="count-location-check-v89"><input class="location-setting-check-v89" type="checkbox" value="'+esc(loc)+'" '+(checked?'checked':'')+'><span>'+esc(loc)+'</span></label>';
+    }).join('') : '<div class="count-settings-empty-v89">ไม่พบ Location ใน Master Data ของร้านนี้</div>';
+    updateLocationSummary();
+  }
+
+  function updateLocationSummary(){
+    var checks = Array.prototype.slice.call(document.querySelectorAll('.location-setting-check-v89'));
+    var selected = checks.filter(function(x){ return x.checked; }).length;
+    var el = byId('countSettingLocationSummaryV89');
+    if(el) el.textContent = 'เลือก '+selected+' จาก '+checks.length+' Location';
+  }
+
+  window.toggleLocationListV89 = function(){
+    var enabled = !!byId('restrictLocationV89')?.checked;
+    var box = byId('locationSettingListV89');
+    if(box) box.classList.toggle('is-disabled-v89', !enabled);
+  };
+
+  window.selectAllLocationsV89 = function(checked){
+    document.querySelectorAll('.location-setting-check-v89').forEach(function(el){ el.checked = !!checked; });
+    updateLocationSummary();
+  };
+
+  window.loadCustomerCountSettingV89 = async function(){
+    if(!isAdminV89()) return;
+    var customer = canonicalCustomerV89(byId('countSettingCustomerV89')?.value || 'LOTUS');
+    try{
+      setLoading(true,'กำลังโหลดการตั้งค่า...');
+      var policy = await loadPolicy(customer,true);
+      byId('allowEditLocationV89').checked = !policy.allowEditLocation;
+      byId('restrictLocationV89').checked = policy.restrictLocation;
+      await renderAdminLocations(customer);
+      window.toggleLocationListV89();
+    }catch(err){
+      alert('โหลดการตั้งค่าไม่สำเร็จ: '+(err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  window.openCountSettingsV89 = async function(){
+    if(!isAdminV89()) return alert('หน้านี้สำหรับ Admin เท่านั้น');
+    ensureSettingsPage();
+    ensureAdminButtons();
+    try{ if(typeof window.showPage === 'function') window.showPage('master'); }catch(e){}
+    ['homePage','masterPage','countPage','fgPage','dashboardPage'].forEach(function(id){ var el=byId(id); if(el) el.style.display='none'; });
+    var page = byId('countSettingsPageV89');
+    if(page) page.style.display='block';
+    try{ if(typeof window.closeMenu === 'function') window.closeMenu(); }catch(e){}
+    window.scrollTo({top:0,behavior:'auto'});
+    await window.loadCustomerCountSettingV89();
+  };
+
+  window.saveCustomerCountSettingV89 = async function(){
+    if(!isAdminV89()) return alert('เฉพาะ Admin เท่านั้น');
+    var customer = canonicalCustomerV89(byId('countSettingCustomerV89')?.value || '');
+    var allowEdit = !byId('allowEditLocationV89')?.checked;
+    var restrict = !!byId('restrictLocationV89')?.checked;
+    var checks = Array.prototype.slice.call(document.querySelectorAll('.location-setting-check-v89'));
+    if(restrict && !checks.some(function(x){ return x.checked; })) return alert('กรุณาเลือกอย่างน้อย 1 Location');
+
+    try{
+      setLoading(true,'กำลังบันทึกการตั้งค่า...');
+      var settingPayload = {
+        customer: customer,
+        allow_edit_location: allowEdit,
+        restrict_location: restrict,
+        updated_at: new Date().toISOString(),
+        updated_by: window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : '') || null
+      };
+      var sRes = await getSupabase().from(SETTINGS_TABLE).upsert(settingPayload,{onConflict:'customer'});
+      if(sRes.error) throw sRes.error;
+
+      var locationPayload = checks.map(function(ch){
+        return {
+          customer: customer,
+          location: ch.value,
+          is_allowed: ch.checked,
+          updated_at: new Date().toISOString(),
+          updated_by: window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : '') || null
+        };
+      });
+      if(locationPayload.length){
+        var lRes = await getSupabase().from(LOCATION_TABLE).upsert(locationPayload,{onConflict:'customer,location'});
+        if(lRes.error) throw lRes.error;
+      }
+
+      delete policyCache[customer];
+      activePolicy = await loadPolicy(customer,true);
+      if(typeof window.showToast === 'function') window.showToast('บันทึกการตั้งค่าสำเร็จ');
+      else if(typeof showToast === 'function') showToast('บันทึกการตั้งค่าสำเร็จ');
+      updateLocationSummary();
+    }catch(err){
+      alert('บันทึกการตั้งค่าไม่สำเร็จ: '+(err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  function allowedSet(){
+    return new Set((activePolicy.allowedLocations || []).map(norm));
+  }
+
+  function filterRowsByPolicy(result){
+    if(!Array.isArray(result)) return result;
+    if(!activePolicy.restrictLocation) return result;
+    var allowed = allowedSet();
+    return result.filter(function(r){ return allowed.has(norm(rowLocation(r))); });
+  }
+
+  function applyPolicyToCountCards(){
+    var customer = currentCustomerV89();
+    if(!customer || canonicalCustomerV89(customer) !== activePolicy.customer) return;
+    var allowed = allowedSet();
+    document.querySelectorAll('#countResult .count-card-v86').forEach(function(card){
+      var key = card.getAttribute('data-v86-key') || '';
+      var locInput = byId('countLocation_' + key);
+      var qtyInput = byId('count_' + key);
+      var isSaved = card.classList.contains('count-card-saved-v86') || !!card.querySelector('.count-saved-confirm-v86');
+      if(locInput){
+        if(activePolicy.restrictLocation){
+          var listId = locInput.getAttribute('list');
+          var list = listId ? byId(listId) : null;
+          if(list){
+            Array.prototype.slice.call(list.querySelectorAll('option')).forEach(function(opt){
+              if(!allowed.has(norm(opt.value))) opt.remove();
+            });
+          }
+        }
+        locInput.disabled = !activePolicy.allowEditLocation;
+        locInput.setAttribute('data-policy-lock-v89', locInput.disabled ? '1' : '0');
+      }
+      if(qtyInput) qtyInput.disabled = false;
+    });
+  }
+
+  function startCountObserver(){
+    if(countObserverStarted) return;
+    var box = byId('countResult');
+    if(!box) return;
+    countObserverStarted = true;
+    var mo = new MutationObserver(function(){ setTimeout(applyPolicyToCountCards,0); });
+    mo.observe(box,{childList:true,subtree:true,attributes:true,attributeFilter:['class']});
+    applyPolicyToCountCards();
+  }
+
+  var oldRenderCountV89 = window.renderCountResult;
+  if(typeof oldRenderCountV89 === 'function'){
+    window.renderCountResult = function(result){
+      var filtered = filterRowsByPolicy(result);
+      var out = oldRenderCountV89.call(this, filtered);
+      setTimeout(applyPolicyToCountCards,0);
+      setTimeout(applyPolicyToCountCards,120);
+      return out;
+    };
+    try{ renderCountResult = window.renderCountResult; }catch(e){}
+  }
+
+  var oldRenderV86V89 = window.renderCountResultV86;
+  if(typeof oldRenderV86V89 === 'function'){
+    window.renderCountResultV86 = function(result){
+      var out = oldRenderV86V89.call(this, filterRowsByPolicy(result));
+      setTimeout(applyPolicyToCountCards,0);
+      return out;
+    };
+  }
+
+  var oldShowCountV89 = window.showCountPage;
+  if(typeof oldShowCountV89 === 'function'){
+    window.showCountPage = async function(customer){
+      var canonical = canonicalCustomerV89(customer);
+      try{ activePolicy = await loadPolicy(canonical,false); }
+      catch(err){
+        console.warn('โหลด count setting ไม่สำเร็จ ใช้ค่าเริ่มต้น',err);
+        activePolicy = { customer:canonical, allowEditLocation:true, restrictLocation:false, allowedLocations:[] };
+      }
+      var res = oldShowCountV89.apply(this, arguments);
+      if(res && typeof res.then === 'function') await res;
+      setTimeout(startCountObserver,300);
+      setTimeout(applyPolicyToCountCards,450);
+      return res;
+    };
+    try{ showCountPage = window.showCountPage; }catch(e){}
+  }
+
+  var oldSaveCountV89 = window.saveCount;
+  if(typeof oldSaveCountV89 === 'function'){
+    window.saveCount = async function(row){
+      var customer = canonicalCustomerV89(rowCustomer(row) || currentCustomerV89());
+      if(activePolicy.customer !== customer){
+        try{ activePolicy = await loadPolicy(customer,false); }catch(e){}
+      }
+
+      var key = row && (row.__v86Key || row.id);
+      var card = key != null ? byId('card_' + key) : null;
+      var locInput = key != null ? byId('countLocation_' + key) : null;
+      var selectedLoc = text(locInput ? locInput.value : rowLocation(row));
+      var isSaved = !!(card && (card.classList.contains('count-card-saved-v86') || card.querySelector('.count-saved-confirm-v86')));
+
+      if(!selectedLoc) return alert('กรุณาเลือก Location ที่นับ');
+      if(activePolicy.restrictLocation && !allowedSet().has(norm(selectedLoc))){
+        return alert('Location '+selectedLoc+' ไม่ได้รับอนุญาตให้นับ กรุณาเลือก Location ที่ Admin กำหนด');
+      }
+      if(!activePolicy.allowEditLocation && locInput && !locInput.disabled){
+        locInput.disabled = true;
+      }
+
+      var result = oldSaveCountV89.apply(this, arguments);
+      if(result && typeof result.then === 'function') await result;
+      setTimeout(applyPolicyToCountCards,150);
+      setTimeout(applyPolicyToCountCards,700);
+      return result;
+    };
+    try{ saveCount = window.saveCount; }catch(e){}
+  }
+
+  var oldShowPageV89 = window.showPage;
+  if(typeof oldShowPageV89 === 'function'){
+    window.showPage = function(page){
+      var settings = byId('countSettingsPageV89');
+      if(settings) settings.style.display='none';
+      var result = oldShowPageV89.apply(this, arguments);
+      setTimeout(ensureAdminButtons,80);
+      return result;
+    };
+    try{ showPage = window.showPage; }catch(e){}
+  }
+
+  var css = document.createElement('style');
+  css.textContent = `
+    .count-settings-wrap-v89{max-width:980px;margin:0 auto;padding:18px 14px 36px;}
+    .count-settings-head-v89{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:16px;}
+    .count-settings-head-v89 h2{margin:0;font-size:28px;font-weight:900;color:#111827;}
+    .count-settings-head-v89 p{margin:4px 0 0;color:#6b7280;}
+    .count-settings-head-v89 button{border:0;border-radius:14px;padding:12px 16px;background:#f3f4f6;color:#111827;font-weight:900;}
+    .count-settings-card-v89{background:#fff;border:1px solid #eef0f3;border-radius:20px;padding:18px;margin-bottom:14px;box-shadow:0 8px 24px rgba(16,24,40,.08);}
+    .count-settings-label-v89{display:block;font-weight:900;margin-bottom:8px;color:#374151;}
+    #countSettingCustomerV89{width:100%;min-height:52px;border:1.5px solid #e5e7eb;border-radius:14px;padding:0 14px;background:#fff;font:inherit;font-weight:800;color:#111827;}
+    .count-settings-toggle-card-v89{display:flex;justify-content:space-between;align-items:center;gap:18px;}
+    .count-settings-toggle-card-v89 b{display:block;font-size:17px;color:#111827;}
+    .count-settings-toggle-card-v89 span{display:block;margin-top:4px;color:#6b7280;font-size:13px;}
+    .count-switch-v89{position:relative;display:inline-block;flex:0 0 auto;width:62px;height:34px;}
+    .count-switch-v89 input{opacity:0;width:0;height:0;position:absolute;}
+    .count-switch-v89 span{position:absolute;inset:0;margin:0;background:#d1d5db;border-radius:999px;transition:.2s;cursor:pointer;}
+    .count-switch-v89 span:before{content:'';position:absolute;width:28px;height:28px;left:3px;top:3px;background:#fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.18);transition:.2s;}
+    .count-switch-v89 input:checked + span{background:#16a34a;}
+    .count-switch-v89 input:checked + span:before{transform:translateX(28px);}
+    .count-settings-location-head-v89{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;}
+    .count-settings-location-head-v89 b{display:block;font-size:18px;}
+    .count-settings-location-head-v89 span{display:block;color:#6b7280;font-size:13px;margin-top:3px;}
+    .count-settings-location-head-v89 button{border:0;border-radius:10px;padding:9px 12px;background:#f3f4f6;color:#374151;font-weight:800;margin-left:6px;}
+    .count-settings-location-grid-v89{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;max-height:420px;overflow:auto;transition:.2s;}
+    .count-settings-location-grid-v89.is-disabled-v89{opacity:.45;pointer-events:none;}
+    .count-location-check-v89{display:flex;align-items:center;gap:9px;padding:12px;border:1px solid #e5e7eb;border-radius:12px;background:#fafafa;font-weight:800;}
+    .count-location-check-v89 input{width:20px;height:20px;accent-color:#d71920;}
+    .count-settings-empty-v89{grid-column:1/-1;padding:20px;text-align:center;color:#6b7280;}
+    .count-settings-save-v89{width:100%;min-height:58px;border:0;border-radius:16px;background:linear-gradient(135deg,#ef233c,#c1121f);color:#fff;font-size:20px;font-weight:900;box-shadow:0 12px 24px rgba(193,18,31,.2);}
+    #adminCountSettingBtnV89 i{background:#fff4e8;color:#d97706;}
+    .count-location-input-v86:disabled{background:#f3f4f6 !important;color:#6b7280 !important;cursor:not-allowed;}
+    @media(max-width:720px){
+      .count-settings-wrap-v89{padding:14px 10px 28px;}
+      .count-settings-head-v89{align-items:flex-start;}
+      .count-settings-head-v89 h2{font-size:23px;}
+      .count-settings-head-v89 p{font-size:12px;}
+      .count-settings-head-v89 button{padding:10px 12px;font-size:13px;}
+      .count-settings-toggle-card-v89 b{font-size:15px;}
+      .count-settings-location-head-v89{align-items:flex-start;flex-direction:column;}
+      .count-settings-location-head-v89 button{margin-left:0;margin-right:6px;}
+      .count-settings-location-grid-v89{grid-template-columns:repeat(2,minmax(0,1fr));max-height:360px;}
+    }
+  `;
+  document.head.appendChild(css);
+
+  document.addEventListener('change',function(e){
+    if(e.target && e.target.classList.contains('location-setting-check-v89')) updateLocationSummary();
+  });
+
+  function initV89(){
+    ensureSettingsPage();
+    ensureAdminButtons();
+    startCountObserver();
+    var targetHome = byId('homePage');
+    if(targetHome){
+      new MutationObserver(function(){ setTimeout(ensureAdminButtons,0); }).observe(targetHome,{childList:true,subtree:true});
+    }
+    var targetSide = byId('sideMenu');
+    if(targetSide){
+      new MutationObserver(function(){ setTimeout(ensureAdminButtons,0); }).observe(targetSide,{childList:true,subtree:true});
+    }
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',function(){ setTimeout(initV89,500); });
+  else setTimeout(initV89,300);
+
+  window.reloadCountPolicyV89 = async function(customer){
+    customer = canonicalCustomerV89(customer || currentCustomerV89());
+    activePolicy = await loadPolicy(customer,true);
+    applyPolicyToCountCards();
+    return activePolicy;
+  };
+})();
+</script>
+
+
+<!-- ===== PATCH V91: COUNT SETTING MASTER OVERLAP FIX ONLY ===== -->
+<style>
+html body.count-settings-open-v91 #masterPage{display:none !important;}
+html body.count-settings-open-v91 #countSettingsPageV89{display:block !important;}
+</style>
+<script>
+(function(){
+  var oldOpenCountSettingsV91 = window.openCountSettingsV89;
+  if(typeof oldOpenCountSettingsV91 === 'function'){
+    window.openCountSettingsV89 = async function(){
+      var result = await oldOpenCountSettingsV91.apply(this, arguments);
+      document.body.classList.add('count-settings-open-v91');
+      var master = document.getElementById('masterPage');
+      var settings = document.getElementById('countSettingsPageV89');
+      if(master) master.style.setProperty('display','none','important');
+      if(settings) settings.style.setProperty('display','block','important');
+      return result;
+    };
+  }
+
+  var oldShowPageV91 = window.showPage;
+  if(typeof oldShowPageV91 === 'function'){
+    window.showPage = function(){
+      document.body.classList.remove('count-settings-open-v91');
+      var master = document.getElementById('masterPage');
+      if(master) master.style.removeProperty('display');
+      return oldShowPageV91.apply(this, arguments);
+    };
+    try{ showPage = window.showPage; }catch(e){}
+  }
+})();
+</script>
+<!-- PATCH V92: LOCATION LOCK APPLIES TO ALL COUNT STATES -->
 </body>
 </html>
