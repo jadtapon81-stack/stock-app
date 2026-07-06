@@ -2243,6 +2243,10 @@ body{
             <div id="fgFormStatus" class="fg-status-mini">เลือกข้อมูลสินค้า</div>
 
             <div class="fg-info-list">
+              <div id="fgPoRow" class="fg-info-row" style="display:none;">
+                <div class="fg-row-label">PO</div>
+                <input id="fgPo" class="fg-row-input" autocomplete="off" placeholder="กรอกเลข PO">
+              </div>
               <div class="fg-info-row fg-field">
                 <div class="fg-row-label">Item</div>
                 <input id="fgItem" class="fg-row-input" oninput="handleFgInput('item')" onfocus="handleFgFocus('item')" autocomplete="off" placeholder="-">
@@ -10963,8 +10967,8 @@ main{
     const candidates = [source, ...fallbackSources].map(s => pickColumns(s, cols)).filter(x => Object.keys(x).length);
     let lastError = null;
     for(const p of candidates){
-      const {error} = await getSupabase().from(table).insert(p);
-      if(!error) return true;
+      const {data, error} = await getSupabase().from(table).insert(p).select('*').single();
+      if(!error) return data;
       lastError = error;
     }
     throw lastError || new Error('insert failed: ' + table);
@@ -10992,6 +10996,13 @@ main{
 
     const movementType = currentFgMode === 'OUT' ? 'OUT' : 'IN';
     const tableName = movementType === 'IN' ? 'fg_in' : 'fg_out';
+    const poValue = String(byId('fgPo')?.value ?? '').trim();
+    if(movementType === 'OUT' && !poValue){
+      if(window.showFgPopup) showFgPopup('กรุณากรอก PO', 'FG OUT ต้องระบุเลข PO ก่อนบันทึก', 'error');
+      else alert('กรุณากรอกเลข PO');
+      if(byId('fgPo')) byId('fgPo').focus();
+      return;
+    }
     const itemKey = itemKeyFromValues(f);
     const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
 
@@ -11023,11 +11034,21 @@ main{
         created_by:currentUser || null
       };
 
-      await insertSmart(tableName, movementPayload, [
+      const insertedMovement = await insertSmart(tableName, movementPayload, [
         {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, created_by:currentUser || null},
         {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, created_by:currentUser || null}
       ]);
 
+      if(movementType === 'OUT'){
+        const sourceId = insertedMovement?.id;
+        if(!sourceId) throw new Error('บันทึก FG OUT สำเร็จ แต่ไม่พบ source_id สำหรับบันทึก PO');
+        const {error: poError} = await getSupabase()
+          .from('stock_transaction')
+          .update({po: poValue})
+          .eq('source_table', 'fg_out')
+          .eq('source_id', sourceId);
+        if(poError) throw new Error('บันทึก PO ลง Transaction ไม่สำเร็จ: ' + (poError.message || poError));
+      }
 
       try{ masterRows = await fetchAll(MASTER_TABLE); window.masterRows = masterRows; }catch(e){}
       try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){}
@@ -17879,5 +17900,38 @@ html body.count-settings-open-v91 #countSettingsPageV89{display:block !important
 })();
 </script>
 <!-- PATCH V92: LOCATION LOCK APPLIES TO ALL COUNT STATES -->
+
+<script>
+/* V95: FG OUT PO ONLY */
+(function(){
+  function syncFgPoVisibilityV95(){
+    const row = document.getElementById('fgPoRow');
+    const input = document.getElementById('fgPo');
+    const isOut = String(window.currentFgMode || (typeof currentFgMode !== 'undefined' ? currentFgMode : '')).toUpperCase() === 'OUT';
+    if(row) row.style.display = isOut ? '' : 'none';
+    if(!isOut && input) input.value = '';
+  }
+
+  const oldShowFgPageV95 = window.showFgPage;
+  window.showFgPage = function(mode){
+    const result = oldShowFgPageV95 ? oldShowFgPageV95.apply(this, arguments) : undefined;
+    setTimeout(syncFgPoVisibilityV95, 0);
+    return result;
+  };
+
+  const oldClearFgFormV95 = window.clearFgForm;
+  window.clearFgForm = function(){
+    const result = oldClearFgFormV95 ? oldClearFgFormV95.apply(this, arguments) : undefined;
+    const input = document.getElementById('fgPo');
+    if(input) input.value = '';
+    return result;
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(syncFgPoVisibilityV95, 0);
+  });
+})();
+</script>
+
 </body>
 </html>
