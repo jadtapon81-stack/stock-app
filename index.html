@@ -10112,54 +10112,6 @@ main{
     return { inserted:true, row:newRow };
   }
 
-  async function fgPatchInsertTransaction(f, movementType, qty, itemKey){
-    const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
-    const payloads = [
-      {
-        item_key:itemKey,
-        Item:f.item,
-        CODE:f.code,
-        Assort:assortValue,
-        Location:f.location,
-        Quantity:qty,
-        customer:f.customer,
-        transaction_type:movementType,
-        movement_type:movementType,
-        created_by:currentUser || null
-      },
-      {
-        item_key:itemKey,
-        Item:f.item,
-        CODE:f.code,
-        Assort:assortValue,
-        Location:f.location,
-        Quantity:qty,
-        customer:f.customer,
-        movement_type:movementType,
-        created_by:currentUser || null
-      },
-      {
-        item_key:itemKey,
-        item:f.item,
-        code:f.code,
-        assort:assortValue,
-        location:f.location,
-        quantity:qty,
-        customer:f.customer,
-        movement_type:movementType,
-        created_by:currentUser || null
-      }
-    ];
-
-    let lastError = null;
-    for(const payload of payloads){
-      const { error } = await getSupabase().from('stock_transaction').insert(payload);
-      if(!error) return true;
-      lastError = error;
-    }
-    console.warn('เพิ่ม stock_transaction ไม่สำเร็จ แต่ FG บันทึกแล้ว', lastError);
-    return false;
-  }
 
   window.saveFgMovement = async function(){
     const rawQty = String(document.getElementById('fgMoveQty')?.value ?? '').trim();
@@ -10218,7 +10170,6 @@ main{
       const { error: moveError } = await getSupabase().from(tableName).insert(movementPayload);
       if(moveError) throw moveError;
 
-      await fgPatchInsertTransaction(f, movementType, moveQty, itemKey);
 
       try{ masterRows = await fetchAll(MASTER_TABLE); window.masterRows = masterRows; }catch(e){ console.warn('โหลด Master Data ใหม่ไม่สำเร็จ', e); }
       try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('โหลด Available Stock ใหม่ไม่สำเร็จ', e); }
@@ -11077,14 +11028,6 @@ main{
         {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, created_by:currentUser || null}
       ]);
 
-      try{
-        await insertSmart('stock_transaction', movementPayload, [
-          {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, transaction_type:movementType, created_by:currentUser || null},
-          {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, movement_type:movementType, created_by:currentUser || null}
-        ]);
-      }catch(e){
-        console.warn('เพิ่ม stock_transaction ไม่สำเร็จ แต่ FG บันทึกแล้ว', e);
-      }
 
       try{ masterRows = await fetchAll(MASTER_TABLE); window.masterRows = masterRows; }catch(e){}
       try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){}
