@@ -20010,6 +20010,29 @@ V8 PRODUCTION CLEANUP PATCH
   let pendingRows = [];
   let pendingFilter = 'ALL';
   let selectedPendingRow = null;
+  const CUSTOMER_OPTIONS_V9 = ['BIG C','LOTUS','MAX MART','VILLA MARKET','SEVEN ELEVEN','PTT','OTHER CUSTOMER'];
+  function customerSelectV9(id='aCustomer', value=''){
+    return `<select id="${id}" class="fgv9-select"><option value="">เลือก Customer</option>${CUSTOMER_OPTIONS_V9.map(c=>`<option value="${esc(c)}" ${String(value||'').toUpperCase()===c?'selected':''}>${esc(c)}</option>`).join('')}</select>`;
+  }
+
+  function v14AssortVal(size){ return Number.isNaN(Number(size)) ? String(size) : Number(size); }
+  function v14NoGenerated(payload){
+    const p = {...payload};
+    // อย่าลบ item_key รวมทุกตาราง เพราะ fg_in/fg_out ใช้ item_key เพื่อให้ trigger stock_transaction ไม่เป็น NULL
+    // ตารางที่ item_key เป็น Generated เช่น loose_master_data/master_data จะไม่ส่ง item_key ตั้งแต่ payload ต้นทาง
+    delete p.remark;
+    return p;
+  }
+  function v14StockQuery(table, item, code, assort, location){
+    return getSupabase()
+      .from(table)
+      .select('*')
+      .eq('Item', item)
+      .eq('CODE', code)
+      .eq('Assort', v14AssortVal(assort))
+      .eq('Location', location || '')
+      .limit(1);
+  }
 
   const THB = 'th-TH';
   const q = id => document.getElementById(id);
@@ -20115,6 +20138,7 @@ V8 PRODUCTION CLEANUP PATCH
         <h3 class="fgv9-title">ข้อมูลกล่อง ASSORT</h3>
         <div class="fgv9-field"><label>Item *</label><input id="aItem" placeholder="เช่น GM41120"></div>
         <div class="fgv9-field"><label>CODE *</label><input id="aCode" placeholder="เช่น BK"></div>
+        <div class="fgv9-field"><label>Customer *</label>${customerSelectV9('aCustomer')}</div>
         <div class="fgv9-field"><label>Assort สูงสุด 4 Size *</label><div class="fgv9-assort-line"><input id="aSizeFrom" type="number" placeholder="36" oninput="updateAssortPreview()"><span>-</span><input id="aSizeTo" type="number" placeholder="39" oninput="updateAssortPreview()"><span>/</span><input id="aRatio" inputmode="numeric" maxlength="4" placeholder="1122" oninput="updateAssortPreview()"></div><div id="aPreview" class="fgv9-muted" style="margin-top:6px">รูปแบบ: Size-Size/จำนวนต่อ Size เช่น 36-39/1122</div></div>
         <div class="fgv9-field"><label>จำนวนกล่องทั้งหมด *</label><input id="aBoxCount" type="number" min="1" placeholder="เช่น 5" oninput="updateAssortPreview()"></div>
         <div class="fgv9-field"><label>Location ต้นทาง</label><input id="aOriginLocation" placeholder="ไม่บังคับกรอก"></div>
@@ -20126,13 +20150,14 @@ V8 PRODUCTION CLEANUP PATCH
   function parseAssortForm(){
     const item=q('aItem')?.value.trim().toUpperCase()||'';
     const code=q('aCode')?.value.trim().toUpperCase()||'';
+    const customer=q('aCustomer')?.value.trim().toUpperCase()||'';
     const from=Number(q('aSizeFrom')?.value||0);
     const to=Number(q('aSizeTo')?.value||0);
     const ratio=String(q('aRatio')?.value||'').replace(/\D/g,'');
     const boxCount=Number(q('aBoxCount')?.value||0);
     const origin=q('aOriginLocation')?.value.trim().toUpperCase()||'';
     const po=q('aPo')?.value.trim().toUpperCase()||'';
-    if(!item||!code||!from||!to||!ratio||!boxCount||!po) throw new Error('กรุณากรอก Item, CODE, Assort, จำนวนกล่อง และ PO ให้ครบ');
+    if(!item||!code||!customer||!from||!to||!ratio||!boxCount||!po) throw new Error('กรุณากรอก Item, CODE, Customer, Assort, จำนวนกล่อง และ PO ให้ครบ');
     if(boxCount<=0) throw new Error('จำนวนกล่องต้องมากกว่า 0');
     if(to<from) throw new Error('Size สิ้นสุดต้องมากกว่าหรือเท่ากับ Size เริ่มต้น');
     const sizes=[]; for(let s=from;s<=to;s++) sizes.push(String(s));
@@ -20153,14 +20178,14 @@ V8 PRODUCTION CLEANUP PATCH
       };
     });
     if(detail.some(x=>!x.perBoxQty)) throw new Error('จำนวนต่อ Size ต้องมากกว่า 0');
-    return {item,code,from,to,ratio,boxCount,origin,po,assort:`${from}-${to}/${ratio}`,detail,total:detail.reduce((s,x)=>s+x.qty,0)};
+    return {item,code,customer,from,to,ratio,boxCount,origin,po,assort:`${from}-${to}/${ratio}`,detail,total:detail.reduce((s,x)=>s+x.qty,0)};
   }
   window.updateAssortPreview = function(){
     const box=q('aPreview'); if(!box) return;
     try{
       const d=parseAssortForm();
       box.className='fgv9-info';
-      box.innerHTML=`รูปแบบ Assort: <b>${esc(d.assort)}</b> จำนวน <b>${nf(d.boxCount)} กล่อง</b><br>${d.detail.map(x=>`Size ${x.size} = ${x.perBoxQty} คู่/กล่อง × ${d.boxCount} = <b>${nf(x.qty)} คู่</b>`).join('<br>')}<br>รวมทั้งหมด <b>${nf(d.total)} คู่</b>`;
+      box.innerHTML=`Customer: <b>${esc(d.customer)}</b><br>รูปแบบ Assort: <b>${esc(d.assort)}</b> จำนวน <b>${nf(d.boxCount)} กล่อง</b><br>${d.detail.map(x=>`Size ${x.size} = ${x.perBoxQty} คู่/กล่อง × ${d.boxCount} = <b>${nf(x.qty)} คู่</b>`).join('<br>')}<br>รวมทั้งหมด <b>${nf(d.total)} คู่</b>`;
     }
     catch(e){ box.className='fgv9-muted'; box.textContent='รูปแบบ: Size-Size/จำนวนต่อ Size เช่น 36-39/1122 และกรอกจำนวนกล่อง'; }
   };
@@ -20172,7 +20197,7 @@ V8 PRODUCTION CLEANUP PATCH
     if(!currentAssortDraft) return showFgInAssortForm();
     showV9Page(); const d=currentAssortDraft;
     q('fgV9Page').innerHTML = `${topV9('ASSORT - เลือกเข้า PO',`PO : ${d.po}`,'type')}
-      <div class="fgv9-card"><div class="fgv9-warn">Assort : <b>${esc(d.assort)}</b><br>จำนวนกล่องทั้งหมด : <b>${nf(d.boxCount)} กล่อง</b><br>จำนวนรวม : <b>${nf(d.total)} คู่</b><br>PO : <b>${esc(d.po)}</b></div>
+      <div class="fgv9-card"><div class="fgv9-warn">Assort : <b>${esc(d.assort)}</b><br>จำนวนกล่องทั้งหมด : <b>${nf(d.boxCount)} กล่อง</b><br>จำนวนรวม : <b>${nf(d.total)} คู่</b><br>Customer : <b>${esc(d.customer)}</b><br>PO : <b>${esc(d.po)}</b></div>
         <label style="display:flex;align-items:center;justify-content:space-between;margin:14px 0;padding:12px;border:1px solid #e5e7eb;border-radius:14px;font-weight:900">เข้า ${esc(d.po)} ทั้งหมด <input id="aAllPo" type="checkbox" ${d.detail.every(x=>x.selected)?'checked':''} onchange="toggleAllAssortPO(this.checked)"></label>
         <h3 class="fgv9-title">เลือก Size เข้า PO</h3><div style="overflow:auto"><table class="fgv9-table"><thead><tr><th>Size</th><th>คู่/กล่อง</th><th>กล่อง</th><th>รวมคู่</th><th>เข้า PO</th></tr></thead><tbody id="assortPoBody"></tbody></table></div><div id="assortPoSummary" style="margin-top:12px"></div>
         <div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="showFgInAssortForm()">ย้อนกลับ</button><button class="fgv9-btn fgv9-primary" onclick="saveAssortPOSelection()">บันทึก</button></div></div>`;
@@ -20198,22 +20223,22 @@ V8 PRODUCTION CLEANUP PATCH
   }
 
   async function insertAssortRow(payload){
-    const {error}=await getSupabase().from(ASSORT_TABLE).insert(payload);
+    const {error}=await getSupabase().from(ASSORT_TABLE).insert(v14NoGenerated(payload));
     if(error) throw error;
   }
 
   async function insertFgOutFromAssort(d, r, cartons, qtyPairs){
     if(!cartons || !qtyPairs) return;
-    const itemKey=`${d.item}${d.code}${r.size}${d.po}`;
-    // ใช้เฉพาะคอลัมน์ที่มีจริงใน fg_out เพื่อไม่ให้เกิด schema cache error เช่น remark column missing
+    // กติกาใหม่: FG OUT ของงานครบกล่องให้บันทึกเป็น "กล่อง" ไม่ใช่คู่
+    const outItemKey = (typeof buildItemKey === 'function') ? buildItemKey(d.item, d.code, r.size, d.origin || '', d.customer) : String(d.item)+String(d.code).toUpperCase()+String(r.size)+String(d.origin||'')+String(d.customer);
     const {error}=await getSupabase().from('fg_out').insert({
-      item_key:itemKey,
+      item_key: outItemKey,
       "Item":d.item,
       "CODE":d.code,
       "Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),
       "Location":d.origin || null,
-      "Quantity":qtyPairs,
-      customer:null,
+      "Quantity":cartons,
+      customer:d.customer,
       po:d.po,
       created_by:currentUser||null
     });
@@ -20222,45 +20247,49 @@ V8 PRODUCTION CLEANUP PATCH
 
   async function insertLooseFromAssortDraft(d, r, qtyPairs){
     if(!qtyPairs || qtyPairs <= 0) return;
-    const location=d.origin || '';
-    const itemKey=`${d.item}${String(d.code||'').toUpperCase()}${r.size}${location}${d.po||''}`;
-    const {data,error}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).select('*').eq('item_key',itemKey).limit(1);
+    const location = d.origin || '';
+    const assortVal = v14AssortVal(r.size);
+    const {data,error} = await v14StockQuery(LOOSE_MASTER_TABLE_V9, d.item, d.code, r.size, location);
     if(error) throw error;
     if(data && data.length){
-      const oldQty=Number(data[0].Quantity ?? data[0].quantity ?? 0);
-      const {error:e2}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).update({"Quantity":oldQty+qtyPairs}).eq('id',data[0].id);
+      const oldQty = Number(data[0].Quantity ?? data[0].quantity ?? 0);
+      const {error:e2} = await getSupabase().from(LOOSE_MASTER_TABLE_V9).update({"Quantity": oldQty + qtyPairs}).eq('id', data[0].id);
       if(e2) throw e2;
     }else{
-      const payload={item_key:itemKey,"Item":d.item,"CODE":d.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qtyPairs,customer:null,created_by:currentUser||null};
-      const {error:e3}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).insert(payload);
+      const payload = {"Item": d.item, "CODE": d.code, "Assort": assortVal, "Location": location, "Quantity": qtyPairs, customer: d.customer, created_by: currentUser || null};
+      const {error:e3} = await getSupabase().from(LOOSE_MASTER_TABLE_V9).insert(v14NoGenerated(payload));
       if(e3) throw e3;
     }
   }
 
   window.saveAssortPOSelection = async function(){
     const d=currentAssortDraft; if(!d) return;
-    const selectedRows=d.detail.filter(x=>x.selected);
-    const unselectedRows=d.detail.filter(x=>!x.selected && x.qty>0);
-    if(selectedRows.length===0 && unselectedRows.length===0) return alert('กรุณาเลือกข้อมูล');
+    if(!d.customer) return alert('กรุณาเลือก Customer');
+    const rows=d.detail.filter(x=>x.qty>0);
+    if(rows.length===0) return alert('กรุณาเลือกข้อมูล');
     loadingV9(true,'กำลังบันทึก ASSORT...');
     try{
-      for(const r of selectedRows){
-        if(r.fullCartons>0){
-          await insertFgOutFromAssort(d, r, r.fullCartons, r.fgOutQty);
-        }
-        if(r.looseQty>0){
-          // เศษที่ไม่ครบ 6 คู่ ให้เข้า loose_master_data ทันที ไม่ต้องรอแปลงเป็น SOLID
-          await insertLooseFromAssortDraft(d, r, r.looseQty);
-        }
+      // ทุก Size ต้องเข้า "รอ Barcode" ก่อนทั้งหมด ไม่แยก FG OUT/งานเศษทันที
+      for(const r of rows){
+        await insertAssortRow({
+          source_item:d.item,
+          code:d.code,
+          assort:d.assort,
+          customer:d.customer,
+          origin_location:d.origin||null,
+          po:d.po,
+          size:r.size,
+          total_qty:r.qty,
+          po_qty:r.selected ? r.qty : 0,
+          remaining_qty:r.qty,
+          status:'WAIT_BARCODE',
+          created_by:currentUser||null,
+          updated_by:currentUser||null
+        });
       }
-      for(const r of unselectedRows){
-        await insertAssortRow({source_item:d.item,code:d.code,assort:d.assort,origin_location:d.origin||null,po:d.po,size:r.size,total_qty:r.qty,po_qty:0,remaining_qty:r.qty,status:'WAIT_BARCODE',created_by:currentUser||null,updated_by:currentUser||null});
-      }
-      const fgOutPairs=selectedRows.reduce((sum,x)=>sum+x.fgOutQty,0);
-      const loosePairs=selectedRows.reduce((sum,x)=>sum+x.looseQty,0);
-      const pendingPairs=unselectedRows.reduce((sum,x)=>sum+x.qty,0);
+      const pendingPairs=rows.reduce((sum,x)=>sum+x.qty,0);
       toastV9('บันทึก ASSORT สำเร็จ');
-      showAssortResult({solidQty:fgOutPairs, loose:loosePairs>0 || pendingPairs>0, msg:`ส่ง FG OUT ${nf(fgOutPairs)} คู่ / งานเศษ ${nf(loosePairs)} คู่`});
+      showAssortResult({solidQty:0, loose:true, msg:`บันทึกรอ Barcode ${nf(pendingPairs)} คู่`});
     }catch(e){ alert('บันทึกไม่สำเร็จ: '+(e.message||e)); }
     finally{ loadingV9(false); }
   };
@@ -20284,49 +20313,71 @@ V8 PRODUCTION CLEANUP PATCH
     const rows=filterPendingRows();
     q('fgV9Page').innerHTML = `${topV9('กำลังดำเนินการ','ASSORT → SOLID / งานเศษ','type')}
       <div class="fgv9-card"><div class="fgv9-tabs"><button class="${pendingFilter==='ALL'?'active':''}" onclick="showAssortPendingList('ALL')">ทั้งหมด</button><button class="${pendingFilter==='BARCODE'?'active':''}" onclick="showAssortPendingList('BARCODE')">รอ Barcode</button><button class="${pendingFilter==='LOOSE'?'active':''}" onclick="showAssortPendingList('LOOSE')">รอเข้างานเศษ</button></div>
-      ${rows.length?rows.map(r=>`<button class="fgv9-list-card" onclick="openAssortPendingDetail(${Number(r.id)})"><div><span class="fgv9-pill red">${esc(r.po||'-')}</span> <b>${esc(r.source_item)} ${esc(r.code)} / ${esc(r.assort)}</b><small>Size ${esc(r.size)} | Location ต้นทาง: ${esc(r.origin_location||'-')}<br>${new Date(r.created_at||Date.now()).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'})} | <span class="fgv9-pill ${statusClass(r.status)}">${statusText(r.status)}</span></small></div><strong>${nf(r.remaining_qty)} คู่</strong></button>`).join(''):'<div class="fgv9-empty">ไม่มีรายการกำลังดำเนินการ</div>'}
+      ${rows.length?rows.map(r=>`<button class="fgv9-list-card" onclick="openAssortPendingDetail(${Number(r.id)})"><div><span class="fgv9-pill red">${esc(r.po||'-')}</span> <b>${esc(r.source_item)} ${esc(r.code)} / ${esc(r.assort)}</b><small>Size ${esc(r.size)} | Customer: ${esc(r.customer||'-')} | Location ต้นทาง: ${esc(r.origin_location||'-')}<br>${new Date(r.created_at||Date.now()).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'})} | <span class="fgv9-pill ${statusClass(r.status)}">${statusText(r.status)}</span></small></div><strong>${nf(r.remaining_qty)} คู่</strong></button>`).join(''):'<div class="fgv9-empty">ไม่มีรายการกำลังดำเนินการ</div>'}
       <button class="fgv9-btn fgv9-primary" style="width:100%;margin-top:12px" onclick="showFgInAssortForm()">+ เพิ่มรายการจาก ASSORT</button></div>${bottomV9('FGIN')}`;
   };
   window.openAssortPendingDetail = function(id){
     selectedPendingRow=pendingRows.find(r=>Number(r.id)===Number(id)); if(!selectedPendingRow) return;
     const r=selectedPendingRow; showV9Page();
     q('fgV9Page').innerHTML = `${topV9('รายละเอียดรายการ',`PO : ${r.po||'-'}`,'pending')}
-      <div class="fgv9-card"><div style="display:flex;justify-content:space-between;gap:10px"><div><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Assort :</b> ${esc(r.assort)}</p><p><b>Location ต้นทาง :</b> ${esc(r.origin_location||'-')}</p></div><div style="text-align:center"><small>คงเหลือ</small><strong style="display:block;font-size:32px;color:#b91c1c">${nf(r.remaining_qty)}</strong><small>คู่</small></div></div><div class="fgv9-warn">เข้า Location เฉพาะจำนวนที่ครบทุก 6 คู่ ส่วนเศษที่ไม่ครบ 6 คู่จะเข้า งานเศษ อัตโนมัติ</div></div>
-      <div class="fgv9-card"><h3 class="fgv9-title">จัดการ Size ที่เหลือ</h3><table class="fgv9-table"><thead><tr><th>Size</th><th>คงเหลือ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody><tr><td>${esc(r.size)}</td><td>${nf(r.remaining_qty)}</td><td><span class="fgv9-pill ${statusClass(r.status)}">${statusText(r.status)}</span></td><td>${r.status==='LOOSE_WAIT'?`<button class="fgv9-btn fgv9-orange" onclick="storePendingToLoose(${Number(r.id)})">เข้างานเศษ</button>`:`<button class="fgv9-btn fgv9-primary" onclick="showConvertToSolid(${Number(r.id)})">แปลงเป็น SOLID</button>`}</td></tr></tbody></table></div>${bottomV9('FGIN')}`;
+      <div class="fgv9-card"><div style="display:flex;justify-content:space-between;gap:10px"><div><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Customer :</b> ${esc(r.customer||'-')}</p><p><b>Assort :</b> ${esc(r.assort)}</p><p><b>Location ต้นทาง :</b> ${esc(r.origin_location||'-')}</p></div><div style="text-align:center"><small>คงเหลือ</small><strong style="display:block;font-size:32px;color:#b91c1c">${nf(r.remaining_qty)}</strong><small>คู่</small></div></div><div class="fgv9-warn">ทุก 6 คู่ = 1 กล่อง เข้า Location / เศษที่ไม่ครบ 6 คู่จะเข้า งานเศษ อัตโนมัติ</div></div>
+      <div class="fgv9-card"><h3 class="fgv9-title">จัดการ Size ที่เหลือ</h3><table class="fgv9-table"><thead><tr><th>Size</th><th>คงเหลือ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody><tr><td>${esc(r.size)}</td><td>${nf(r.remaining_qty)}</td><td><span class="fgv9-pill ${(Number(r.remaining_qty||0)<6||r.status==='LOOSE_WAIT')?'loose':statusClass(r.status)}">${Number(r.remaining_qty||0)<6?'รอเข้างานเศษ':statusText(r.status)}</span></td><td>${(r.status==='LOOSE_WAIT'||Number(r.remaining_qty||0)<6)?`<button class="fgv9-btn fgv9-orange" onclick="storePendingToLoose(${Number(r.id)})">เข้างานเศษ</button>`:`<button class="fgv9-btn fgv9-primary" onclick="showConvertToSolid(${Number(r.id)})">แปลงเป็น SOLID</button>`}</td></tr></tbody></table></div>${bottomV9('FGIN')}`;
   };
 
   window.showConvertToSolid = function(id){
     const r=pendingRows.find(x=>Number(x.id)===Number(id))||selectedPendingRow; if(!r) return;
+    const qtyNow = Number(r.remaining_qty||0);
+    if(qtyNow < 6){
+      // ต่ำกว่า 6 คู่ ห้ามย้ายเข้า Location ให้เข้าคลังงานเศษทั้งหมด
+      return storePendingToLoose(Number(r.id), true);
+    }
     selectedPendingRow=r; showV9Page();
     q('fgV9Page').innerHTML = `${topV9('แปลงเป็น SOLID',`Size ${r.size}`,'pending')}
-      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลรายการ</h3><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Assort เดิม :</b> ${esc(r.assort)}</p><p><b>Size :</b> ${esc(r.size)}</p><p><b>คงเหลือ :</b> <span style="color:#b91c1c;font-weight:900">${nf(r.remaining_qty)} คู่</span></p></div>
-      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder="เช่น E12"></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะแยกให้อัตโนมัติ: ครบทุก 6 คู่ เข้า Location / เศษที่ไม่ครบ 6 คู่ เข้า งานเศษ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
+      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลรายการ</h3><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Customer :</b> ${esc(r.customer||'-')}</p><p><b>Assort เดิม :</b> ${esc(r.assort)}</p><p><b>Size :</b> ${esc(r.size)}</p><p><b>คงเหลือ :</b> <span style="color:#b91c1c;font-weight:900">${nf(r.remaining_qty)} คู่</span></p></div>
+      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder="เช่น E12"></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะบันทึกเฉพาะจำนวนที่ครบกล่อง: 6 คู่ = 1 กล่อง เข้า Location / เศษที่เหลือจะเข้า งานเศษ อัตโนมัติ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
   };
-  async function insertOrUpdateMasterSolid(r, location, qty){
-    const itemKey=`${r.source_item}${String(r.code||'').toUpperCase()}${r.size}${location}`;
-    const {data,error}=await getSupabase().from(MASTER_TABLE_V9).select('*').eq('item_key',itemKey).limit(1);
+  async function insertOrUpdateMasterSolid(r, location, pairQty){
+    const cartonQty = Math.floor(Number(pairQty || 0) / 6);
+    if(cartonQty <= 0) return;
+    const assortVal = v14AssortVal(r.size);
+
+    const {data,error} = await v14StockQuery(MASTER_TABLE_V9, r.source_item, r.code, r.size, location);
     if(error) throw error;
-    if(data&&data.length){
-      const oldQty=Number(data[0].Quantity ?? data[0].quantity ?? 0);
-      const {error:e2}=await getSupabase().from(MASTER_TABLE_V9).update({"Quantity":oldQty+qty}).eq('id',data[0].id); if(e2) throw e2;
+
+    if(data && data.length){
+      const oldQty = Number(data[0].Quantity ?? data[0].quantity ?? 0);
+      const {error:e2} = await getSupabase().from(MASTER_TABLE_V9).update({"Quantity": oldQty + cartonQty}).eq('id', data[0].id);
+      if(e2) throw e2;
     }else{
-      const payload={item_key:itemKey,"Item":r.source_item,"CODE":r.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qty,customer:r.customer||null,created_by:currentUser||null};
-      const {error:e3}=await getSupabase().from(MASTER_TABLE_V9).insert(payload); if(e3) throw e3;
+      if(!r.customer) throw new Error('ไม่พบ Customer ของรายการนี้ กรุณาเลือก Customer ตั้งแต่ตอนรับเข้า ASSORT');
+      const payload = {"Item": r.source_item, "CODE": r.code, "Assort": assortVal, "Location": location, "Quantity": cartonQty, customer: r.customer, created_by: currentUser || null};
+      const {error:e3} = await getSupabase().from(MASTER_TABLE_V9).insert(v14NoGenerated(payload));
+      if(e3) throw e3;
     }
-    const {error:e4}=await getSupabase().from(FG_IN_TABLE).insert({item_key:itemKey,"Item":r.source_item,"CODE":r.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qty,customer:r.customer||null,po:r.po||null,created_by:currentUser||null}); if(e4) throw e4;
+
+    if(!r.customer) throw new Error('ไม่พบ Customer ของรายการนี้');
+    const fgItemKey = (typeof buildItemKey === 'function') ? buildItemKey(r.source_item, r.code, r.size, location, r.customer) : String(r.source_item)+String(r.code).toUpperCase()+String(r.size)+String(location)+String(r.customer);
+    const fgInPayload = {item_key: fgItemKey, "Item": r.source_item, "CODE": r.code, "Assort": assortVal, "Location": location, "Quantity": cartonQty, customer: r.customer, po: r.po || null, created_by: currentUser || null};
+    const {error:e4} = await getSupabase().from(FG_IN_TABLE).insert(v14NoGenerated(fgInPayload));
+    if(e4) throw e4;
   }
   window.saveConvertToSolid = async function(id){
     const r=pendingRows.find(x=>Number(x.id)===Number(id))||selectedPendingRow; if(!r) return;
     const location=q('solidLocation')?.value.trim().toUpperCase()||'';
     const qty=Number(r.remaining_qty||0);
-    if(!location) return alert('กรุณากรอก Location ปลายทาง');
     if(!qty||qty<=0) return alert('ไม่พบจำนวนคงเหลือ');
+    if(qty < 6){
+      // น้อยกว่า 6 คู่ เข้า งานเศษ ทั้งหมด ไม่ต้องกรอก Location
+      return storePendingToLoose(Number(r.id), true);
+    }
+    if(!location) return alert('กรุณากรอก Location ปลายทาง');
 
     // กติกาใหม่:
     // - เข้า Location ได้เฉพาะจำนวนที่หาร 6 ลงตัวเท่านั้น
     // - ถ้าน้อยกว่า 6 คู่ เข้า งานเศษ ทั้งหมด
     // - ถ้าเช่น 10 คู่ => เข้า Location 6 คู่ และเข้า งานเศษ 4 คู่
     const solidQty=Math.floor(qty/6)*6;
+    const fullCartons=Math.floor(solidQty/6);
     const looseQty=qty%6;
 
     loadingV9(true,'กำลังบันทึกการแปลง...');
@@ -20338,31 +20389,37 @@ V8 PRODUCTION CLEANUP PATCH
         await insertOrUpdateLoose({...r, remaining_qty:looseQty, target_location:location});
       }
       const {error}=await getSupabase().from(ASSORT_TABLE).update({remaining_qty:0,status:'COMPLETED',target_location:location,updated_by:currentUser||null,updated_at:new Date().toISOString()}).eq('id',r.id); if(error) throw error;
-      showAssortResult({solidQty:solidQty, loose:looseQty>0, msg:`เข้า Location ${nf(solidQty)} คู่ / งานเศษ ${nf(looseQty)} คู่`});
+      showAssortResult({solidQty:solidQty, loose:looseQty>0, msg:`เข้า Location ${nf(fullCartons)} กล่อง (${nf(solidQty)} คู่) / งานเศษ ${nf(looseQty)} คู่`});
     }catch(e){ alert('บันทึกไม่สำเร็จ: '+(e.message||e)); }
     finally{ loadingV9(false); }
   };
   async function insertOrUpdateLoose(r){
-    const location=r.target_location || r.origin_location || '';
-    const qty=Number(r.remaining_qty||0);
-    const itemKey=`${r.source_item}${String(r.code||'').toUpperCase()}${r.size}${location}${r.customer||''}`;
-    const {data,error}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).select('*').eq('item_key',itemKey).limit(1);
+    const location = r.origin_location || '';
+    const qty = Number(r.remaining_qty || 0);
+    if(!qty || qty <= 0) return;
+    const assortVal = v14AssortVal(r.size);
+
+    const {data,error} = await v14StockQuery(LOOSE_MASTER_TABLE_V9, r.source_item, r.code, r.size, location);
     if(error) throw error;
-    if(data&&data.length){
-      const oldQty=Number(data[0].Quantity ?? data[0].quantity ?? 0);
-      const {error:e2}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).update({"Quantity":oldQty+qty}).eq('id',data[0].id); if(e2) throw e2;
+
+    if(data && data.length){
+      const oldQty = Number(data[0].Quantity ?? data[0].quantity ?? 0);
+      const {error:e2} = await getSupabase().from(LOOSE_MASTER_TABLE_V9).update({"Quantity": oldQty + qty}).eq('id', data[0].id);
+      if(e2) throw e2;
     }else{
-      const payload={item_key:itemKey,"Item":r.source_item,"CODE":r.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qty,customer:r.customer||null,created_by:currentUser||null};
-      const {error:e3}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).insert(payload); if(e3) throw e3;
+      if(!r.customer) throw new Error('ไม่พบ Customer ของรายการนี้ กรุณาเลือก Customer ตั้งแต่ตอนรับเข้า ASSORT');
+      const payload = {"Item": r.source_item, "CODE": r.code, "Assort": assortVal, "Location": location, "Quantity": qty, customer: r.customer, created_by: currentUser || null};
+      const {error:e3} = await getSupabase().from(LOOSE_MASTER_TABLE_V9).insert(v14NoGenerated(payload));
+      if(e3) throw e3;
     }
   }
-  window.storePendingToLoose = async function(id){
+  window.storePendingToLoose = async function(id, auto=false){
     const r=pendingRows.find(x=>Number(x.id)===Number(id))||selectedPendingRow; if(!r) return;
-    if(!confirm('ยืนยันนำรายการนี้เข้าคลังงานเศษ?')) return;
+    if(!auto && !confirm('ยืนยันนำรายการนี้เข้าคลังงานเศษ?')) return;
     loadingV9(true,'กำลังบันทึกเข้างานเศษ...');
     try{
       await insertOrUpdateLoose(r);
-      const {error}=await getSupabase().from(ASSORT_TABLE).update({status:'COMPLETED',updated_by:currentUser||null,updated_at:new Date().toISOString()}).eq('id',r.id); if(error) throw error;
+      const {error}=await getSupabase().from(ASSORT_TABLE).update({remaining_qty:0,status:'COMPLETED',updated_by:currentUser||null,updated_at:new Date().toISOString()}).eq('id',r.id); if(error) throw error;
       toastV9('บันทึกเข้างานเศษสำเร็จ'); showAssortPendingList('LOOSE');
     }catch(e){ alert('บันทึกไม่สำเร็จ: '+(e.message||e)); }
     finally{ loadingV9(false); }
@@ -20370,7 +20427,7 @@ V8 PRODUCTION CLEANUP PATCH
   window.showAssortResult = function({solidQty=0, loose=false, msg=''}){
     showV9Page();
     q('fgV9Page').innerHTML = `${topV9('ผลการแปลง',msg,'type')}
-      <div class="fgv9-card" style="text-align:center;padding:28px 16px"><div style="font-size:68px">${loose?'⚠️':'✅'}</div><h3 style="font-size:22px;margin:8px 0;color:#111827">${loose?'ย้ายไปรอเข้าคลังงานเศษ':'แปลงเป็น SOLID สำเร็จ'}</h3><p class="fgv9-muted">จำนวน ${nf(solidQty)} คู่</p>${loose?'<div class="fgv9-warn">จำนวนไม่ครบ 6 คู่ ระบบจะยังไม่เข้า Stock หลัก และย้ายไปเมนูรอเข้าคลังงานเศษ</div>':''}<div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="showAssortPendingList()">ดูรายการค้าง</button><button class="fgv9-btn fgv9-primary" onclick="showFgInTypeSelect()">เสร็จสิ้น</button></div></div>${bottomV9('FGIN')}`;
+      <div class="fgv9-card" style="text-align:center;padding:28px 16px"><div style="font-size:68px">${loose?'⚠️':'✅'}</div><h3 style="font-size:22px;margin:8px 0;color:#111827">${loose?'ย้ายไปรอเข้าคลังงานเศษ':'แปลงเป็น SOLID สำเร็จ'}</h3><p class="fgv9-muted">เข้า Location ${nf(Math.floor(Number(solidQty||0)/6))} กล่อง (${nf(solidQty)} คู่)</p>${loose?'<div class="fgv9-warn">จำนวนไม่ครบ 6 คู่ ระบบจะยังไม่เข้า Stock หลัก และย้ายไปเมนูรอเข้าคลังงานเศษ</div>':''}<div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="showAssortPendingList()">ดูรายการค้าง</button><button class="fgv9-btn fgv9-primary" onclick="showFgInTypeSelect()">เสร็จสิ้น</button></div></div>${bottomV9('FGIN')}`;
   };
 
   window.exportAssortPendingExcel = async function(){
@@ -20381,6 +20438,582 @@ V8 PRODUCTION CLEANUP PATCH
   };
 })();
 </script>
+
+
+<!-- ===== V24 PRODUCTION FIX: LOOSE READY -> FG IN + DELETE LOOSE MASTER + ASSORT SOLID SAFE ===== -->
+<style id="v24LooseToLocationStyle">
+  .v24-ready-actions{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap}
+  .v24-location-btn{border:0;border-radius:14px;padding:10px 14px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;font-weight:1000;box-shadow:0 8px 18px rgba(185,28,28,.18)}
+  .v24-delete-note{margin-top:8px;padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-weight:800;font-size:13px}
+</style>
+<script id="v24LooseToLocationPatch">
+(function(){
+  'use strict';
+  if(window.__V24_LOOSE_TO_LOCATION_PATCH__) return;
+  window.__V24_LOOSE_TO_LOCATION_PATCH__ = true;
+
+  const TABLES = {
+    master:'master_data',
+    fgIn:'fg_in',
+    looseMaster:'loose_master_data',
+    looseBalance:'loose_balance',
+    looseTransaction:'loose_transaction',
+    assort:'dept_assort_pending'
+  };
+  const PACK = 6;
+  const cache = new Map();
+
+  const $v24 = (id)=>document.getElementById(id);
+  const esc24 = (v)=>String(v ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const norm24 = (v)=>String(v ?? '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+  const num24 = (v)=>Number(v || 0) || 0;
+  const nf24 = (v)=>Number(v || 0).toLocaleString('th-TH');
+  const item24 = (r)=>r?.Item ?? r?.item ?? r?.source_item ?? '';
+  const code24 = (r)=>r?.CODE ?? r?.code ?? '';
+  const assort24 = (r)=>r?.Assort ?? r?.assort ?? r?.size ?? '';
+  const loc24 = (r)=>r?.Location ?? r?.location ?? r?.target_location ?? r?.origin_location ?? '';
+  const cust24 = (r)=>r?.customer ?? r?.Customer ?? '';
+  const bal24 = (r)=>num24(r?.balance_pairs ?? r?.balance ?? r?.Quantity ?? r?.quantity ?? r?.remaining_qty ?? 0);
+  const masterId24 = (r)=>r?.master_id ?? r?.id ?? null;
+  const itemKey24 = (item, code, assort, location, customer)=>{
+    if(typeof window.buildItemKey === 'function') return window.buildItemKey(item, code, assort, location, customer);
+    return String(item||'') + String(code||'').toUpperCase() + String(assort||'') + String(location||'') + String(customer||'');
+  };
+  const rowLooseKey24 = (r)=>r?.item_key || itemKey24(item24(r), code24(r), assort24(r), loc24(r), cust24(r));
+
+  function loading24(show, text){ if(typeof window.setLoading==='function') window.setLoading(show, text || ''); }
+  function toast24(text){ if(typeof window.showToast==='function') window.showToast(text); }
+
+  async function fetchAll24(table){
+    if(typeof window.fetchAll === 'function') return await window.fetchAll(table);
+    let all=[], from=0, size=1000;
+    while(true){
+      const {data,error}=await getSupabase().from(table).select('*').range(from, from+size-1);
+      if(error) throw error;
+      if(!data || !data.length) break;
+      all = all.concat(data);
+      if(data.length < size) break;
+      from += size;
+    }
+    return all;
+  }
+
+  async function getColumns24(table){
+    if(cache.has(table)) return cache.get(table);
+    try{
+      const rows = await fetchAll24(table);
+      if(rows && rows.length){
+        const cols = Object.keys(rows[0]);
+        cache.set(table, cols);
+        return cols;
+      }
+    }catch(e){}
+    cache.set(table, null);
+    return null;
+  }
+
+  function stripGeneratedAndBad24(table, payload){
+    const p = {...payload};
+    // loose_master_data.item_key และ unit เป็น generated always ห้ามส่งเด็ดขาด
+    if(table === TABLES.looseMaster){
+      delete p.item_key;
+      delete p.unit;
+    }
+    // ใช้ po ตัวเล็กเท่านั้น กัน error PO column
+    if(Object.prototype.hasOwnProperty.call(p, 'PO')) delete p.PO;
+    // remark เคยไม่มีในบาง table
+    if(table === TABLES.fgIn || table === TABLES.master || table === TABLES.looseMaster) delete p.remark;
+    // ไม่ส่ง undefined
+    Object.keys(p).forEach(k=>{ if(p[k] === undefined) delete p[k]; });
+    return p;
+  }
+
+  async function smartInsert24(table, payload){
+    let p = stripGeneratedAndBad24(table, payload);
+    const cols = await getColumns24(table);
+    if(cols && cols.length){
+      const set = new Set(cols);
+      p = Object.fromEntries(Object.entries(p).filter(([k])=>set.has(k)));
+    }
+    let lastErr = null;
+    for(let i=0;i<5;i++){
+      const {data,error} = await getSupabase().from(table).insert(p).select('*').maybeSingle();
+      if(!error) return data;
+      lastErr = error;
+      const msg = String(error.message || '');
+      const m = msg.match(/Could not find the '([^']+)' column/i);
+      if(m && p[m[1]] !== undefined){ delete p[m[1]]; continue; }
+      if(/non-DEFAULT value.*item_key/i.test(msg) && p.item_key !== undefined){ delete p.item_key; continue; }
+      if(/non-DEFAULT value.*unit/i.test(msg) && p.unit !== undefined){ delete p.unit; continue; }
+      if(/schema cache/i.test(msg)){ cache.delete(table); }
+      break;
+    }
+    throw lastErr || new Error('insert failed: ' + table);
+  }
+
+  async function smartUpdate24(table, values, filter){
+    let p = stripGeneratedAndBad24(table, values);
+    const cols = await getColumns24(table);
+    if(cols && cols.length){
+      const set = new Set(cols);
+      p = Object.fromEntries(Object.entries(p).filter(([k])=>set.has(k)));
+    }
+    let q = getSupabase().from(table).update(p);
+    filter(q);
+    const {error} = await q;
+    if(error) throw error;
+  }
+
+  async function findMaster24(item, code, assort, location, customer){
+    try{
+      const key = itemKey24(item, code, assort, location, customer);
+      let {data,error} = await getSupabase().from(TABLES.master).select('*').eq('item_key', key).limit(1);
+      if(!error && data && data.length) return data[0];
+    }catch(e){}
+    const {data,error} = await getSupabase().from(TABLES.master)
+      .select('*')
+      .eq('Item', item)
+      .eq('CODE', code)
+      .eq('Assort', String(assort))
+      .eq('Location', location)
+      .eq('customer', customer)
+      .limit(1);
+    if(error) return null;
+    return data?.[0] || null;
+  }
+
+  async function ensureMaster24(item, code, assort, location, customer){
+    const exists = await findMaster24(item, code, assort, location, customer);
+    if(exists) return exists;
+    const payload = {
+      Item:item,
+      CODE:code,
+      Assort:String(assort),
+      Location:location,
+      Quantity:0,
+      customer,
+      created_by: window.currentUser || currentUser || null
+    };
+    return await smartInsert24(TABLES.master, payload);
+  }
+
+  async function getLooseMasterRow24(r){
+    const mid = masterId24(r);
+    if(mid){
+      const {data,error}=await getSupabase().from(TABLES.looseMaster).select('*').eq('id', mid).limit(1);
+      if(!error && data && data.length) return data[0];
+    }
+    const key = rowLooseKey24(r);
+    if(key){
+      const {data,error}=await getSupabase().from(TABLES.looseMaster).select('*').eq('item_key', key).limit(1);
+      if(!error && data && data.length) return data[0];
+    }
+    const {data,error}=await getSupabase().from(TABLES.looseMaster)
+      .select('*')
+      .eq('Item', item24(r))
+      .eq('CODE', code24(r))
+      .eq('Assort', String(assort24(r)))
+      .eq('customer', cust24(r))
+      .limit(1);
+    if(error) throw error;
+    return data?.[0] || null;
+  }
+
+  async function removeLoosePairs24(r, pairs, locationForTransaction, poValue){
+    const master = await getLooseMasterRow24(r);
+    const oldQty = bal24(master || r);
+    const remain = Math.max(0, oldQty - pairs);
+    const key = (master?.item_key || rowLooseKey24(r));
+    const txPayload = {
+      master_id: master?.id ?? masterId24(r) ?? null,
+      item_key: key,
+      item:item24(r),
+      code:code24(r),
+      assort:String(assort24(r)),
+      location: locationForTransaction || loc24(r) || '',
+      customer:cust24(r),
+      transaction_type:'OUT',
+      quantity:pairs,
+      balance:remain,
+      po:poValue || null,
+      created_by: window.currentUser || currentUser || null
+    };
+    await smartInsert24(TABLES.looseTransaction, txPayload);
+    if(master?.id){
+      if(remain <= 0){
+        const {error} = await getSupabase().from(TABLES.looseMaster).delete().eq('id', master.id);
+        if(error) throw error;
+      }else{
+        await smartUpdate24(TABLES.looseMaster, {Quantity: remain, quantity: remain}, q=>q.eq('id', master.id));
+      }
+    }
+    return remain;
+  }
+
+  async function addFgInCarton24({item, code, assort, location, customer, cartons, po}){
+    if(!item || !code || !assort || !location || !customer) throw new Error('ข้อมูลเข้า Location ไม่ครบ');
+    if(!cartons || cartons <= 0) return null;
+    await ensureMaster24(item, code, String(assort), location, customer);
+    const fgKey = itemKey24(item, code, String(assort), location, customer);
+    const fgPayload = {
+      item_key: fgKey,
+      Item:item,
+      item:item,
+      CODE:code,
+      code:code,
+      Assort:String(assort),
+      assort:String(assort),
+      Location:location,
+      location:location,
+      Quantity:cartons,
+      quantity:cartons,
+      customer,
+      po:po || null,
+      created_by: window.currentUser || currentUser || null
+    };
+    return await smartInsert24(TABLES.fgIn, fgPayload);
+  }
+
+  window.showLooseToLocationV24 = async function(masterId){
+    try{
+      const rows = await fetchAll24(TABLES.looseBalance).catch(()=>fetchAll24(TABLES.looseMaster));
+      const r = rows.find(x=>String(x.master_id ?? x.id) === String(masterId));
+      if(!r) return alert('ไม่พบรายการงานเศษ');
+      window.__v24SelectedLoose = r;
+      const pairs = Math.floor(bal24(r) / PACK) * PACK;
+      const cartons = Math.floor(pairs / PACK);
+      const remain = bal24(r) % PACK;
+      const content = $v24('looseContent');
+      if(!content) return;
+      content.innerHTML = `
+        <div class="loose-back-row"><div class="loose-back-left"><button class="loose-back-btn" onclick="renderLooseReady()">← พร้อมแพ็ค</button><b>เข้า Location</b></div><div class="loose-back-actions"><button class="loose-home-btn" onclick="goHomeFromLoose()">🏠</button></div></div>
+        <div class="loose-panel">
+          <div class="loose-current-box"><span><small>รายการ</small><span>${esc24(item24(r))} ${esc24(code24(r))} ${esc24(assort24(r))} | ${esc24(cust24(r))}</span></span><strong>${nf24(bal24(r))} คู่</strong></div>
+          <div class="loose-form-grid">
+            <div class="loose-field"><label>Location ปลายทาง *</label><input id="v24LooseTargetLocation" placeholder="เช่น E14" value=""></div>
+            <div class="loose-field"><label>PO</label><input id="v24LoosePo" placeholder="เลข PO ถ้ามี"></div>
+            <div class="loose-field"><label>จำนวนเข้า Location</label><input value="${nf24(cartons)} กล่อง (${nf24(pairs)} คู่)" readonly></div>
+            <div class="loose-field"><label>คงเหลืองานเศษหลังย้าย</label><input value="${nf24(remain)} คู่" readonly></div>
+          </div>
+          <div class="v24-delete-note">เมื่อบันทึก ระบบจะเพิ่มเข้า FG IN / Available ตาม Location และลบออกจาก loose_master_data ถ้าเหลือ 0 คู่</div>
+          <button class="loose-save-btn orange" onclick="saveLooseToLocationV24()">บันทึกเข้า Location</button>
+        </div>`;
+    }catch(e){ alert('เปิดรายการไม่สำเร็จ: ' + (e?.message || e)); }
+  };
+
+  window.saveLooseToLocationV24 = async function(){
+    const r = window.__v24SelectedLoose;
+    if(!r) return alert('ไม่พบรายการงานเศษ');
+    const location = String($v24('v24LooseTargetLocation')?.value || '').trim().toUpperCase();
+    const po = String($v24('v24LoosePo')?.value || '').trim();
+    if(!location) return alert('กรุณากรอก Location ปลายทาง');
+    const total = bal24(r);
+    const pairsToMove = Math.floor(total / PACK) * PACK;
+    const cartons = Math.floor(pairsToMove / PACK);
+    if(pairsToMove <= 0) return alert('จำนวนไม่ถึง 6 คู่ ยังเข้า Location ไม่ได้');
+    loading24(true, 'กำลังย้ายงานเศษเข้า Location...');
+    try{
+      const item = item24(r), code = code24(r), assort = String(assort24(r)), customer = cust24(r);
+      if(!customer) throw new Error('ไม่พบ Customer ของงานเศษ');
+      await addFgInCarton24({item, code, assort, location, customer, cartons, po});
+      await removeLoosePairs24(r, pairsToMove, location, po);
+      try{ if(typeof window.loadLooseData === 'function') await window.loadLooseData(true); }catch(e){}
+      try{ if(typeof window.loadMasterData === 'function') await window.loadMasterData(); }catch(e){}
+      toast24('ย้ายเข้า Location สำเร็จ');
+      if(typeof window.renderLooseReady === 'function') setTimeout(()=>window.renderLooseReady(), 100);
+    }catch(e){
+      alert('บันทึกไม่สำเร็จ: ' + (e?.message || e));
+    }finally{ loading24(false); }
+  };
+
+  // แทนหน้า Ready เดิมให้กดเข้า Location ได้จริง
+  window.renderLooseReady = async function(){
+    const title = $v24('looseTitle'); if(title) title.textContent = 'พร้อมแพ็ค';
+    const content = $v24('looseContent'); if(!content) return;
+    try{
+      const rowsRaw = await fetchAll24(TABLES.looseBalance).catch(()=>fetchAll24(TABLES.looseMaster));
+      const rows = rowsRaw.filter(r=>bal24(r) >= PACK).sort((a,b)=>bal24(b)-bal24(a));
+      content.innerHTML = `<div class="loose-back-row"><div class="loose-back-left"><button class="loose-back-btn" onclick="renderLooseMenu()">← งานเศษ</button><b>พร้อมแพ็ค</b></div><div class="loose-back-actions"><button class="loose-home-btn" onclick="goHomeFromLoose()">🏠</button></div></div>
+        <div class="loose-tabs"><button onclick="renderLooseMove()">รับ/จ่าย</button><button onclick="renderLooseCount()">นับสต็อก</button><button class="active" onclick="renderLooseReady()">พร้อมแพ็ค</button></div>
+        <div class="loose-table-wrap"><table class="loose-table"><thead><tr><th>Item</th><th>CODE</th><th>Assort</th><th>Customer</th><th>คงเหลือ</th><th>เข้าได้</th><th>จัดการ</th></tr></thead><tbody>${rows.map(r=>{
+          const pairs = Math.floor(bal24(r)/PACK)*PACK;
+          const cartons = Math.floor(pairs/PACK);
+          const remain = bal24(r)%PACK;
+          const id = masterId24(r);
+          return `<tr><td>${esc24(item24(r))}</td><td>${esc24(code24(r))}</td><td>${esc24(assort24(r))}</td><td>${esc24(cust24(r)||'-')}</td><td><b>${nf24(bal24(r))} คู่</b></td><td>${nf24(cartons)} กล่อง<br><small>เหลือเศษ ${nf24(remain)} คู่</small></td><td><div class="v24-ready-actions"><button class="v24-location-btn" onclick="showLooseToLocationV24('${esc24(id)}')">เข้า Location</button></div></td></tr>`;
+        }).join('')}</tbody></table></div><div class="loose-summary-box">รวม ${nf24(rows.length)} รายการที่มากกว่าหรือเท่ากับ ${PACK} คู่</div>`;
+    }catch(e){
+      content.innerHTML = `<div class="empty" style="color:#b91c1c">โหลดรายการพร้อมแพ็คไม่สำเร็จ: ${esc24(e?.message || e)}</div>`;
+    }
+  };
+
+  // Override ASSORT -> SOLID ให้ไม่ update master_data.Quantity ซ้ำ และใช้ po ตัวเล็กเท่านั้น
+  window.saveConvertToSolid = async function(id){
+    const location = String($v24('solidLocation')?.value || '').trim().toUpperCase();
+    if(!location) return alert('กรุณากรอก Location ปลายทาง');
+    loading24(true, 'กำลังบันทึกการแปลง...');
+    try{
+      const {data,error} = await getSupabase().from(TABLES.assort).select('*').eq('id', id).maybeSingle();
+      if(error) throw error;
+      const r = data;
+      if(!r) throw new Error('ไม่พบรายการกำลังดำเนินการ');
+      const qty = bal24(r);
+      const solidPairs = Math.floor(qty / PACK) * PACK;
+      const cartons = Math.floor(solidPairs / PACK);
+      const loosePairs = qty % PACK;
+      const item = item24(r), code = code24(r), assort = String(r.size ?? r.assort ?? ''), customer = cust24(r);
+      if(!customer) throw new Error('ไม่พบ Customer ของรายการนี้');
+      if(solidPairs > 0) await addFgInCarton24({item, code, assort, location, customer, cartons, po:r.po || null});
+      if(loosePairs > 0){
+        const loosePayload = {Item:item, CODE:code, Assort:assort, Location:'', Quantity:loosePairs, customer, created_by:window.currentUser || currentUser || null};
+        // ถ้ามีเดิมให้บวก ไม่สร้างซ้ำ
+        let existing = null;
+        try{
+          const {data:ex}=await getSupabase().from(TABLES.looseMaster).select('*').eq('Item', item).eq('CODE', code).eq('Assort', assort).eq('customer', customer).limit(1);
+          existing = ex?.[0] || null;
+        }catch(e){}
+        if(existing?.id){
+          const oldQty = num24(existing.Quantity ?? existing.quantity ?? 0);
+          await smartUpdate24(TABLES.looseMaster, {Quantity: oldQty + loosePairs, quantity: oldQty + loosePairs}, q=>q.eq('id', existing.id));
+        }else{
+          await smartInsert24(TABLES.looseMaster, loosePayload);
+        }
+      }
+      await smartUpdate24(TABLES.assort, {remaining_qty:0,status:'COMPLETED',target_location:location,updated_by:window.currentUser || currentUser || null,updated_at:new Date().toISOString()}, q=>q.eq('id', id));
+      toast24(`เข้า Location ${nf24(cartons)} กล่อง / งานเศษ ${nf24(loosePairs)} คู่`);
+      if(typeof window.showAssortResult === 'function') window.showAssortResult({solidQty:solidPairs, loose:loosePairs>0, msg:`เข้า Location ${nf24(cartons)} กล่อง (${nf24(solidPairs)} คู่) / งานเศษ ${nf24(loosePairs)} คู่`});
+    }catch(e){ alert('บันทึกไม่สำเร็จ: ' + (e?.message || e)); }
+    finally{ loading24(false); }
+  };
+
+})();
+</script>
+<!-- ===== END V24 PRODUCTION FIX ===== -->
+
+
+
+<!-- ===== V25 FIX: use loose_master_data as source of truth when moving loose stock to Location ===== -->
+<script id="v25LooseMasterDeleteFix">
+(function(){
+  const PACK = 6;
+  const TABLE_LOOSE_MASTER = 'loose_master_data';
+  const TABLE_LOOSE_TRANSACTION = 'loose_transaction';
+  const TABLE_FG_IN = 'fg_in';
+
+  const $v25 = id => document.getElementById(id);
+  const esc25 = v => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const num25 = v => Number(String(v ?? 0).replace(/,/g,'')) || 0;
+  const nf25 = n => Number(n || 0).toLocaleString('th-TH');
+  const currentUser25 = () => window.currentUser || localStorage.getItem('stock_user') || '';
+
+  function rowItem25(r){ return r.Item ?? r.item ?? ''; }
+  function rowCode25(r){ return r.CODE ?? r.code ?? ''; }
+  function rowAssort25(r){ return r.Assort ?? r.assort ?? ''; }
+  function rowCustomer25(r){ return r.customer ?? r.Customer ?? ''; }
+  function rowQty25(r){ return num25(r.Quantity ?? r.quantity ?? r.balance ?? r.available_qty ?? 0); }
+  function assortPayload25(v){ return Number.isNaN(Number(v)) ? String(v) : Number(v); }
+  function itemKey25(item, code, assort, location, customer){
+    return String(item || '') + String(code || '').toUpperCase() + String(assort || '') + String(location || '') + String(customer || '');
+  }
+
+  async function fetchAll25(table){
+    if (typeof window.fetchAll === 'function') return await window.fetchAll(table);
+    let all = [], from = 0, size = 1000;
+    while (true) {
+      const {data, error} = await getSupabase().from(table).select('*').range(from, from + size - 1);
+      if (error) throw error;
+      if (!data || !data.length) break;
+      all = all.concat(data);
+      if (data.length < size) break;
+      from += size;
+    }
+    return all;
+  }
+
+  async function getLooseMasterById25(id){
+    const {data, error} = await getSupabase().from(TABLE_LOOSE_MASTER).select('*').eq('id', id).maybeSingle();
+    if (error) throw error;
+    return data;
+  }
+
+  async function insertFgIn25({item, code, assort, location, cartons, customer, po}){
+    const payload = {
+      item_key: itemKey25(item, code, assort, location, customer),
+      Item: item,
+      CODE: code,
+      Assort: assortPayload25(assort),
+      Location: location,
+      Quantity: cartons,
+      customer: customer,
+      created_by: currentUser25()
+    };
+    if (po) payload.po = po;
+
+    const {error} = await getSupabase().from(TABLE_FG_IN).insert(payload);
+    if (error) throw error;
+  }
+
+  async function insertLooseOutTx25({row, pairs, balance, location, po}){
+    const item = rowItem25(row), code = rowCode25(row), assort = String(rowAssort25(row)), customer = rowCustomer25(row);
+    const payload = {
+      master_id: row.id ?? null,
+      item_key: row.item_key || itemKey25(item, code, assort, '', customer),
+      item: item,
+      code: code,
+      assort: assort,
+      location: location || '',
+      customer: customer,
+      transaction_type: 'OUT',
+      quantity: pairs,
+      balance: balance,
+      po: po || null,
+      created_by: currentUser25()
+    };
+    const {error} = await getSupabase().from(TABLE_LOOSE_TRANSACTION).insert(payload);
+    if (error) console.warn('บันทึก loose_transaction ไม่สำเร็จ แต่จะดำเนินการต่อ:', error.message || error);
+  }
+
+  async function refreshAfterMove25(){
+    try { if (typeof window.loadLooseData === 'function') await window.loadLooseData(true); } catch(e) {}
+    try { if (typeof window.loadMasterData === 'function') await window.loadMasterData(); } catch(e) {}
+  }
+
+  // สำคัญ: หน้า Ready ต้องอ่านจาก loose_master_data เท่านั้น ไม่ใช้ loose_balance เพราะอาจ stale/ค้าง transaction
+  window.renderLooseReady = async function(){
+    const title = $v25('looseTitle');
+    if (title) title.textContent = 'พร้อมแพ็ค';
+    const content = $v25('looseContent');
+    if (!content) return;
+
+    try {
+      const rows = (await fetchAll25(TABLE_LOOSE_MASTER))
+        .filter(r => rowQty25(r) >= PACK)
+        .sort((a,b) => rowQty25(b) - rowQty25(a));
+
+      content.innerHTML = `
+        <div class="loose-back-row">
+          <div class="loose-back-left"><button class="loose-back-btn" onclick="renderLooseMenu()">← งานเศษ</button><b>พร้อมแพ็ค</b></div>
+          <div class="loose-back-actions"><button class="loose-home-btn" onclick="goHomeFromLoose()">🏠</button></div>
+        </div>
+        <div class="loose-tabs">
+          <button onclick="renderLooseMove()">รับ/จ่าย</button>
+          <button onclick="renderLooseCount()">นับสต็อก</button>
+          <button class="active" onclick="renderLooseReady()">พร้อมแพ็ค</button>
+        </div>
+        <div class="loose-table-wrap">
+          <table class="loose-table">
+            <thead><tr><th>Item</th><th>CODE</th><th>Assort</th><th>Customer</th><th>คงเหลือ</th><th>เข้าได้</th><th>จัดการ</th></tr></thead>
+            <tbody>
+              ${rows.map(r => {
+                const qty = rowQty25(r);
+                const movePairs = Math.floor(qty / PACK) * PACK;
+                const cartons = Math.floor(movePairs / PACK);
+                const remain = qty % PACK;
+                return `<tr>
+                  <td>${esc25(rowItem25(r))}</td>
+                  <td>${esc25(rowCode25(r))}</td>
+                  <td>${esc25(rowAssort25(r))}</td>
+                  <td>${esc25(rowCustomer25(r) || '-')}</td>
+                  <td><b>${nf25(qty)} คู่</b></td>
+                  <td>${nf25(cartons)} กล่อง<br><small>เหลือเศษ ${nf25(remain)} คู่</small></td>
+                  <td><button class="v24-location-btn" onclick="showLooseToLocationV24('${esc25(r.id)}')">เข้า Location</button></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div class="loose-summary-box">รวม ${nf25(rows.length)} รายการที่มากกว่าหรือเท่ากับ ${PACK} คู่</div>`;
+    } catch(e) {
+      content.innerHTML = `<div class="empty" style="color:#b91c1c">โหลดรายการพร้อมแพ็คไม่สำเร็จ: ${esc25(e?.message || e)}</div>`;
+    }
+  };
+
+  window.showLooseToLocationV24 = async function(masterId){
+    try {
+      const r = await getLooseMasterById25(masterId);
+      if (!r) return alert('ไม่พบรายการงานเศษใน loose_master_data');
+      window.__v25SelectedLooseMasterId = r.id;
+      const qty = rowQty25(r);
+      const movePairs = Math.floor(qty / PACK) * PACK;
+      const cartons = Math.floor(movePairs / PACK);
+      const remain = qty % PACK;
+      const content = $v25('looseContent');
+      if (!content) return;
+
+      content.innerHTML = `
+        <div class="loose-back-row">
+          <div class="loose-back-left"><button class="loose-back-btn" onclick="renderLooseReady()">← พร้อมแพ็ค</button><b>เข้า Location</b></div>
+          <div class="loose-back-actions"><button class="loose-home-btn" onclick="goHomeFromLoose()">🏠</button></div>
+        </div>
+        <div class="loose-panel">
+          <div class="loose-current-box">
+            <span><small>รายการ</small><span>${esc25(rowItem25(r))} ${esc25(rowCode25(r))} ${esc25(rowAssort25(r))} | ${esc25(rowCustomer25(r))}</span></span>
+            <strong>${nf25(qty)} คู่</strong>
+          </div>
+          <div class="loose-form-grid">
+            <div class="loose-field"><label>Location ปลายทาง *</label><input id="v24LooseTargetLocation" placeholder="เช่น E14" value=""></div>
+            <div class="loose-field"><label>PO</label><input id="v24LoosePo" placeholder="เลข PO ถ้ามี"></div>
+            <div class="loose-field"><label>จำนวนเข้า Location</label><input value="${nf25(cartons)} กล่อง (${nf25(movePairs)} คู่)" readonly></div>
+            <div class="loose-field"><label>คงเหลืองานเศษหลังย้าย</label><input value="${nf25(remain)} คู่" readonly></div>
+          </div>
+          <div class="v24-delete-note">ระบบจะอ่านยอดจริงจาก loose_master_data ตอนกดบันทึกอีกครั้ง ถ้าเหลือ 0 คู่ จะลบรายการนี้ออกทันที</div>
+          <button class="loose-save-btn orange" onclick="saveLooseToLocationV24()">บันทึกเข้า Location</button>
+        </div>`;
+    } catch(e) {
+      alert('เปิดรายการไม่สำเร็จ: ' + (e?.message || e));
+    }
+  };
+
+  window.saveLooseToLocationV24 = async function(){
+    const masterId = window.__v25SelectedLooseMasterId;
+    if (!masterId) return alert('ไม่พบรายการงานเศษ');
+
+    const location = String($v25('v24LooseTargetLocation')?.value || '').trim().toUpperCase();
+    const po = String($v25('v24LoosePo')?.value || '').trim();
+    if (!location) return alert('กรุณากรอก Location ปลายทาง');
+
+    if (typeof window.setLoading === 'function') setLoading(true, 'กำลังย้ายงานเศษเข้า Location...');
+    try {
+      // อ่านจาก loose_master_data สด ๆ ทุกครั้ง เพื่อไม่ใช้ loose_balance ที่ค้าง
+      const row = await getLooseMasterById25(masterId);
+      if (!row) throw new Error('ไม่พบรายการใน loose_master_data อาจถูกย้ายไปแล้ว');
+
+      const qty = rowQty25(row);
+      const movePairs = Math.floor(qty / PACK) * PACK;
+      const cartons = Math.floor(movePairs / PACK);
+      const remain = qty % PACK;
+      const item = rowItem25(row), code = rowCode25(row), assort = String(rowAssort25(row)), customer = rowCustomer25(row);
+
+      if (!customer) throw new Error('ไม่พบ Customer ของงานเศษ');
+      if (movePairs <= 0 || cartons <= 0) throw new Error('จำนวนไม่ถึง 6 คู่ ยังเข้า Location ไม่ได้');
+
+      // 1) เข้า FG IN เป็นหน่วยกล่อง
+      await insertFgIn25({item, code, assort, location, cartons, customer, po});
+
+      // 2) บันทึก OUT จากงานเศษเป็นหน่วยคู่
+      await insertLooseOutTx25({row, pairs: movePairs, balance: remain, location, po});
+
+      // 3) ตัดจาก loose_master_data ด้วยยอดจริง
+      if (remain <= 0) {
+        const {error: delError} = await getSupabase().from(TABLE_LOOSE_MASTER).delete().eq('id', row.id);
+        if (delError) throw delError;
+      } else {
+        const {error: upError} = await getSupabase().from(TABLE_LOOSE_MASTER).update({Quantity: remain}).eq('id', row.id);
+        if (upError) throw upError;
+      }
+
+      await refreshAfterMove25();
+      if (typeof window.showToast === 'function') showToast(`เข้า Location สำเร็จ ${nf25(cartons)} กล่อง / เหลืองานเศษ ${nf25(remain)} คู่`);
+      setTimeout(() => window.renderLooseReady && window.renderLooseReady(), 120);
+    } catch(e) {
+      alert('บันทึกไม่สำเร็จ: ' + (e?.message || e));
+    } finally {
+      if (typeof window.setLoading === 'function') setLoading(false);
+    }
+  };
+})();
+</script>
+<!-- ===== END V25 FIX ===== -->
 
 </body>
 </html>
