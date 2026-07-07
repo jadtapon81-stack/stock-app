@@ -19039,397 +19039,363 @@ html body.count-settings-open-v91 #countSettingsPageV89{display:block !important
 
 
 
-<!-- ===== FINAL FIX PATCH V6: MASTER DUP ONLY + LOOSE NAV POSITION + FG IN PO ===== -->
+<!-- ===== PERFORMANCE STABILIZER V6: stop layout jitter, keep functions usable ===== -->
 <style>
-  /* V6: เวลาเปิดหน้างานเศษ ต้องซ่อนหน้า Home/หน้าอื่นจริง ๆ ไม่ให้ไปโผล่ด้านล่าง */
-  body.loose-open-v6 #homePage,
-  body.loose-open-v6 #masterPage,
-  body.loose-open-v6 #countPage,
-  body.loose-open-v6 #fgPage,
-  body.loose-open-v6 #dashboardPage,
-  body.loose-open-v6 #otherCustomerPage,
-  body.loose-open-v6 #countSettingsPageV89{
-    display:none!important;
-  }
-  body.loose-open-v6 #loosePage{
-    display:block!important;
-    width:100%!important;
-    margin-top:0!important;
-  }
-  body:not(.loose-open-v6) #loosePage{
-    display:none!important;
-  }
-
-  /* V6: ปุ่มงานเศษใน Home ให้เป็นขนาดเดียวกับการ์ดเดิม ไม่ล้น ไม่แตกบรรทัดแปลก */
+  /* Home grid is the only place for action cards */
+  #homePage .role-menu-grid{align-items:stretch!important; overflow:visible!important;}
   #homePage .role-menu-grid > #looseHomeCard{
-    grid-column:auto!important;
+    position:relative!important;
+    left:auto!important; right:auto!important; top:auto!important; bottom:auto!important;
+    transform:none!important;
+    margin:0!important;
     width:100%!important;
-    min-height:138px!important;
-    height:auto!important;
-    padding:14px 10px!important;
-    border-radius:20px!important;
-    border:1px solid #fed7aa!important;
-    background:linear-gradient(180deg,#fff7ed 0%,#fff 90%)!important;
-    box-shadow:0 8px 24px rgba(16,24,40,.10)!important;
+    max-width:100%!important;
+    min-width:0!important;
+    grid-column:auto!important;
     display:flex!important;
     flex-direction:column!important;
-    align-items:center!important;
     justify-content:center!important;
+    align-items:center!important;
     text-align:center!important;
     overflow:hidden!important;
-    position:relative!important;
-    color:#20242f!important;
+    contain:layout paint!important;
   }
-  #homePage .role-menu-grid > #looseHomeCard i,
-  #homePage .role-menu-grid > #looseHomeCard .loose-final-icon,
-  #homePage .role-menu-grid > #looseHomeCard .loose-home-icon{
-    width:56px!important;
-    height:56px!important;
-    min-width:56px!important;
-    min-height:56px!important;
-    border-radius:50%!important;
-    margin:0 auto 8px!important;
-    display:grid!important;
-    place-items:center!important;
-    background:linear-gradient(135deg,#f97316,#ea580c)!important;
-    color:#fff!important;
-    font-size:26px!important;
-    box-shadow:none!important;
-  }
-  #homePage .role-menu-grid > #looseHomeCard b,
-  #homePage .role-menu-grid > #looseHomeCard .loose-final-title{
-    display:block!important;
-    font-size:18px!important;
-    line-height:1.1!important;
-    font-weight:900!important;
-    color:#20242f!important;
-    white-space:normal!important;
-  }
-  #homePage .role-menu-grid > #looseHomeCard span,
-  #homePage .role-menu-grid > #looseHomeCard small,
-  #homePage .role-menu-grid > #looseHomeCard .loose-final-sub,
-  #homePage .role-menu-grid > #looseHomeCard .loose-home-desc{
-    display:block!important;
-    margin-top:3px!important;
-    color:#697180!important;
-    font-size:12px!important;
-    line-height:1.2!important;
-    white-space:normal!important;
-  }
-  #homePage .role-menu-grid > #looseHomeCard .loose-v6-stats{
-    display:flex!important;
-    justify-content:center!important;
-    gap:8px!important;
-    margin-top:7px!important;
-    width:100%!important;
-  }
-  #homePage .role-menu-grid > #looseHomeCard .loose-v6-pill{
-    display:inline-flex!important;
-    align-items:center!important;
-    justify-content:center!important;
-    min-width:48px!important;
-    max-width:90px!important;
-    padding:4px 7px!important;
-    border-radius:999px!important;
-    background:#fff7ed!important;
-    border:1px solid #fed7aa!important;
-    color:#ea580c!important;
-    font-size:11px!important;
-    font-weight:900!important;
-    line-height:1.15!important;
-    white-space:nowrap!important;
-  }
-  #homePage .role-menu-grid > #looseHomeCard:after{display:none!important;content:none!important;}
+  #homePage:not([style*="display: none"]) ~ #loosePage,
+  body:not(.loose-open) #loosePage{display:none!important;}
+  body.home-open #loosePage{display:none!important;}
+  body.loose-open #homePage{display:none!important;}
 
-  /* V6: PO ต้องแสดงทั้ง FG IN และ FG OUT */
-  #fgPoRow{display:grid!important;}
+  #looseHomeCard .loose-home-stats,
+  #looseHomeCard .loose-home-desc,
+  #looseHomeCard .loose-ready-badge-home{max-width:100%; overflow:hidden; text-overflow:ellipsis;}
+
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; scroll-behavior:auto!important;}
+  }
 </style>
-
 <script>
 (function(){
-  const PATCH = 'v6-master-dup-only-loose-position-fg-in-po';
-  const READY_QTY = 6;
+  if(window.__STOCK_APP_PERFORMANCE_STABILIZER_V6__) return;
+  window.__STOCK_APP_PERFORMANCE_STABILIZER_V6__ = true;
 
-  const $id = (id) => document.getElementById(id);
-  const nf = (v) => Number(v || 0).toLocaleString('th-TH');
-  const norm = (v) => String(v ?? '').trim().toUpperCase().replace(/\s+/g,'').replace(/-/g,'');
-  const safe = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  function byId(id){ return document.getElementById(id); }
+  function qs(sel){ return document.querySelector(sel); }
 
-  function getMain(){ return document.querySelector('main'); }
-  function getBalance(r){ return Number(r?.balance_pairs ?? r?.balance ?? r?.available_qty ?? r?.Quantity ?? r?.quantity ?? 0); }
-
-  function ensureLoosePageV6(){
-    let lp = $id('loosePage');
-    const main = getMain();
-    if(!main) return lp;
-    if(!lp){
-      lp = document.createElement('section');
-      lp.id = 'loosePage';
-      lp.className = 'page-card';
-      lp.innerHTML = '<h2 class="title" id="looseTitle">งานเศษ</h2><div id="looseContent" class="loose-shell"></div>';
-    }
-    if(lp.parentElement !== main || main.firstElementChild !== lp){
-      main.prepend(lp);
-    }
-    return lp;
-  }
-
-  function hideAllMainPagesExceptLoose(){
-    document.body.classList.add('loose-open-v6');
-    const main = getMain();
-    if(main){
-      Array.from(main.children).forEach(el => {
-        if(el.id === 'loosePage'){
-          el.style.setProperty('display','block','important');
-        }else if(el.tagName === 'SECTION' || /Page$/.test(el.id || '')){
-          el.style.setProperty('display','none','important');
-        }
-      });
-    }
-    ['homePage','masterPage','countPage','fgPage','dashboardPage','otherCustomerPage','countSettingsPageV89'].forEach(id=>{
-      const el=$id(id); if(el) el.style.setProperty('display','none','important');
-    });
-    const lp=$id('loosePage'); if(lp) lp.style.setProperty('display','block','important');
-    document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));
-    $id('btnLooseStock')?.classList.add('active');
-    if(typeof closeMenu === 'function') closeMenu();
-    setTimeout(()=>window.scrollTo({top:0,left:0,behavior:'auto'}),0);
-  }
-
-  async function showLoosePageV6(){
-    ensureLoosePageV6();
-    hideAllMainPagesExceptLoose();
-    if($id('looseTitle')) $id('looseTitle').textContent = 'งานเศษ';
-    if($id('looseContent')) $id('looseContent').innerHTML = '<div class="empty">กำลังโหลดงานเศษ...</div>';
+  function stopTimer(name){
     try{
-      if(typeof loadLooseData === 'function') await loadLooseData(true);
-      if(typeof renderLooseMenu === 'function') renderLooseMenu();
-      else if($id('looseContent')) $id('looseContent').innerHTML = '<div class="empty">ไม่พบฟังก์ชัน renderLooseMenu</div>';
-    }catch(err){
-      if($id('looseContent')) $id('looseContent').innerHTML = '<div class="empty" style="color:#b91c1c;">โหลดงานเศษไม่สำเร็จ: '+safe(err?.message || err)+'</div>';
-    }
-    hideAllMainPagesExceptLoose();
+      if(window[name]){
+        clearInterval(window[name]);
+        clearTimeout(window[name]);
+        window[name] = null;
+      }
+    }catch(e){}
   }
 
-  window.showLoosePage = showLoosePageV6;
-  try{ showLoosePage = window.showLoosePage; }catch(e){}
-
-  window.goHomeFromLoose = function(){
-    document.body.classList.remove('loose-open-v6');
-    const lp=$id('loosePage');
-    if(lp) lp.style.setProperty('display','none','important');
-    ['homePage','masterPage','countPage','fgPage','dashboardPage','otherCustomerPage','countSettingsPageV89'].forEach(id=>{
-      const el=$id(id); if(el) el.style.removeProperty('display');
-    });
-    if(typeof showPage === 'function') showPage('home');
-    const home=$id('homePage'); if(home) home.style.setProperty('display','block','important');
-    setTimeout(()=>window.scrollTo({top:0,left:0,behavior:'auto'}),0);
-  };
-  try{ goHomeFromLoose = window.goHomeFromLoose; }catch(e){}
-
-  /* ดักคลิกปุ่มงานเศษทุกเวอร์ชัน ให้เปิดหน้า Loose แบบถูกตำแหน่งเสมอ */
-  document.addEventListener('click', function(e){
-    const card = e.target.closest && e.target.closest('#looseHomeCard, #btnLooseStock');
-    if(card){
-      e.preventDefault();
-      e.stopPropagation();
-      showLoosePageV6();
-    }
-  }, true);
-
-  /* ปรับ Home Card งานเศษให้เป็น component เดียว ไม่สร้างซ้ำ และอัปเดตตัวเลข */
-  async function fetchLooseRowsV6(){
-    try{
-      const {data,error}=await getSupabase().from('loose_balance').select('*').range(0,9999);
-      if(error) throw error;
-      return data || [];
-    }catch(e){
-      try{
-        const {data,error}=await getSupabase().from('loose_master_data').select('*').range(0,9999);
-        if(error) throw error;
-        return data || [];
-      }catch(_){ return []; }
-    }
+  function stopNoisyTimers(){
+    // These old patches repeatedly rewrote layout and caused visible jitter.
+    stopTimer('__homeMobileMenuNoOverlapTimer');
+    stopTimer('__mobileOnlineAndIconFixTimer');
+    stopTimer('__onlineFixTimer');
   }
 
   function homeGrid(){
-    return document.querySelector('#homePage .role-menu-grid.admin-menu-grid') ||
-           document.querySelector('#homePage .role-menu-grid.user-menu-grid') ||
-           document.querySelector('#homePage .role-menu-grid') ||
-           document.querySelector('#homePage .quick-list');
+    return qs('#homePage .role-menu-grid') || qs('#homePage .quick-list') || qs('#homePage .dashboard-grid');
   }
 
-  async function renderLooseHomeCardV6(){
+  function moveLooseCardIntoHomeGrid(){
     const grid = homeGrid();
-    if(!grid) return;
-
-    document.querySelectorAll('#looseHomeCard').forEach((el,idx)=>{ if(idx>0) el.remove(); });
-    let card = $id('looseHomeCard');
-    if(!card){
-      card = document.createElement('button');
-      card.id = 'looseHomeCard';
-      card.type = 'button';
-      grid.appendChild(card);
-    }
-    if(card.parentElement !== grid) grid.appendChild(card);
-
-    const rows = await fetchLooseRowsV6();
-    const total = rows.reduce((s,r)=>s+getBalance(r),0);
-    const ready = rows.filter(r=>getBalance(r) >= READY_QTY).length;
-    card.className = 'loose-home-v6' + (ready > 0 ? ' loose-ready-alert' : '');
-    card.onclick = showLoosePageV6;
-    card.innerHTML = `
-      <i>👟</i>
-      <b>งานเศษ</b>
-      <span>Loose Stock</span>
-      <div class="loose-v6-stats">
-        <small class="loose-v6-pill">${nf(total)} คู่</small>
-        <small class="loose-v6-pill">Ready ${nf(ready)}</small>
-      </div>
-    `;
+    const card = byId('looseHomeCard');
+    if(!grid || !card) return;
+    if(card.parentElement !== grid){ grid.appendChild(card); }
+    card.style.display = '';
+    card.style.position = 'relative';
+    card.style.margin = '0';
+    card.style.width = '100%';
   }
 
-  window.renderLooseHomeCardV6 = renderLooseHomeCardV6;
+  function hideDuplicateLooseCards(){
+    const cards = Array.from(document.querySelectorAll('[id="looseHomeCard"]'));
+    if(cards.length <= 1) return;
+    cards.forEach((card, index) => {
+      if(index > 0) card.remove();
+    });
+  }
 
-  /* Duplicate ITEMKEY: เช็คเฉพาะ master_data เท่านั้น ไม่ใช้ duplicate_all_item_key */
-  async function getMasterRowsForDup(){
-    if(Array.isArray(window.masterRows) && window.masterRows.length) return window.masterRows;
-    try{ if(typeof masterRows !== 'undefined' && Array.isArray(masterRows) && masterRows.length) return masterRows; }catch(e){}
-    try{
-      let all=[]; let from=0; const size=1000;
-      while(true){
-        const {data,error}=await getSupabase().from('master_data').select('id,item_key').range(from, from+size-1);
-        if(error) throw error;
-        if(!data || !data.length) break;
-        all = all.concat(data);
-        if(data.length < size) break;
-        from += size;
+  function isolatePage(page){
+    const loose = byId('loosePage');
+    const home = byId('homePage');
+    if(page === 'home'){
+      document.body.classList.add('home-open');
+      document.body.classList.remove('loose-open');
+      if(loose) loose.style.display = 'none';
+      if(home) home.style.display = 'block';
+    }else if(page === 'loose'){
+      document.body.classList.add('loose-open');
+      document.body.classList.remove('home-open');
+      if(home) home.style.display = 'none';
+      if(loose) loose.style.display = 'block';
+    }else{
+      document.body.classList.remove('home-open','loose-open');
+      if(loose) loose.style.display = 'none';
+    }
+  }
+
+  let stabilizeQueued = false;
+  function stabilize(page){
+    if(stabilizeQueued) return;
+    stabilizeQueued = true;
+    requestAnimationFrame(function(){
+      stabilizeQueued = false;
+      stopNoisyTimers();
+      hideDuplicateLooseCards();
+      moveLooseCardIntoHomeGrid();
+      if(page) isolatePage(page);
+    });
+  }
+
+  const oldShowPage = window.showPage;
+  if(typeof oldShowPage === 'function'){
+    window.showPage = function(page){
+      const result = oldShowPage.apply(this, arguments);
+      stabilize(page);
+      return result;
+    };
+  }
+
+  const oldShowLoosePage = window.showLoosePage;
+  if(typeof oldShowLoosePage === 'function'){
+    window.showLoosePage = async function(){
+      isolatePage('loose');
+      const result = await oldShowLoosePage.apply(this, arguments);
+      stabilize('loose');
+      return result;
+    };
+  }
+
+  const oldRenderLoose = window.__refreshLooseHomeCardV5 || window.__refreshLooseHomeCardV4 || window.renderLooseHomeCard;
+  if(typeof oldRenderLoose === 'function'){
+    let looseRenderLock = false;
+    window.__refreshLooseHomeCardV6 = async function(){
+      if(looseRenderLock) return;
+      looseRenderLock = true;
+      try{ await oldRenderLoose(); }
+      finally{
+        looseRenderLock = false;
+        stabilize(document.body.classList.contains('loose-open') ? 'loose' : 'home');
       }
-      return all;
-    }catch(e){ return []; }
+    };
   }
 
-  function findMasterButtons(){
-    const arr=[];
-    const known=['btnMaster'];
-    known.forEach(id=>{ const el=$id(id); if(el) arr.push(el); });
-    document.querySelectorAll('#homePage button, .role-menu-grid button, .quick-list button').forEach(btn=>{
-      const txt=(btn.textContent||'').toUpperCase();
-      if(txt.includes('MASTER DATA') || txt.includes('MASTER')) arr.push(btn);
-    });
-    return [...new Set(arr)].filter(Boolean);
+  // Avoid smooth-scroll queue build-up on low-end mobile browsers.
+  const oldScrollTo = window.scrollTo;
+  window.scrollTo = function(arg1, arg2){
+    try{
+      if(arg1 && typeof arg1 === 'object' && arg1.behavior === 'smooth'){
+        arg1 = Object.assign({}, arg1, {behavior:'auto'});
+      }
+    }catch(e){}
+    return oldScrollTo.apply(window, arguments.length === 1 ? [arg1] : [arg1, arg2]);
+  };
+
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ stabilize('home'); }, 150);
+    setTimeout(function(){ stabilize(document.body.classList.contains('loose-open') ? 'loose' : 'home'); }, 900);
+  });
+
+  // One light observer replaces old 2-second polling layout patch.
+  const home = byId('homePage');
+  if(home && 'MutationObserver' in window){
+    const obs = new MutationObserver(function(){ stabilize(); });
+    obs.observe(home, {childList:true, subtree:true});
+  }
+})();
+</script>
+<!-- ===== END PERFORMANCE STABILIZER V6 ===== -->
+
+
+
+<!-- ===== FINAL PATCH v7: FG IN PO + Loose OUT Location editable / remove remark ===== -->
+<style>
+  #fgPoRow{display:grid!important;}
+  .loose-field.remark-hidden{display:none!important;}
+  #looseLocation:not([readonly]){background:#fff!important;border-color:#fb923c!important;box-shadow:0 0 0 4px rgba(249,115,22,.08)!important;}
+  .loose-out-hint{margin-top:8px;padding:10px 12px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;font-weight:800;}
+</style>
+<script>
+(function(){
+  const PATCH_VERSION = 'v7_PO_LOOSE_FIX_20260707';
+  const LOOSE_MASTER_TABLE = 'loose_master_data';
+  const LOOSE_BALANCE_VIEW = 'loose_balance';
+  const LOOSE_TRANSACTION_TABLE = 'loose_transaction';
+  let looseRowsV7 = [];
+  let looseMoveTypeV7 = 'IN';
+  let currentLooseRowV7 = null;
+
+  const byId = (id) => document.getElementById(id);
+  const txt = (id) => String(byId(id)?.value ?? '').trim();
+  const safe = (v) => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const norm = (v) => String(v ?? '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+  const num = (v) => Number(v || 0);
+  const fmt = (v) => Number(v || 0).toLocaleString('th-TH');
+  const itemOf = (r) => r?.Item ?? r?.item ?? '';
+  const codeOf = (r) => r?.CODE ?? r?.code ?? '';
+  const assortOf = (r) => r?.Assort ?? r?.assort ?? '';
+  const locOf = (r) => r?.Location ?? r?.location ?? '';
+  const custOf = (r) => r?.customer ?? r?.Customer ?? '';
+  const balOf = (r) => Number(r?.balance_pairs ?? r?.balance ?? r?.Quantity ?? r?.quantity ?? 0);
+  const idOf = (r) => r?.master_id ?? r?.id ?? null;
+  const keyOf = (r) => r?.item_key || [itemOf(r), codeOf(r), assortOf(r), locOf(r), custOf(r)].join('');
+
+  function canonicalCustomer(v){
+    const s = String(v || '').trim();
+    const n = norm(s);
+    if(n === 'bigc' || n === 'big c') return 'BIG C';
+    if(n === 'lotus') return 'LOTUS';
+    return s.toUpperCase();
   }
 
-  async function checkMasterDuplicateOnlyV6(){
-    const rows = await getMasterRowsForDup();
-    const map = new Map();
-    rows.forEach(r=>{
-      const k = norm(r.item_key);
-      if(!k) return;
-      map.set(k, (map.get(k)||0)+1);
-    });
-    let groups=0, duplicateRows=0;
-    map.forEach(c=>{ if(c>1){ groups++; duplicateRows += c; } });
-    const has = groups > 0;
-    findMasterButtons().forEach(btn=>{
-      btn.classList.toggle('master-duplicate-alert', has);
-      btn.title = has ? `พบ ITEMKEY ซ้ำใน master_data ${nf(groups)} กลุ่ม / ${nf(duplicateRows)} แถว` : 'ไม่พบ ITEMKEY ซ้ำใน master_data';
-      let badge = btn.querySelector('.master-dup-badge,.dup-badge-v72,.dup-badge-v73,.dup-badge-v74');
-      if(has){
-        if(!badge){
-          badge=document.createElement('span'); badge.className='master-dup-badge'; btn.appendChild(badge);
-        }
-        badge.textContent = nf(groups);
-      }else if(badge){ badge.remove(); }
-    });
-    return {groups, duplicateRows};
+  function buildItemKeyV7(item, code, assort, location, customer){
+    if(typeof buildItemKey === 'function') return buildItemKey(item, code, assort, location, customer);
+    return String(item||'') + String(code||'').toUpperCase() + String(assort||'') + String(location||'') + String(customer||'');
   }
 
-  window.checkDuplicateItemKeyWarning = checkMasterDuplicateOnlyV6;
-  window.checkDuplicateMasterAlert = checkMasterDuplicateOnlyV6;
-  window.getDuplicateItemKeyInfo = checkMasterDuplicateOnlyV6;
-
-  /* FG IN/OUT: แสดง PO ทั้งสองหน้า และบันทึก PO ลง fg_in/fg_out ถ้าตารางมีคอลัมน์ po */
-  function showFgPoAlways(){
-    const row=$id('fgPoRow');
-    if(row) row.style.setProperty('display','grid','important');
-    const input=$id('fgPo');
-    if(input){
-      input.placeholder = 'กรอกเลข PO';
-      input.autocomplete = 'off';
+  async function fetchAllV7(table){
+    if(typeof fetchAll === 'function') return await fetchAll(table);
+    let all=[]; let from=0; const size=1000;
+    while(true){
+      const {data,error}=await getSupabase().from(table).select('*').range(from, from+size-1);
+      if(error) throw error;
+      if(!data || !data.length) break;
+      all=all.concat(data);
+      if(data.length<size) break;
+      from+=size;
     }
+    return all;
   }
 
-  const oldShowFgPageV6 = window.showFgPage;
-  window.showFgPage = function(mode){
-    document.body.classList.remove('loose-open-v6');
-    const res = oldShowFgPageV6 ? oldShowFgPageV6.apply(this, arguments) : undefined;
-    setTimeout(showFgPoAlways,0);
-    setTimeout(showFgPoAlways,120);
-    return res;
-  };
-  try{ showFgPage = window.showFgPage; }catch(e){}
+  async function getColumns(table){
+    try{
+      const {data,error}=await getSupabase().from(table).select('*').limit(1);
+      if(error) throw error;
+      if(data && data.length) return Object.keys(data[0]);
+    }catch(e){}
+    return [];
+  }
+  function pickColumns(obj, cols){
+    if(!cols || !cols.length) return obj;
+    const set = new Set(cols);
+    const out = {};
+    Object.keys(obj).forEach(k => { if(set.has(k)) out[k] = obj[k]; });
+    return out;
+  }
+  async function insertSmartV7(table, payload, fallbackPayloads=[]){
+    const cols = await getColumns(table);
+    const list = [payload, ...fallbackPayloads].map(p => pickColumns(p, cols)).filter(p => Object.keys(p).length);
+    let lastError = null;
+    for(const p of list){
+      const {data,error} = await getSupabase().from(table).insert(p).select('*').single();
+      if(!error) return data;
+      lastError = error;
+    }
+    throw lastError || new Error('บันทึกไม่สำเร็จ: ' + table);
+  }
 
-  const oldClearFgFormV6 = window.clearFgForm;
-  window.clearFgForm = function(){
-    const keepPo = $id('fgPo')?.value || '';
-    const res = oldClearFgFormV6 ? oldClearFgFormV6.apply(this, arguments) : undefined;
-    showFgPoAlways();
-    /* clear form ให้ล้าง PO ด้วยตามปุ่มเคลียร์ */
-    if($id('fgPo')) $id('fgPo').value = '';
-    return res;
+  function getFgValuesV7(){
+    const customer = canonicalCustomer(txt('fgCustomer'));
+    if(byId('fgCustomer')) byId('fgCustomer').value = customer;
+    return {
+      item: txt('fgItem'),
+      code: txt('fgCode').toUpperCase(),
+      assort: txt('fgAssort'),
+      location: txt('fgLocation'),
+      customer,
+      po: txt('fgPo')
+    };
+  }
+  function buildKeyFromRowV7(r){ return buildItemKeyV7(itemOf(r), codeOf(r), assortOf(r), locOf(r), custOf(r)); }
+  function findLocalMasterV7(itemKey){
+    return (window.masterRows || masterRows || []).find(r => norm(r.item_key || buildKeyFromRowV7(r)) === norm(itemKey)) || null;
+  }
+  async function findRemoteMasterV7(itemKey){
+    const local = findLocalMasterV7(itemKey);
+    if(local) return local;
+    try{
+      const {data,error}=await getSupabase().from(MASTER_TABLE).select('*').eq('item_key', itemKey).maybeSingle();
+      if(error) throw error;
+      return data || null;
+    }catch(e){ return null; }
+  }
+  async function ensureMasterForInV7(f, qty, itemKey){
+    const found = await findRemoteMasterV7(itemKey);
+    if(found) return {inserted:false,row:found};
+    const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+    const payload = {Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:qty, customer:f.customer};
+    const {data,error}=await getSupabase().from(MASTER_TABLE).insert(payload).select('*').single();
+    if(error){
+      if(error.code === '23505') return {inserted:false,row: await findRemoteMasterV7(itemKey)};
+      throw new Error('เพิ่ม Master Data ไม่สำเร็จ: ' + (error.message || error));
+    }
+    const row = data || {...payload,item_key:itemKey};
+    try{ masterRows = [row, ...(masterRows || [])]; window.masterRows = masterRows; }catch(e){}
+    try{ if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows || []); }catch(e){}
+    return {inserted:true,row};
+  }
+
+  async function updatePoToTransactionV7(sourceTable, sourceId, poValue){
+    if(!poValue || !sourceId) return;
+    let res = await getSupabase().from('stock_transaction').update({po: poValue}).eq('source_table', sourceTable).eq('source_id', sourceId);
+    if(res.error && /column|po/i.test(res.error.message || '')){
+      res = await getSupabase().from('stock_transaction').update({PO: poValue}).eq('source_table', sourceTable).eq('source_id', sourceId);
+    }
+    if(res.error) console.warn('บันทึก PO ลง stock_transaction ไม่สำเร็จ', res.error);
+  }
+
+  function forceFgPoVisible(){
+    const row = byId('fgPoRow');
+    if(row) row.style.display = 'grid';
+    const po = byId('fgPo');
+    if(po) po.placeholder = currentFgMode === 'IN' ? 'กรอกเลข PO รับเข้า ถ้ามี' : 'กรอกเลข PO จ่ายออก';
+  }
+  const oldShowFgPageV7 = window.showFgPage;
+  window.showFgPage = function(mode){
+    const result = oldShowFgPageV7 ? oldShowFgPageV7.apply(this, arguments) : undefined;
+    setTimeout(forceFgPoVisible, 0);
+    setTimeout(forceFgPoVisible, 150);
+    return result;
   };
-  try{ clearFgForm = window.clearFgForm; }catch(e){}
+  document.addEventListener('DOMContentLoaded', () => setTimeout(forceFgPoVisible, 1000));
 
   window.saveFgMovement = async function(){
-    const rawQty = String($id('fgMoveQty')?.value ?? '').trim();
-    const moveQty = (typeof toNumber === 'function') ? toNumber(rawQty) : Number(rawQty);
+    const rawQty = String(byId('fgMoveQty')?.value ?? '').trim();
+    const moveQty = Number(rawQty);
     if(rawQty === '' || moveQty <= 0){
       if(window.showFgPopup) showFgPopup('กรุณาใส่จำนวน', 'จำนวน CARTON ต้องมากกว่า 0', 'error');
       else alert('กรุณาใส่จำนวน CARTON');
       return;
     }
-
-    const f = (typeof fgValues === 'function') ? fgValues() : {
-      item:$id('fgItem')?.value?.trim()||'', code:$id('fgCode')?.value?.trim()||'', assort:$id('fgAssort')?.value?.trim()||'', location:$id('fgLocation')?.value?.trim()||'', customer:$id('fgCustomer')?.value?.trim()||''
-    };
+    const f = getFgValuesV7();
     if(!f.item || !f.code || !f.assort || !f.location || !f.customer){
       if(window.showFgPopup) showFgPopup('ข้อมูลไม่ครบ', 'กรุณากรอก Item, CODE, Assort, Location และ Customer ให้ครบ', 'error');
       else alert('กรุณากรอก Item, CODE, Assort, Location และ Customer ให้ครบ');
       return;
     }
-    if(typeof customerCfg === 'function' && !customerCfg(f.customer)){
-      if(window.showFgPopup) showFgPopup('Customer ไม่ถูกต้อง', 'เลือก Customer จากรายการที่กำหนด', 'error');
-      else alert('Customer ไม่ถูกต้อง');
-      return;
-    }
-
-    const mode = (typeof currentFgMode !== 'undefined' && currentFgMode === 'OUT') ? 'OUT' : 'IN';
-    const tableName = mode === 'IN' ? 'fg_in' : 'fg_out';
-    const poValue = String($id('fgPo')?.value ?? '').trim();
-    if(mode === 'OUT' && !poValue){
+    const movementType = currentFgMode === 'OUT' ? 'OUT' : 'IN';
+    if(movementType === 'OUT' && !f.po){
       if(window.showFgPopup) showFgPopup('กรุณากรอก PO', 'FG OUT ต้องระบุเลข PO ก่อนบันทึก', 'error');
       else alert('กรุณากรอกเลข PO');
-      $id('fgPo')?.focus();
+      byId('fgPo')?.focus();
       return;
     }
-
-    const itemKey = (typeof itemKeyFromValues === 'function') ? itemKeyFromValues(f) : String(f.item||'') + String(f.code||'').toUpperCase() + String(f.assort||'') + String(f.location||'') + String(f.customer||'');
+    const tableName = movementType === 'IN' ? 'fg_in' : 'fg_out';
+    const itemKey = buildItemKeyV7(f.item, f.code, f.assort, f.location, f.customer);
     const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
-
-    if(typeof setLoading === 'function') setLoading(true, mode === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...');
+    if(typeof setLoading === 'function') setLoading(true, movementType === 'IN' ? 'กำลังบันทึก FG IN...' : 'กำลังบันทึก FG OUT...');
     try{
-      let masterInfo={inserted:false,row:null};
-      if(mode === 'IN'){
-        if(typeof ensureMasterForIn === 'function') masterInfo = await ensureMasterForIn(f, moveQty, itemKey);
-      }else{
-        if(typeof findMasterRemote === 'function'){
-          const exists = await findMasterRemote(itemKey);
-          if(!exists) throw new Error('ไม่พบข้อมูลใน Master Data สำหรับ FG OUT');
-        }
-      }
+      let masterInfo = {inserted:false,row:null};
+      if(movementType === 'IN') masterInfo = await ensureMasterForInV7(f, moveQty, itemKey);
+      else if(!(await findRemoteMasterV7(itemKey))) throw new Error('ไม่พบข้อมูลใน Master Data สำหรับ FG OUT');
 
-      const movementPayload = {
+      const payload = {
         item_key:itemKey,
         Item:f.item, item:f.item,
         CODE:f.code, code:f.code,
@@ -19437,47 +19403,26 @@ html body.count-settings-open-v91 #countSettingsPageV89{display:block !important
         Location:f.location, location:f.location,
         Quantity:moveQty, quantity:moveQty,
         customer:f.customer,
-        transaction_type:mode,
-        movement_type:mode,
-        po:poValue || null,
-        PO:poValue || null,
-        created_by:(typeof currentUser !== 'undefined' ? currentUser : null) || null
+        PO:f.po || null,
+        po:f.po || null,
+        transaction_type:movementType,
+        movement_type:movementType,
+        created_by:currentUser || window.currentUser || null
       };
+      const inserted = await insertSmartV7(tableName, payload, [
+        {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, PO:f.po || null, created_by:currentUser || window.currentUser || null},
+        {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, po:f.po || null, created_by:currentUser || window.currentUser || null}
+      ]);
+      if(f.po) await updatePoToTransactionV7(tableName, inserted?.id, f.po);
 
-      let insertedMovement;
-      if(typeof insertSmart === 'function'){
-        insertedMovement = await insertSmart(tableName, movementPayload, [
-          {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, po:poValue || null, created_by:(typeof currentUser !== 'undefined' ? currentUser : null) || null},
-          {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, po:poValue || null, created_by:(typeof currentUser !== 'undefined' ? currentUser : null) || null}
-        ]);
-      }else{
-        const {data,error}=await getSupabase().from(tableName).insert(movementPayload).select('*').single();
-        if(error) throw error;
-        insertedMovement = data;
-      }
-
-      /* ถ้ามี stock_transaction trigger ให้เติม PO ลง transaction ทั้ง IN และ OUT */
-      if(poValue && insertedMovement?.id){
-        try{
-          await getSupabase()
-            .from('stock_transaction')
-            .update({po:poValue, PO:poValue})
-            .eq('source_table', tableName)
-            .eq('source_id', insertedMovement.id);
-        }catch(e){ console.warn('Update transaction PO skipped:', e?.message || e); }
-      }
-
-      try{ if(typeof fetchAll === 'function'){ masterRows = await fetchAll('master_data'); window.masterRows = masterRows; } }catch(e){}
-      try{ if(typeof fetchAll === 'function') availableRows = await fetchAll('available_stock'); }catch(e){}
+      try{ masterRows = await fetchAllV7(MASTER_TABLE); window.masterRows = masterRows; }catch(e){}
+      try{ availableRows = await fetchAllV7(AVAILABLE_TABLE); }catch(e){}
       try{ if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows || []); }catch(e){}
       try{ if(typeof renderMasterTable === 'function') renderMasterTable(masterRows || []); }catch(e){}
       try{ if(typeof updateHomeStats === 'function') await updateHomeStats(); }catch(e){}
-      try{ await checkMasterDuplicateOnlyV6(); }catch(e){}
-      if(typeof clearFgForm === 'function') clearFgForm(false);
-      showFgPoAlways();
-
-      const customerText = (typeof customerLabel === 'function') ? customerLabel(f.customer) : f.customer;
-      const msg = `${mode === 'IN' ? 'เพิ่มข้อมูลเรียบร้อยแล้ว' : 'เบิกข้อมูลเรียบร้อยแล้ว'}\n${customerText} ${moveQty.toLocaleString('th-TH')} CARTON${poValue ? '\nPO: '+poValue : ''}`;
+      try{ if(typeof clearFgForm === 'function') clearFgForm(false); }catch(e){}
+      forceFgPoVisible();
+      const msg = `${movementType === 'IN' ? 'เพิ่มข้อมูลเรียบร้อยแล้ว' : 'เบิกข้อมูลเรียบร้อยแล้ว'}\n${f.customer} ${moveQty.toLocaleString('th-TH')} CARTON${f.po ? '\nPO: ' + f.po : ''}`;
       if(typeof showToast === 'function') showToast(msg);
     }catch(err){
       if(window.showFgPopup) showFgPopup('บันทึกไม่สำเร็จ', err?.message || String(err), 'error');
@@ -19486,52 +19431,954 @@ html body.count-settings-open-v91 #countSettingsPageV89{display:block !important
       if(typeof setLoading === 'function') setLoading(false);
     }
   };
-  try{ saveFgMovement = window.saveFgMovement; }catch(e){}
 
-  /* ทำให้ showPage ไม่ทำให้หน้า Loose ซ้อน */
-  const previousShowPage = window.showPage;
-  window.showPage = function(page){
-    if(page !== 'loose'){
-      document.body.classList.remove('loose-open-v6');
-      const lp=$id('loosePage'); if(lp) lp.style.setProperty('display','none','important');
+  async function loadLooseRowsV7(){
+    try{ looseRowsV7 = await fetchAllV7(LOOSE_BALANCE_VIEW); }
+    catch(e){
+      try{ looseRowsV7 = (await fetchAllV7(LOOSE_MASTER_TABLE)).map(r => ({...r, master_id:r.id, balance_pairs:balOf(r)})); }
+      catch(err){ looseRowsV7 = []; }
     }
-    const res = previousShowPage ? previousShowPage.apply(this, arguments) : undefined;
+    return looseRowsV7;
+  }
+  function searchLooseRowsV7(keyword){
+    const q = norm(keyword);
+    if(!q) return looseRowsV7;
+    return looseRowsV7.filter(r => [keyOf(r), itemOf(r), codeOf(r), assortOf(r), locOf(r), custOf(r), balOf(r)].map(norm).join('|').includes(q));
+  }
+  function syncLooseMoveUiV7(){
+    const isOut = looseMoveTypeV7 === 'OUT';
+    byId('looseBtnIn')?.classList.toggle('active', !isOut);
+    byId('looseBtnOut')?.classList.toggle('active', isOut);
+    byId('looseBtnIn')?.classList.toggle('in', !isOut);
+    byId('looseBtnOut')?.classList.toggle('out', isOut);
+    const loc = byId('looseLocation');
+    if(loc){
+      loc.readOnly = !isOut;
+      loc.placeholder = isOut ? 'กรอก / แก้ไข Location ตอนจ่ายออก' : 'Location จาก Master งานเศษ';
+    }
+    const remarkField = byId('looseRemarkField');
+    if(remarkField) remarkField.classList.toggle('remark-hidden', isOut);
+    const hint = byId('looseOutHint');
+    if(hint) hint.style.display = isOut ? 'block' : 'none';
+  }
+  window.setLooseMoveType = function(type){
+    looseMoveTypeV7 = type === 'OUT' ? 'OUT' : 'IN';
+    syncLooseMoveUiV7();
+  };
+
+  window.renderLooseMove = async function(){
+    currentLooseRowV7 = null;
+    looseMoveTypeV7 = 'IN';
+    if(byId('looseTitle')) byId('looseTitle').textContent = 'รับเข้า / จ่ายออกงานเศษ';
+    if(!looseRowsV7.length) await loadLooseRowsV7();
+    const content = byId('looseContent');
+    if(!content) return;
+    const backHtml = (typeof back === 'function') ? back('รับเข้า / จ่ายออกงานเศษ') : '<div class="loose-menu-nav"><button onclick="renderLooseMenu()">← งานเศษ</button></div>';
+    const tabsHtml = (typeof tabs === 'function') ? tabs('move') : '';
+    content.innerHTML = `${backHtml}${tabsHtml}
+      <div class="loose-panel">
+        <div class="loose-type-switch">
+          <button id="looseBtnIn" class="active in" onclick="setLooseMoveType('IN')">IN รับเข้า</button>
+          <button id="looseBtnOut" onclick="setLooseMoveType('OUT')">OUT จ่ายออก</button>
+        </div>
+        <div id="looseOutHint" class="loose-out-hint" style="display:none;">โหมด OUT: สามารถกรอกหรือแก้ไข Location ได้ และตัดช่องหมายเหตุออก</div>
+        <div class="loose-search-row"><input id="looseQuickSearch" placeholder="ค้นหา Item / CODE / Assort / Customer" oninput="renderLooseSuggest()"><button onclick="renderLooseSuggest()">ค้นหา</button></div>
+        <div id="looseSuggest" class="loose-suggest-list"></div>
+        <div class="loose-form-grid">
+          <div class="loose-field"><label>Item</label><input id="looseItem" readonly></div>
+          <div class="loose-field"><label>CODE</label><input id="looseCode" readonly></div>
+          <div class="loose-field"><label>Assort</label><input id="looseAssort" readonly></div>
+          <div class="loose-field"><label>Location</label><input id="looseLocation" readonly></div>
+          <div class="loose-field"><label>Customer</label><input id="looseCustomer" readonly></div>
+          <div class="loose-field"><label>จำนวน (คู่)</label><input id="looseQty" type="number" inputmode="decimal" min="0" placeholder="กรอกจำนวน"></div>
+          <div class="loose-field"><label>PO</label><input id="loosePo" placeholder="เลข PO ถ้ามี"></div>
+          <div id="looseRemarkField" class="loose-field"><label>หมายเหตุ</label><input id="looseRemark" placeholder="หมายเหตุ ถ้ามี"></div>
+        </div>
+        <div class="loose-current-box"><span><small>คงเหลืองานเศษปัจจุบัน</small><span id="looseSelectedText">ยังไม่ได้เลือกรายการ</span></span><strong id="looseCurrentBalance">0 คู่</strong></div>
+        <button id="looseSaveBtn" class="loose-save-btn orange" onclick="saveLooseMovement()" disabled>บันทึกข้อมูล</button>
+      </div>`;
+    syncLooseMoveUiV7();
+  };
+
+  window.renderLooseSuggest = function(){
+    const box = byId('looseSuggest');
+    if(!box) return;
+    const q = txt('looseQuickSearch');
+    if(q.length < 2){ box.innerHTML = ''; return; }
+    const rows = searchLooseRowsV7(q).slice(0,30);
+    window.__looseSuggestRowsV7 = rows;
+    if(!rows.length){ box.innerHTML = '<div class="empty">ไม่พบข้อมูลงานเศษ</div>'; return; }
+    box.innerHTML = rows.map((r,i)=>`<button class="loose-suggest-item" onclick="selectLooseRowByIndex(${i})"><span><b>${safe(itemOf(r))} ${safe(codeOf(r))} ${safe(assortOf(r))}</b><small>${safe(locOf(r)||'-')} | ${safe(custOf(r)||'-')} | ${safe(keyOf(r))}</small></span><strong>${fmt(balOf(r))} คู่</strong></button>`).join('');
+  };
+
+  window.selectLooseRowByIndex = function(i){
+    const r = (window.__looseSuggestRowsV7 || [])[i];
+    if(!r) return;
+    currentLooseRowV7 = r;
+    byId('looseItem').value = itemOf(r);
+    byId('looseCode').value = codeOf(r);
+    byId('looseAssort').value = assortOf(r);
+    byId('looseLocation').value = locOf(r);
+    byId('looseCustomer').value = custOf(r);
+    byId('looseCurrentBalance').textContent = fmt(balOf(r)) + ' คู่';
+    byId('looseSelectedText').textContent = (itemOf(r) + ' ' + codeOf(r) + ' ' + assortOf(r)).trim();
+    byId('looseSaveBtn').disabled = false;
+    byId('looseSuggest').innerHTML = '';
+    syncLooseMoveUiV7();
+  };
+
+  window.saveLooseMovement = async function(){
+    if(!currentLooseRowV7) return alert('กรุณาเลือกรายการงานเศษก่อน');
+    const qty = num(txt('looseQty'));
+    if(!qty || qty <= 0) return alert('กรุณากรอกจำนวนคู่ให้ถูกต้อง');
+    const locationValue = txt('looseLocation') || locOf(currentLooseRowV7);
+    if(looseMoveTypeV7 === 'OUT' && !locationValue) return alert('กรุณากรอก Location ก่อนจ่ายออกงานเศษ');
+    const oldBal = balOf(currentLooseRowV7);
+    const newBal = looseMoveTypeV7 === 'IN' ? oldBal + qty : oldBal - qty;
+    if(looseMoveTypeV7 === 'OUT' && newBal < 0 && !confirm('ยอดคงเหลืองานเศษจะติดลบ ต้องการบันทึกต่อหรือไม่')) return;
+    const payload = {
+      master_id:idOf(currentLooseRowV7),
+      item_key:keyOf(currentLooseRowV7),
+      item:itemOf(currentLooseRowV7),
+      code:codeOf(currentLooseRowV7),
+      assort:assortOf(currentLooseRowV7),
+      location:locationValue,
+      customer:custOf(currentLooseRowV7),
+      transaction_type:looseMoveTypeV7,
+      quantity:qty,
+      balance:newBal,
+      po:txt('loosePo') || null,
+      created_by:window.currentUser || currentUser || null
+    };
+    if(looseMoveTypeV7 === 'IN') payload.remark = txt('looseRemark') || null;
+    try{
+      if(typeof setLoading === 'function') setLoading(true, 'กำลังบันทึกงานเศษ...');
+      const {error} = await getSupabase().from(LOOSE_TRANSACTION_TABLE).insert(payload);
+      if(error) throw error;
+      if(typeof showToast === 'function') showToast('บันทึกงานเศษสำเร็จ');
+      await loadLooseRowsV7();
+      if(typeof loadLooseData === 'function') { try{ await loadLooseData(true); }catch(e){} }
+      await renderLooseMove();
+      if(typeof updateLooseHome === 'function') { try{ updateLooseHome(); }catch(e){} }
+    }catch(err){
+      alert('บันทึกไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      if(typeof setLoading === 'function') setLoading(false);
+    }
+  };
+
+  console.log('Loaded patch', PATCH_VERSION);
+})();
+</script>
+
+
+
+<!-- =========================================================
+V8 PRODUCTION CLEANUP PATCH
+- Clean Loose Card UI
+- Remove debug/developer notices
+- Stable Home placement
+- Fresh Export All
+- Clean Loose OUT form behavior
+========================================================= -->
+<style id="v8ProductionStyle">
+  /* Hide debug / developer hint boxes */
+  .dev-note,.debug-note,.patch-note,.orange-note,
+  [data-dev-note="true"], .loose-out-hint, .loose-mode-hint{
+    display:none!important;
+  }
+
+  /* Prevent Loose page being rendered under Home */
+  #homePage[style*="block"] ~ #loosePage,
+  body:not(.v8-loose-active) #loosePage{
+    display:none!important;
+  }
+
+  /* Home grid final layout */
+  #homePage .role-menu-grid{
+    align-items:stretch!important;
+  }
+
+  #looseHomeCard{
+    display:grid!important;
+    grid-template-rows:auto 1fr auto!important;
+    gap:10px!important;
+    min-height:138px!important;
+    width:100%!important;
+    padding:14px!important;
+    border-radius:20px!important;
+    border:1px solid #f2d2ba!important;
+    background:#fff!important;
+    box-shadow:0 8px 24px rgba(16,24,40,.10)!important;
+    color:#20242f!important;
+    overflow:hidden!important;
+    position:relative!important;
+    text-align:left!important;
+  }
+
+  #looseHomeCard::before{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:linear-gradient(135deg,rgba(255,237,213,.78),rgba(255,255,255,.35));
+    pointer-events:none;
+  }
+
+  #looseHomeCard > *{position:relative;z-index:1;}
+
+  #looseHomeCard .v8-loose-head{
+    display:flex!important;
+    align-items:center!important;
+    gap:10px!important;
+    min-width:0!important;
+  }
+
+  #looseHomeCard .v8-loose-icon{
+    width:50px!important;
+    height:50px!important;
+    min-width:50px!important;
+    border-radius:16px!important;
+    display:grid!important;
+    place-items:center!important;
+    margin:0!important;
+    background:linear-gradient(135deg,#f97316,#ea580c)!important;
+    color:#fff!important;
+    font-style:normal!important;
+    font-size:25px!important;
+    box-shadow:0 10px 22px rgba(234,88,12,.22)!important;
+  }
+
+  #looseHomeCard .v8-loose-title{
+    display:block!important;
+    font-size:18px!important;
+    line-height:1.1!important;
+    font-weight:900!important;
+    color:#20242f!important;
+    white-space:nowrap!important;
+  }
+
+  #looseHomeCard .v8-loose-sub{
+    display:block!important;
+    margin-top:3px!important;
+    font-size:12px!important;
+    line-height:1.2!important;
+    font-weight:700!important;
+    color:#6b7280!important;
+    white-space:nowrap!important;
+  }
+
+  #looseHomeCard .v8-loose-stats{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+  }
+
+  #looseHomeCard .v8-stat{
+    border:1px solid #ffedd5!important;
+    background:rgba(255,255,255,.90)!important;
+    border-radius:14px!important;
+    padding:9px 10px!important;
+    min-width:0!important;
+  }
+
+  #looseHomeCard .v8-stat small{
+    display:block!important;
+    color:#9a3412!important;
+    font-size:11px!important;
+    line-height:1.1!important;
+    font-weight:800!important;
+    margin:0 0 4px!important;
+  }
+
+  #looseHomeCard .v8-stat b{
+    display:block!important;
+    color:#ea580c!important;
+    font-size:17px!important;
+    line-height:1.1!important;
+    font-weight:900!important;
+    word-break:normal!important;
+  }
+
+  #looseHomeCard .v8-loose-foot{
+    display:flex!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:8px!important;
+  }
+
+  #looseHomeCard .v8-ready{
+    display:inline-flex!important;
+    align-items:center!important;
+    width:max-content!important;
+    max-width:100%!important;
+    padding:6px 10px!important;
+    border-radius:999px!important;
+    background:#ffedd5!important;
+    color:#c2410c!important;
+    font-size:12px!important;
+    font-weight:900!important;
+    white-space:nowrap!important;
+  }
+
+  #looseHomeCard .v8-arrow{
+    color:#ea580c!important;
+    font-size:22px!important;
+    line-height:1!important;
+    font-weight:900!important;
+  }
+
+  #looseHomeCard.v8-alert{
+    animation:v8LoosePulse 1.6s infinite;
+  }
+
+  @keyframes v8LoosePulse{
+    0%{box-shadow:0 0 0 0 rgba(249,115,22,.34),0 8px 24px rgba(16,24,40,.10)}
+    70%{box-shadow:0 0 0 8px rgba(249,115,22,0),0 8px 24px rgba(16,24,40,.10)}
+    100%{box-shadow:0 0 0 0 rgba(249,115,22,0),0 8px 24px rgba(16,24,40,.10)}
+  }
+
+  /* Clean loose form */
+  .loose-form .loose-debug,
+  .loose-form .loose-dev-msg,
+  .loose-form .loose-explain,
+  #looseOutDeveloperNote,
+  #looseModeDeveloperNote{
+    display:none!important;
+  }
+
+  body.v8-loose-out #looseRemark,
+  body.v8-loose-out label[for="looseRemark"],
+  body.v8-loose-out #looseRemarkWrap,
+  body.v8-loose-out .loose-remark-wrap{
+    display:none!important;
+  }
+
+  @media(max-width:520px){
+    #looseHomeCard{min-height:124px!important;padding:12px!important;}
+    #looseHomeCard .v8-loose-icon{width:46px!important;height:46px!important;min-width:46px!important;font-size:22px!important;}
+    #looseHomeCard .v8-loose-title{font-size:16px!important;}
+    #looseHomeCard .v8-stat b{font-size:15px!important;}
+  }
+</style>
+
+<script id="v8ProductionScript">
+(function(){
+  'use strict';
+  if(window.__V8_PRODUCTION_PATCH__) return;
+  window.__V8_PRODUCTION_PATCH__ = true;
+
+  const cfg = {
+    looseMaster:'loose_master_data',
+    looseBalance:'loose_balance',
+    looseTransaction:'loose_transaction',
+    looseCount:'stock_count_loose'
+  };
+
+  const n = v => Number(v || 0).toLocaleString('th-TH');
+  const num = v => Number(v ?? 0) || 0;
+  const looseQty = r => num(r?.balance_pairs ?? r?.balance ?? r?.available_qty ?? r?.Quantity ?? r?.quantity ?? 0);
+
+  function has(fn){ return typeof window[fn] === 'function'; }
+
+  async function fetchAllFresh(table){
+    if(has('fetchAll')) return await window.fetchAll(table);
+    let all=[], from=0, size=1000;
+    while(true){
+      const {data,error}=await getSupabase().from(table).select('*').range(from, from+size-1);
+      if(error) throw error;
+      if(!data || !data.length) break;
+      all=all.concat(data);
+      if(data.length<size) break;
+      from += size;
+    }
+    return all;
+  }
+
+  async function loadLooseBalanceSafe(){
+    try{ return await fetchAllFresh(cfg.looseBalance); }
+    catch(e){
+      try{ return await fetchAllFresh(cfg.looseMaster); }
+      catch(err){ return []; }
+    }
+  }
+
+  function getHomeGrid(){
+    return document.querySelector('#homePage .role-menu-grid.admin-menu-grid') ||
+           document.querySelector('#homePage .role-menu-grid.user-menu-grid') ||
+           document.querySelector('#homePage .role-menu-grid') ||
+           document.querySelector('#homePage .quick-list');
+  }
+
+  function removeLooseDuplicates(card){
+    document.querySelectorAll('#looseHomeCard').forEach(el => { if(el !== card) el.remove(); });
+    document.querySelectorAll('.loose-home-card-v3,.loose-home-card,.loose-card-home').forEach(el => {
+      if(el.id !== 'looseHomeCard') el.remove();
+    });
+  }
+
+  function ensureLooseCard(){
+    const grid = getHomeGrid();
+    if(!grid) return null;
+    let card = document.getElementById('looseHomeCard');
+    if(!card){
+      card = document.createElement('button');
+      card.type = 'button';
+      card.id = 'looseHomeCard';
+    }
+    if(card.parentElement !== grid) grid.appendChild(card);
+    card.onclick = function(){
+      document.body.classList.add('v8-loose-active');
+      if(has('showLoosePage')) window.showLoosePage();
+      else if(has('showPage')) window.showPage('loose');
+    };
+    removeLooseDuplicates(card);
+    return card;
+  }
+
+  let looseRenderLock = 0;
+  async function renderLooseCard(force=false){
+    const now = Date.now();
+    if(!force && now - looseRenderLock < 850) return;
+    looseRenderLock = now;
+    const card = ensureLooseCard();
+    if(!card) return;
+    const rows = await loadLooseBalanceSafe();
+    const totalPairs = rows.reduce((s,r)=>s + looseQty(r),0);
+    const readyCount = rows.filter(r => looseQty(r) >= 6).length;
+    card.className = readyCount > 0 ? 'v8-alert' : '';
+    card.innerHTML = `
+      <div class="v8-loose-head">
+        <i class="v8-loose-icon">👟</i>
+        <span>
+          <b class="v8-loose-title">งานเศษ</b>
+          <small class="v8-loose-sub">Loose Stock</small>
+        </span>
+      </div>
+      <div class="v8-loose-stats">
+        <span class="v8-stat"><small>คงเหลือ</small><b>${n(totalPairs)} คู่</b></span>
+        <span class="v8-stat"><small>พร้อมแพ็ค</small><b>${n(readyCount)}</b></span>
+      </div>
+      <div class="v8-loose-foot">
+        <span class="v8-ready">${readyCount > 0 ? '🟠 Ready to Pack' : 'สถานะปกติ'}</span>
+        <span class="v8-arrow">›</span>
+      </div>`;
+  }
+
+  function removeDevText(){
+    const words = ['โหมด OUT :', 'สามารถกรอกหรือแก้ไข Location ได้', 'ตัดช่องหมายเหตุออก', 'Developer', 'debug'];
+    document.querySelectorAll('body *').forEach(el => {
+      if(!el || ['SCRIPT','STYLE','TEXTAREA','INPUT','SELECT','OPTION'].includes(el.tagName)) return;
+      const t = (el.textContent || '').trim();
+      if(t && words.some(w => t.includes(w)) && t.length < 220){ el.style.display = 'none'; }
+    });
+  }
+
+  function syncLooseOutUI(){
+    const text = document.body.innerText || '';
+    const isOut = /งานเศษ/.test(text) && /(OUT|จ่ายออก)/.test(text) && !/(IN รับเข้า|รับเข้า)/.test(document.activeElement?.textContent || '');
+    document.body.classList.toggle('v8-loose-out', isOut);
+    removeDevText();
+  }
+
+  function enforcePageState(page){
     if(page === 'home'){
-      const home=$id('homePage'); if(home) home.style.setProperty('display','block','important');
-      setTimeout(renderLooseHomeCardV6,60);
+      document.body.classList.remove('v8-loose-active');
+      const lp = document.getElementById('loosePage');
+      if(lp) lp.style.display = 'none';
     }
-    setTimeout(()=>checkMasterDuplicateOnlyV6().catch(()=>{}),120);
-    setTimeout(showFgPoAlways,50);
+    if(page !== 'home') setTimeout(removeDevText, 120);
+  }
+
+  const oldShowPage = window.showPage;
+  window.showPage = function(page){
+    const res = oldShowPage ? oldShowPage.apply(this, arguments) : undefined;
+    enforcePageState(page);
+    if(page === 'home') setTimeout(()=>renderLooseCard(true), 180);
     return res;
   };
-  try{ showPage = window.showPage; }catch(e){}
 
-  const previousLoadMaster = window.loadMasterData;
+  const oldShowLoose = window.showLoosePage;
+  if(oldShowLoose){
+    window.showLoosePage = async function(){
+      document.body.classList.add('v8-loose-active');
+      const res = await oldShowLoose.apply(this, arguments);
+      setTimeout(()=>{ removeDevText(); syncLooseOutUI(); }, 120);
+      return res;
+    };
+  }
+
+  const oldSetLooseMoveType = window.setLooseMoveType;
+  if(oldSetLooseMoveType){
+    window.setLooseMoveType = function(type){
+      const res = oldSetLooseMoveType.apply(this, arguments);
+      document.body.classList.toggle('v8-loose-out', String(type).toUpperCase()==='OUT');
+      setTimeout(removeDevText, 80);
+      return res;
+    };
+  }
+
+  // Export fresh data only when user clicks
+  window.exportExcel = async function(){
+    if(!window.XLSX) return alert('โหลด XLSX ไม่สำเร็จ กรุณารีเฟรชหน้า');
+    try{
+      if(has('setLoading')) setLoading(true,'กำลัง Export ข้อมูลล่าสุด...');
+      const tables = [
+        ['Master_Data','master_data'],
+        ['Available_Stock','available_stock'],
+        ['FG_IN','fg_in'],
+        ['FG_OUT','fg_out'],
+        ['Stock_Count','stock_count'],
+        ['Stock_Transaction','stock_transaction'],
+        ['Loose_Master','loose_master_data'],
+        ['Loose_Balance','loose_balance'],
+        ['Loose_Transaction','loose_transaction'],
+        ['Loose_Count','stock_count_loose'],
+        ['Active_Users','active_users']
+      ];
+      const wb = XLSX.utils.book_new();
+      for(const [sheet, table] of tables){
+        let rows=[];
+        try{ rows = await fetchAllFresh(table); }
+        catch(e){ rows = [{status:'โหลดไม่ได้หรือยังไม่มีตาราง/วิว', table, error:e?.message || String(e)}]; }
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows.length ? rows : [{}]), sheet.slice(0,31));
+      }
+      const now = new Date();
+      const stamp = now.toISOString().replace(/[:T]/g,'-').slice(0,16);
+      XLSX.writeFile(wb, `stock_export_current_${stamp}.xlsx`);
+      if(has('showToast')) showToast('Export Excel สำเร็จ');
+    }catch(err){
+      alert('Export Excel ไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      if(has('setLoading')) setLoading(false);
+    }
+  };
+
+  const oldLoadMaster = window.loadMasterData;
   window.loadMasterData = async function(){
-    const res = previousLoadMaster ? await previousLoadMaster.apply(this, arguments) : undefined;
-    await renderLooseHomeCardV6();
-    await checkMasterDuplicateOnlyV6();
-    showFgPoAlways();
+    const res = oldLoadMaster ? await oldLoadMaster.apply(this, arguments) : undefined;
+    setTimeout(()=>renderLooseCard(true), 250);
     return res;
   };
-  try{ loadMasterData = window.loadMasterData; }catch(e){}
 
+  document.addEventListener('click', function(){ setTimeout(syncLooseOutUI, 80); }, true);
+  document.addEventListener('input', function(){ setTimeout(removeDevText, 80); }, true);
   document.addEventListener('DOMContentLoaded', function(){
-    ensureLoosePageV6();
-    showFgPoAlways();
-    setTimeout(renderLooseHomeCardV6,500);
-    setTimeout(()=>checkMasterDuplicateOnlyV6().catch(()=>{}),700);
-    setTimeout(()=>checkMasterDuplicateOnlyV6().catch(()=>{}),2200);
+    setTimeout(()=>renderLooseCard(true), 600);
+    setTimeout(removeDevText, 800);
   });
+})();
+</script>
 
-  /* กันแพตช์เก่าดึง duplicate view กลับมา: ย้ำเฉพาะ master_data */
-  setInterval(()=>{
-    if(!document.body.classList.contains('loose-open-v6')) renderLooseHomeCardV6();
-    checkMasterDuplicateOnlyV6().catch(()=>{});
-    showFgPoAlways();
-  }, 5000);
 
-  console.log('Loaded patch', PATCH);
+
+<!-- ===== V9 FG IN ASSORT -> SOLID -> LOOSE WAIT PRODUCTION PATCH ===== -->
+<style id="fgAssortV9Style">
+  .fgv9-page{display:none;max-width:760px;margin:0 auto;padding:0 0 22px}.fgv9-page.show{display:block}
+
+  body.fgv9-active #homePage,
+  body.fgv9-active #masterPage,
+  body.fgv9-active #countPage,
+  body.fgv9-active #fgPage,
+  body.fgv9-active #dashboardPage,
+  body.fgv9-active #otherCustomerPage,
+  body.fgv9-active #loosePage{display:none!important}
+  body.fgv9-active #fgV9Page{display:block!important}
+  body.fgv9-active .topbar{display:none!important}
+  body.fgv9-active .bottom-nav-modern, body.fgv9-active .fgv9-bottom{display:none!important}
+  .fgv9-top{position:sticky;top:0;z-index:1200;margin:0 -14px 18px;padding:14px 16px;background:linear-gradient(135deg,#d90b16,#a80010);color:#fff;display:flex;align-items:center;gap:12px;box-shadow:0 10px 24px rgba(168,0,16,.22)}
+  .fgv9-top button{width:42px;height:42px;border:0;border-radius:14px;background:rgba(255,255,255,.14);color:#fff;font-size:22px;font-weight:900}.fgv9-top h2{margin:0;font-size:19px;line-height:1.15}.fgv9-top small{display:block;font-size:12px;opacity:.85;margin-top:2px}
+  .fgv9-card{background:#fff;border:1px solid #edf0f3;border-radius:22px;padding:16px;margin:12px 0;box-shadow:0 8px 22px rgba(16,24,40,.08)}
+  .fgv9-title{margin:0 0 12px;color:#b91c1c;font-size:17px;font-weight:900}.fgv9-muted{color:#6b7280;font-size:12px}.fgv9-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fgv9-field{margin-bottom:12px}.fgv9-field label{display:block;margin:0 0 6px;color:#111827;font-size:13px;font-weight:900}.fgv9-field input,.fgv9-field select,.fgv9-field textarea{width:100%;height:48px;border:1.5px solid #e5e7eb;border-radius:14px;padding:0 13px;font-size:15px;background:#fff;outline:0}.fgv9-field textarea{height:88px;padding:12px 13px;resize:vertical}.fgv9-field input:focus,.fgv9-field select:focus,.fgv9-field textarea:focus{border-color:#d90b16;box-shadow:0 0 0 4px rgba(217,11,22,.08)}
+  .fgv9-btn{border:0;border-radius:16px;min-height:52px;padding:0 16px;font-size:16px;font-weight:900}.fgv9-primary{background:linear-gradient(135deg,#d90b16,#a80010);color:#fff}.fgv9-secondary{background:#fff;color:#111827;border:1px solid #e5e7eb}.fgv9-orange{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa}.fgv9-green{background:#ecfdf5;color:#047857;border:1px solid #bbf7d0}
+  .fgv9-type-grid{display:grid;gap:12px}.fgv9-type{border:1.5px solid #e5e7eb;border-radius:22px;background:#fff;padding:18px;display:grid;grid-template-columns:58px 1fr 24px;align-items:center;gap:14px;text-align:left;box-shadow:0 8px 22px rgba(16,24,40,.06)}.fgv9-type.active{border-color:#d90b16;background:#fff5f5}.fgv9-type i{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;font-size:28px;background:#fff1f2;font-style:normal}.fgv9-type b{display:block;font-size:18px;color:#111827}.fgv9-type span{display:block;margin-top:4px;color:#6b7280;font-size:12px;line-height:1.45}.fgv9-type em{font-style:normal;font-size:28px;color:#d90b16}
+  .fgv9-assort-line{display:grid;grid-template-columns:1fr 20px 1fr 20px 1.3fr;gap:8px;align-items:center}.fgv9-assort-line span{text-align:center;color:#6b7280;font-weight:900}.fgv9-info{padding:12px;border-radius:16px;background:#f0fdf4;border:1px solid #bbf7d0;color:#166534;font-size:13px;font-weight:700;line-height:1.55}.fgv9-warn{padding:12px;border-radius:16px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:13px;font-weight:700;line-height:1.55}.fgv9-error{padding:12px;border-radius:16px;background:#fff1f2;border:1px solid #fecdd3;color:#be123c;font-size:13px;font-weight:800;line-height:1.55}
+  .fgv9-table{width:100%;border-collapse:separate;border-spacing:0;min-width:0}.fgv9-table th{position:static;background:#f9fafb;color:#374151;padding:10px 8px;font-size:12px;text-align:center}.fgv9-table td{border-bottom:1px solid #f3f4f6;padding:10px 8px;text-align:center;font-size:13px}.fgv9-table input[type="checkbox"]{width:22px;height:22px}.fgv9-table input[type="number"]{height:38px;text-align:center;border:1px solid #e5e7eb;border-radius:10px;width:76px;padding:0 8px}.fgv9-pill{display:inline-flex;align-items:center;gap:4px;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:900}.fgv9-pill.red{background:#fee2e2;color:#b91c1c}.fgv9-pill.orange{background:#ffedd5;color:#c2410c}.fgv9-pill.green{background:#dcfce7;color:#166534}.fgv9-pill.gray{background:#f3f4f6;color:#374151}
+  .fgv9-summary{display:grid;grid-template-columns:1fr 1fr;gap:10px}.fgv9-summary div{border:1px solid #fee2e2;background:#fff7f7;border-radius:16px;padding:12px;text-align:center}.fgv9-summary small{display:block;color:#7f1d1d;font-weight:800}.fgv9-summary b{display:block;margin-top:4px;color:#b91c1c;font-size:24px}
+  .fgv9-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}.fgv9-list-card{border:1px solid #edf0f3;border-radius:18px;background:#fff;padding:13px;margin:10px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}.fgv9-list-card b{display:block;font-size:15px}.fgv9-list-card small{display:block;color:#6b7280;margin-top:3px;line-height:1.45}.fgv9-list-card strong{font-size:22px;color:#b91c1c}.fgv9-tabs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:12px}.fgv9-tabs button{border:0;border-bottom:2px solid transparent;background:#fff;color:#6b7280;min-height:44px;font-weight:900}.fgv9-tabs button.active{color:#d90b16;border-color:#d90b16}
+  .fgv9-bottom{position:fixed;left:0;right:0;bottom:0;z-index:1300;display:grid;grid-template-columns:repeat(5,1fr);background:rgba(255,255,255,.96);border-top:1px solid #e5e7eb;backdrop-filter:blur(10px)}.fgv9-bottom button{border:0;background:transparent;min-height:62px;color:#6b7280;font-size:11px;font-weight:800}.fgv9-bottom button span{display:block;font-size:20px}.fgv9-bottom button.active{color:#d90b16}.fgv9-empty{text-align:center;color:#6b7280;padding:30px 12px;border:1px dashed #d1d5db;border-radius:18px;background:#fff}.fgv9-hidden{display:none!important}
+  @media(max-width:480px){.fgv9-grid{grid-template-columns:1fr}.fgv9-card{border-radius:20px;padding:14px}.fgv9-top{margin-left:-12px;margin-right:-12px}.fgv9-assort-line{grid-template-columns:1fr 15px 1fr 15px 1.2fr;gap:6px}.fgv9-actions{grid-template-columns:1fr 1fr}.fgv9-type{grid-template-columns:52px 1fr 20px;padding:15px}.fgv9-type i{width:50px;height:50px;font-size:25px}.fgv9-type b{font-size:16px}}
+</style>
+
+<script id="fgAssortV9Script">
+(function(){
+  const ASSORT_TABLE = 'dept_assort_pending';
+  const FG_IN_TABLE = 'fg_in';
+  const MASTER_TABLE_V9 = 'master_data';
+  const LOOSE_MASTER_TABLE_V9 = 'loose_master_data';
+  let v9OriginalShowFgPage = window.showFgPage;
+  let currentAssortDraft = null;
+  let pendingRows = [];
+  let pendingFilter = 'ALL';
+  let selectedPendingRow = null;
+
+  const THB = 'th-TH';
+  const q = id => document.getElementById(id);
+  const esc = v => String(v ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+  const nf = n => Number(n||0).toLocaleString(THB);
+  const normalizeV9 = v => String(v ?? '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+  const todayISO = () => new Date().toISOString().slice(0,10);
+  const nowTime = () => new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});
+
+  function toastV9(msg){ if(typeof showToast==='function') showToast(msg); else alert(msg); }
+  function loadingV9(on,msg=''){ if(typeof setLoading==='function') setLoading(on,msg); }
+  async function fetchAllV9(table){
+    if(typeof fetchAll === 'function') return await fetchAll(table);
+    let all=[], from=0, size=1000;
+    while(true){
+      const {data,error}=await getSupabase().from(table).select('*').range(from,from+size-1);
+      if(error) throw error; if(!data||!data.length) break;
+      all=all.concat(data); if(data.length<size) break; from+=size;
+    }
+    return all;
+  }
+
+  function ensureV9Page(){
+    if(q('fgV9Page')) return;
+    const main = document.querySelector('main') || document.body;
+    main.insertAdjacentHTML('beforeend', `<section id="fgV9Page" class="fgv9-page"></section>`);
+  }
+  function clearFinalPageClassesV9(){
+    document.body.classList.remove(
+      'final-page-lock','final-page-home','final-page-master','final-page-count',
+      'final-page-fg','final-page-dashboard','final-page-otherCustomer',
+      'show-other-customer','hide-main-topbar'
+    );
+  }
+
+  function hideV9Page(){
+    document.body.classList.remove('fgv9-active');
+    const el=q('fgV9Page');
+    if(el){
+      el.classList.remove('show');
+      el.style.display='none';
+    }
+  }
+
+  function showV9Page(){
+    ensureV9Page();
+    clearFinalPageClassesV9();
+    document.body.classList.add('fgv9-active');
+    ['homePage','masterPage','countPage','fgPage','dashboardPage','otherCustomerPage','loosePage'].forEach(id=>{
+      const el=q(id);
+      if(el) el.style.display='none';
+    });
+    const page=q('fgV9Page');
+    page.style.display='block';
+    page.classList.add('show');
+    const topbar=document.querySelector('#appPage .topbar');
+    if(topbar) topbar.style.display='none';
+    if(typeof closeMenu==='function') closeMenu();
+    window.scrollTo({top:0,behavior:'auto'});
+    setTimeout(()=>{ if(document.body.classList.contains('fgv9-active')){ clearFinalPageClassesV9(); page.style.display='block'; page.classList.add('show'); } }, 80);
+    setTimeout(()=>{ if(document.body.classList.contains('fgv9-active')){ clearFinalPageClassesV9(); page.style.display='block'; page.classList.add('show'); } }, 250);
+  }
+  function topV9(title, sub='', back='home'){
+    const backFn = back === 'type' ? 'showFgInTypeSelect()' : back === 'pending' ? 'showAssortPendingList()' : "showPage('home')";
+    return `<div class="fgv9-top"><button onclick="${backFn}">←</button><div style="flex:1"><h2>${esc(title)}</h2>${sub?`<small>${esc(sub)}</small>`:''}</div><button onclick="showPage('home')">⌂</button></div>`;
+  }
+  function bottomV9(active='FGIN'){
+    return '';
+  }
+
+  window.showFgPage = function(mode){
+    if(mode === 'IN') return window.showFgInTypeSelect();
+    hideV9Page();
+    return v9OriginalShowFgPage ? v9OriginalShowFgPage.apply(this, arguments) : undefined;
+  };
+  const oldShowPage = window.showPage;
+  window.showPage = function(page){
+    hideV9Page();
+    const res = oldShowPage ? oldShowPage.apply(this, arguments) : undefined;
+    document.body.classList.remove('fgv9-active');
+    return res;
+  };
+
+  window.showFgInTypeSelect = function(){
+    showV9Page();
+    q('fgV9Page').innerHTML = `${topV9('FG IN','เลือกประเภทงานรับเข้า','home')}
+      <div class="fgv9-card">
+        <h3 class="fgv9-title">เลือกประเภทงานรับเข้า</h3>
+        <div class="fgv9-type-grid">
+          <button class="fgv9-type active" onclick="showFgInSolid()"><i>📦</i><div><b>งาน SOLID</b><span>สินค้าเต็มกล่อง / Size เดียว เข้า Location ได้เลย</span></div><em>›</em></button>
+          <button class="fgv9-type" onclick="showFgInAssortForm()"><i>🗃️</i><div><b>งาน ASSORT</b><span>หลาย Size ในกล่องเดียว เลือกเข้า PO และรอแปลงเป็น SOLID / งานเศษ</span></div><em>›</em></button>
+          <button class="fgv9-type" onclick="showAssortPendingList()"><i>⏳</i><div><b>กำลังดำเนินการ</b><span>งาน ASSORT ที่รอเปลี่ยน Barcode / รอเข้า Location / รอเข้างานเศษ</span></div><em>›</em></button>
+        </div>
+      </div>${bottomV9('FGIN')}`;
+  };
+  window.showFgInSolid = function(){ hideV9Page(); if(v9OriginalShowFgPage) v9OriginalShowFgPage('IN'); };
+
+  window.showFgInAssortForm = function(){
+    currentAssortDraft = null;
+    showV9Page();
+    q('fgV9Page').innerHTML = `${topV9('FG IN (ASSORT)','รับเข้ากล่อง Assort','type')}
+      <div class="fgv9-card">
+        <h3 class="fgv9-title">ข้อมูลกล่อง ASSORT</h3>
+        <div class="fgv9-field"><label>Item *</label><input id="aItem" placeholder="เช่น GM41120"></div>
+        <div class="fgv9-field"><label>CODE *</label><input id="aCode" placeholder="เช่น BK"></div>
+        <div class="fgv9-field"><label>Assort สูงสุด 4 Size *</label><div class="fgv9-assort-line"><input id="aSizeFrom" type="number" placeholder="36" oninput="updateAssortPreview()"><span>-</span><input id="aSizeTo" type="number" placeholder="39" oninput="updateAssortPreview()"><span>/</span><input id="aRatio" inputmode="numeric" maxlength="4" placeholder="1122" oninput="updateAssortPreview()"></div><div id="aPreview" class="fgv9-muted" style="margin-top:6px">รูปแบบ: Size-Size/จำนวนต่อ Size เช่น 36-39/1122</div></div>
+        <div class="fgv9-field"><label>จำนวนกล่องทั้งหมด *</label><input id="aBoxCount" type="number" min="1" placeholder="เช่น 5" oninput="updateAssortPreview()"></div>
+        <div class="fgv9-field"><label>Location ต้นทาง</label><input id="aOriginLocation" placeholder="ไม่บังคับกรอก"></div>
+        <div class="fgv9-field"><label>PO *</label><input id="aPo" placeholder="เช่น PO1234"></div>
+        <div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="showFgInTypeSelect()">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="prepareAssortPOSelect()">ต่อไป</button></div>
+      </div>${bottomV9('FGIN')}`;
+  };
+
+  function parseAssortForm(){
+    const item=q('aItem')?.value.trim().toUpperCase()||'';
+    const code=q('aCode')?.value.trim().toUpperCase()||'';
+    const from=Number(q('aSizeFrom')?.value||0);
+    const to=Number(q('aSizeTo')?.value||0);
+    const ratio=String(q('aRatio')?.value||'').replace(/\D/g,'');
+    const boxCount=Number(q('aBoxCount')?.value||0);
+    const origin=q('aOriginLocation')?.value.trim().toUpperCase()||'';
+    const po=q('aPo')?.value.trim().toUpperCase()||'';
+    if(!item||!code||!from||!to||!ratio||!boxCount||!po) throw new Error('กรุณากรอก Item, CODE, Assort, จำนวนกล่อง และ PO ให้ครบ');
+    if(boxCount<=0) throw new Error('จำนวนกล่องต้องมากกว่า 0');
+    if(to<from) throw new Error('Size สิ้นสุดต้องมากกว่าหรือเท่ากับ Size เริ่มต้น');
+    const sizes=[]; for(let s=from;s<=to;s++) sizes.push(String(s));
+    if(sizes.length>4) throw new Error('ASSORT รองรับสูงสุด 4 Size');
+    if(ratio.length!==sizes.length) throw new Error('จำนวนตัวเลขหลัง / ต้องเท่ากับจำนวน Size');
+    const detail=sizes.map((size,i)=>{
+      const perBoxQty=Number(ratio[i]||0);
+      const totalQty=perBoxQty*boxCount;
+      return {
+        size,
+        perBoxQty,
+        boxCount,
+        qty:totalQty,
+        selected:true,
+        fullCartons:Math.floor(totalQty/6),
+        fgOutQty:Math.floor(totalQty/6)*6,
+        looseQty:totalQty%6
+      };
+    });
+    if(detail.some(x=>!x.perBoxQty)) throw new Error('จำนวนต่อ Size ต้องมากกว่า 0');
+    return {item,code,from,to,ratio,boxCount,origin,po,assort:`${from}-${to}/${ratio}`,detail,total:detail.reduce((s,x)=>s+x.qty,0)};
+  }
+  window.updateAssortPreview = function(){
+    const box=q('aPreview'); if(!box) return;
+    try{
+      const d=parseAssortForm();
+      box.className='fgv9-info';
+      box.innerHTML=`รูปแบบ Assort: <b>${esc(d.assort)}</b> จำนวน <b>${nf(d.boxCount)} กล่อง</b><br>${d.detail.map(x=>`Size ${x.size} = ${x.perBoxQty} คู่/กล่อง × ${d.boxCount} = <b>${nf(x.qty)} คู่</b>`).join('<br>')}<br>รวมทั้งหมด <b>${nf(d.total)} คู่</b>`;
+    }
+    catch(e){ box.className='fgv9-muted'; box.textContent='รูปแบบ: Size-Size/จำนวนต่อ Size เช่น 36-39/1122 และกรอกจำนวนกล่อง'; }
+  };
+  window.prepareAssortPOSelect = function(){
+    try{ currentAssortDraft=parseAssortForm(); showAssortPOSelect(); }
+    catch(e){ alert(e.message); }
+  };
+  window.showAssortPOSelect = function(){
+    if(!currentAssortDraft) return showFgInAssortForm();
+    showV9Page(); const d=currentAssortDraft;
+    q('fgV9Page').innerHTML = `${topV9('ASSORT - เลือกเข้า PO',`PO : ${d.po}`,'type')}
+      <div class="fgv9-card"><div class="fgv9-warn">Assort : <b>${esc(d.assort)}</b><br>จำนวนกล่องทั้งหมด : <b>${nf(d.boxCount)} กล่อง</b><br>จำนวนรวม : <b>${nf(d.total)} คู่</b><br>PO : <b>${esc(d.po)}</b></div>
+        <label style="display:flex;align-items:center;justify-content:space-between;margin:14px 0;padding:12px;border:1px solid #e5e7eb;border-radius:14px;font-weight:900">เข้า ${esc(d.po)} ทั้งหมด <input id="aAllPo" type="checkbox" ${d.detail.every(x=>x.selected)?'checked':''} onchange="toggleAllAssortPO(this.checked)"></label>
+        <h3 class="fgv9-title">เลือก Size เข้า PO</h3><div style="overflow:auto"><table class="fgv9-table"><thead><tr><th>Size</th><th>คู่/กล่อง</th><th>กล่อง</th><th>รวมคู่</th><th>เข้า PO</th></tr></thead><tbody id="assortPoBody"></tbody></table></div><div id="assortPoSummary" style="margin-top:12px"></div>
+        <div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="showFgInAssortForm()">ย้อนกลับ</button><button class="fgv9-btn fgv9-primary" onclick="saveAssortPOSelection()">บันทึก</button></div></div>`;
+    renderAssortPOBody();
+  };
+  window.toggleAllAssortPO = function(checked){ currentAssortDraft.detail.forEach(x=>x.selected=checked); renderAssortPOBody(); };
+  window.toggleAssortSizePO = function(size, checked){ const row=currentAssortDraft.detail.find(x=>x.size===String(size)); if(row) row.selected=checked; const all=q('aAllPo'); if(all) all.checked=currentAssortDraft.detail.every(x=>x.selected); renderAssortPOBody(); };
+  function renderAssortPOBody(){
+    const d=currentAssortDraft; if(!d) return; const body=q('assortPoBody'); if(!body) return;
+    body.innerHTML=d.detail.map(x=>`<tr><td><b>${esc(x.size)}</b></td><td>${nf(x.perBoxQty)}</td><td>${nf(x.boxCount)}</td><td><b>${nf(x.qty)}</b></td><td><input type="checkbox" ${x.selected?'checked':''} onchange="toggleAssortSizePO('${esc(x.size)}',this.checked)"></td></tr>`).join('');
+    const selected=d.detail.filter(x=>x.selected);
+    const unselected=d.detail.filter(x=>!x.selected);
+    const selectedPairs=selected.reduce((s,x)=>s+x.qty,0);
+    const fgOutPairs=selected.reduce((s,x)=>s+x.fgOutQty,0);
+    const fullCartons=selected.reduce((s,x)=>s+x.fullCartons,0);
+    const loosePairs=selected.reduce((s,x)=>s+x.looseQty,0);
+    const pendingPairs=unselected.reduce((s,x)=>s+x.qty,0);
+    q('assortPoSummary').innerHTML=`<div class="fgv9-summary"><div><small>เข้า PO รวม</small><b>${nf(selectedPairs)} คู่</b></div><div><small>คงเหลือไม่เลือก</small><b>${nf(pendingPairs)} คู่</b></div></div>
+      <div class="fgv9-card" style="box-shadow:none;margin-top:10px;background:#fafafa"><h3 class="fgv9-title">ระบบจะบันทึกอัตโนมัติ</h3>
+        <table class="fgv9-table"><thead><tr><th>Size</th><th>รวมคู่</th><th>FG OUT</th><th>งานเศษ</th></tr></thead><tbody>${selected.map(x=>`<tr><td>${esc(x.size)}</td><td>${nf(x.qty)}</td><td>${x.fullCartons?`${nf(x.fullCartons)} กล่อง (${nf(x.fgOutQty)} คู่)`:'-'}</td><td>${x.looseQty?`${nf(x.looseQty)} คู่`:'-'}</td></tr>`).join('')}</tbody></table>
+        <div class="fgv9-summary" style="margin-top:10px"><div><small>ส่ง FG OUT</small><b>${nf(fullCartons)} กล่อง</b><small>${nf(fgOutPairs)} คู่</small></div><div><small>รอเข้างานเศษ</small><b>${nf(loosePairs)} คู่</b></div></div>
+      </div>`;
+  }
+
+  async function insertAssortRow(payload){
+    const {error}=await getSupabase().from(ASSORT_TABLE).insert(payload);
+    if(error) throw error;
+  }
+
+  async function insertFgOutFromAssort(d, r, cartons, qtyPairs){
+    if(!cartons || !qtyPairs) return;
+    const itemKey=`${d.item}${d.code}${r.size}${d.po}`;
+    // ใช้เฉพาะคอลัมน์ที่มีจริงใน fg_out เพื่อไม่ให้เกิด schema cache error เช่น remark column missing
+    const {error}=await getSupabase().from('fg_out').insert({
+      item_key:itemKey,
+      "Item":d.item,
+      "CODE":d.code,
+      "Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),
+      "Location":d.origin || null,
+      "Quantity":qtyPairs,
+      customer:null,
+      po:d.po,
+      created_by:currentUser||null
+    });
+    if(error) throw error;
+  }
+
+  async function insertLooseFromAssortDraft(d, r, qtyPairs){
+    if(!qtyPairs || qtyPairs <= 0) return;
+    const location=d.origin || '';
+    const itemKey=`${d.item}${String(d.code||'').toUpperCase()}${r.size}${location}${d.po||''}`;
+    const {data,error}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).select('*').eq('item_key',itemKey).limit(1);
+    if(error) throw error;
+    if(data && data.length){
+      const oldQty=Number(data[0].Quantity ?? data[0].quantity ?? 0);
+      const {error:e2}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).update({"Quantity":oldQty+qtyPairs}).eq('id',data[0].id);
+      if(e2) throw e2;
+    }else{
+      const payload={item_key:itemKey,"Item":d.item,"CODE":d.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qtyPairs,customer:null,created_by:currentUser||null};
+      const {error:e3}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).insert(payload);
+      if(e3) throw e3;
+    }
+  }
+
+  window.saveAssortPOSelection = async function(){
+    const d=currentAssortDraft; if(!d) return;
+    const selectedRows=d.detail.filter(x=>x.selected);
+    const unselectedRows=d.detail.filter(x=>!x.selected && x.qty>0);
+    if(selectedRows.length===0 && unselectedRows.length===0) return alert('กรุณาเลือกข้อมูล');
+    loadingV9(true,'กำลังบันทึก ASSORT...');
+    try{
+      for(const r of selectedRows){
+        if(r.fullCartons>0){
+          await insertFgOutFromAssort(d, r, r.fullCartons, r.fgOutQty);
+        }
+        if(r.looseQty>0){
+          // เศษที่ไม่ครบ 6 คู่ ให้เข้า loose_master_data ทันที ไม่ต้องรอแปลงเป็น SOLID
+          await insertLooseFromAssortDraft(d, r, r.looseQty);
+        }
+      }
+      for(const r of unselectedRows){
+        await insertAssortRow({source_item:d.item,code:d.code,assort:d.assort,origin_location:d.origin||null,po:d.po,size:r.size,total_qty:r.qty,po_qty:0,remaining_qty:r.qty,status:'WAIT_BARCODE',created_by:currentUser||null,updated_by:currentUser||null});
+      }
+      const fgOutPairs=selectedRows.reduce((sum,x)=>sum+x.fgOutQty,0);
+      const loosePairs=selectedRows.reduce((sum,x)=>sum+x.looseQty,0);
+      const pendingPairs=unselectedRows.reduce((sum,x)=>sum+x.qty,0);
+      toastV9('บันทึก ASSORT สำเร็จ');
+      showAssortResult({solidQty:fgOutPairs, loose:loosePairs>0 || pendingPairs>0, msg:`ส่ง FG OUT ${nf(fgOutPairs)} คู่ / งานเศษ ${nf(loosePairs)} คู่`});
+    }catch(e){ alert('บันทึกไม่สำเร็จ: '+(e.message||e)); }
+    finally{ loadingV9(false); }
+  };
+
+  async function loadPending(){
+    try{ pendingRows=await fetchAllV9(ASSORT_TABLE); }
+    catch(e){ pendingRows=[]; console.warn('โหลดตาราง ASSORT ไม่สำเร็จ',e); }
+  }
+  function statusText(s){ return {WAIT_BARCODE:'รอเปลี่ยน Barcode',READY_LOCATION:'พร้อมเข้า Location',LOOSE_WAIT:'รอเข้าคลังงานเศษ',COMPLETED:'สำเร็จ'}[s]||s||'-'; }
+  function statusClass(s){ return s==='COMPLETED'?'green':s==='LOOSE_WAIT'?'orange':s==='READY_LOCATION'?'green':'orange'; }
+  function filterPendingRows(){
+    return pendingRows.filter(r=>{
+      if(pendingFilter==='BARCODE') return r.status==='WAIT_BARCODE';
+      if(pendingFilter==='LOCATION') return r.status==='READY_LOCATION';
+      if(pendingFilter==='LOOSE') return r.status==='LOOSE_WAIT';
+      return r.status!=='COMPLETED';
+    }).sort((a,b)=>new Date(b.created_at||0)-new Date(a.created_at||0));
+  }
+  window.showAssortPendingList = async function(filter='ALL'){
+    pendingFilter=filter; showV9Page(); loadingV9(true,'กำลังโหลดงานค้าง...'); await loadPending(); loadingV9(false);
+    const rows=filterPendingRows();
+    q('fgV9Page').innerHTML = `${topV9('กำลังดำเนินการ','ASSORT → SOLID / งานเศษ','type')}
+      <div class="fgv9-card"><div class="fgv9-tabs"><button class="${pendingFilter==='ALL'?'active':''}" onclick="showAssortPendingList('ALL')">ทั้งหมด</button><button class="${pendingFilter==='BARCODE'?'active':''}" onclick="showAssortPendingList('BARCODE')">รอ Barcode</button><button class="${pendingFilter==='LOOSE'?'active':''}" onclick="showAssortPendingList('LOOSE')">รอเข้างานเศษ</button></div>
+      ${rows.length?rows.map(r=>`<button class="fgv9-list-card" onclick="openAssortPendingDetail(${Number(r.id)})"><div><span class="fgv9-pill red">${esc(r.po||'-')}</span> <b>${esc(r.source_item)} ${esc(r.code)} / ${esc(r.assort)}</b><small>Size ${esc(r.size)} | Location ต้นทาง: ${esc(r.origin_location||'-')}<br>${new Date(r.created_at||Date.now()).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'})} | <span class="fgv9-pill ${statusClass(r.status)}">${statusText(r.status)}</span></small></div><strong>${nf(r.remaining_qty)} คู่</strong></button>`).join(''):'<div class="fgv9-empty">ไม่มีรายการกำลังดำเนินการ</div>'}
+      <button class="fgv9-btn fgv9-primary" style="width:100%;margin-top:12px" onclick="showFgInAssortForm()">+ เพิ่มรายการจาก ASSORT</button></div>${bottomV9('FGIN')}`;
+  };
+  window.openAssortPendingDetail = function(id){
+    selectedPendingRow=pendingRows.find(r=>Number(r.id)===Number(id)); if(!selectedPendingRow) return;
+    const r=selectedPendingRow; showV9Page();
+    q('fgV9Page').innerHTML = `${topV9('รายละเอียดรายการ',`PO : ${r.po||'-'}`,'pending')}
+      <div class="fgv9-card"><div style="display:flex;justify-content:space-between;gap:10px"><div><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Assort :</b> ${esc(r.assort)}</p><p><b>Location ต้นทาง :</b> ${esc(r.origin_location||'-')}</p></div><div style="text-align:center"><small>คงเหลือ</small><strong style="display:block;font-size:32px;color:#b91c1c">${nf(r.remaining_qty)}</strong><small>คู่</small></div></div><div class="fgv9-warn">เข้า Location เฉพาะจำนวนที่ครบทุก 6 คู่ ส่วนเศษที่ไม่ครบ 6 คู่จะเข้า งานเศษ อัตโนมัติ</div></div>
+      <div class="fgv9-card"><h3 class="fgv9-title">จัดการ Size ที่เหลือ</h3><table class="fgv9-table"><thead><tr><th>Size</th><th>คงเหลือ</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody><tr><td>${esc(r.size)}</td><td>${nf(r.remaining_qty)}</td><td><span class="fgv9-pill ${statusClass(r.status)}">${statusText(r.status)}</span></td><td>${r.status==='LOOSE_WAIT'?`<button class="fgv9-btn fgv9-orange" onclick="storePendingToLoose(${Number(r.id)})">เข้างานเศษ</button>`:`<button class="fgv9-btn fgv9-primary" onclick="showConvertToSolid(${Number(r.id)})">แปลงเป็น SOLID</button>`}</td></tr></tbody></table></div>${bottomV9('FGIN')}`;
+  };
+
+  window.showConvertToSolid = function(id){
+    const r=pendingRows.find(x=>Number(x.id)===Number(id))||selectedPendingRow; if(!r) return;
+    selectedPendingRow=r; showV9Page();
+    q('fgV9Page').innerHTML = `${topV9('แปลงเป็น SOLID',`Size ${r.size}`,'pending')}
+      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลรายการ</h3><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Assort เดิม :</b> ${esc(r.assort)}</p><p><b>Size :</b> ${esc(r.size)}</p><p><b>คงเหลือ :</b> <span style="color:#b91c1c;font-weight:900">${nf(r.remaining_qty)} คู่</span></p></div>
+      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder="เช่น E12"></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะแยกให้อัตโนมัติ: ครบทุก 6 คู่ เข้า Location / เศษที่ไม่ครบ 6 คู่ เข้า งานเศษ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
+  };
+  async function insertOrUpdateMasterSolid(r, location, qty){
+    const itemKey=`${r.source_item}${String(r.code||'').toUpperCase()}${r.size}${location}`;
+    const {data,error}=await getSupabase().from(MASTER_TABLE_V9).select('*').eq('item_key',itemKey).limit(1);
+    if(error) throw error;
+    if(data&&data.length){
+      const oldQty=Number(data[0].Quantity ?? data[0].quantity ?? 0);
+      const {error:e2}=await getSupabase().from(MASTER_TABLE_V9).update({"Quantity":oldQty+qty}).eq('id',data[0].id); if(e2) throw e2;
+    }else{
+      const payload={item_key:itemKey,"Item":r.source_item,"CODE":r.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qty,customer:r.customer||null,created_by:currentUser||null};
+      const {error:e3}=await getSupabase().from(MASTER_TABLE_V9).insert(payload); if(e3) throw e3;
+    }
+    const {error:e4}=await getSupabase().from(FG_IN_TABLE).insert({item_key:itemKey,"Item":r.source_item,"CODE":r.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qty,customer:r.customer||null,po:r.po||null,created_by:currentUser||null}); if(e4) throw e4;
+  }
+  window.saveConvertToSolid = async function(id){
+    const r=pendingRows.find(x=>Number(x.id)===Number(id))||selectedPendingRow; if(!r) return;
+    const location=q('solidLocation')?.value.trim().toUpperCase()||'';
+    const qty=Number(r.remaining_qty||0);
+    if(!location) return alert('กรุณากรอก Location ปลายทาง');
+    if(!qty||qty<=0) return alert('ไม่พบจำนวนคงเหลือ');
+
+    // กติกาใหม่:
+    // - เข้า Location ได้เฉพาะจำนวนที่หาร 6 ลงตัวเท่านั้น
+    // - ถ้าน้อยกว่า 6 คู่ เข้า งานเศษ ทั้งหมด
+    // - ถ้าเช่น 10 คู่ => เข้า Location 6 คู่ และเข้า งานเศษ 4 คู่
+    const solidQty=Math.floor(qty/6)*6;
+    const looseQty=qty%6;
+
+    loadingV9(true,'กำลังบันทึกการแปลง...');
+    try{
+      if(solidQty>0){
+        await insertOrUpdateMasterSolid(r, location, solidQty);
+      }
+      if(looseQty>0){
+        await insertOrUpdateLoose({...r, remaining_qty:looseQty, target_location:location});
+      }
+      const {error}=await getSupabase().from(ASSORT_TABLE).update({remaining_qty:0,status:'COMPLETED',target_location:location,updated_by:currentUser||null,updated_at:new Date().toISOString()}).eq('id',r.id); if(error) throw error;
+      showAssortResult({solidQty:solidQty, loose:looseQty>0, msg:`เข้า Location ${nf(solidQty)} คู่ / งานเศษ ${nf(looseQty)} คู่`});
+    }catch(e){ alert('บันทึกไม่สำเร็จ: '+(e.message||e)); }
+    finally{ loadingV9(false); }
+  };
+  async function insertOrUpdateLoose(r){
+    const location=r.target_location || r.origin_location || '';
+    const qty=Number(r.remaining_qty||0);
+    const itemKey=`${r.source_item}${String(r.code||'').toUpperCase()}${r.size}${location}${r.customer||''}`;
+    const {data,error}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).select('*').eq('item_key',itemKey).limit(1);
+    if(error) throw error;
+    if(data&&data.length){
+      const oldQty=Number(data[0].Quantity ?? data[0].quantity ?? 0);
+      const {error:e2}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).update({"Quantity":oldQty+qty}).eq('id',data[0].id); if(e2) throw e2;
+    }else{
+      const payload={item_key:itemKey,"Item":r.source_item,"CODE":r.code,"Assort":Number.isNaN(Number(r.size))?r.size:Number(r.size),"Location":location,"Quantity":qty,customer:r.customer||null,created_by:currentUser||null};
+      const {error:e3}=await getSupabase().from(LOOSE_MASTER_TABLE_V9).insert(payload); if(e3) throw e3;
+    }
+  }
+  window.storePendingToLoose = async function(id){
+    const r=pendingRows.find(x=>Number(x.id)===Number(id))||selectedPendingRow; if(!r) return;
+    if(!confirm('ยืนยันนำรายการนี้เข้าคลังงานเศษ?')) return;
+    loadingV9(true,'กำลังบันทึกเข้างานเศษ...');
+    try{
+      await insertOrUpdateLoose(r);
+      const {error}=await getSupabase().from(ASSORT_TABLE).update({status:'COMPLETED',updated_by:currentUser||null,updated_at:new Date().toISOString()}).eq('id',r.id); if(error) throw error;
+      toastV9('บันทึกเข้างานเศษสำเร็จ'); showAssortPendingList('LOOSE');
+    }catch(e){ alert('บันทึกไม่สำเร็จ: '+(e.message||e)); }
+    finally{ loadingV9(false); }
+  };
+  window.showAssortResult = function({solidQty=0, loose=false, msg=''}){
+    showV9Page();
+    q('fgV9Page').innerHTML = `${topV9('ผลการแปลง',msg,'type')}
+      <div class="fgv9-card" style="text-align:center;padding:28px 16px"><div style="font-size:68px">${loose?'⚠️':'✅'}</div><h3 style="font-size:22px;margin:8px 0;color:#111827">${loose?'ย้ายไปรอเข้าคลังงานเศษ':'แปลงเป็น SOLID สำเร็จ'}</h3><p class="fgv9-muted">จำนวน ${nf(solidQty)} คู่</p>${loose?'<div class="fgv9-warn">จำนวนไม่ครบ 6 คู่ ระบบจะยังไม่เข้า Stock หลัก และย้ายไปเมนูรอเข้าคลังงานเศษ</div>':''}<div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="showAssortPendingList()">ดูรายการค้าง</button><button class="fgv9-btn fgv9-primary" onclick="showFgInTypeSelect()">เสร็จสิ้น</button></div></div>${bottomV9('FGIN')}`;
+  };
+
+  window.exportAssortPendingExcel = async function(){
+    try{
+      const rows=await fetchAllV9(ASSORT_TABLE);
+      const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows.length?rows:[{}]),'Assort_Pending'); XLSX.writeFile(wb,`assort_pending_${todayISO()}.xlsx`);
+    }catch(e){ alert('Export ไม่สำเร็จ: '+(e.message||e)); }
+  };
 })();
 </script>
 
