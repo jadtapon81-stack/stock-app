@@ -2105,6 +2105,7 @@ body{
       <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
       <button id="btnFgIn" class="menu-btn" onclick="showFgPage('IN')">➕ FG IN</button>
       <button id="btnFgOut" class="menu-btn" onclick="showFgPage('OUT')">➖ FG OUT</button>
+      <button id="btnTransferLocation" class="menu-btn transfer-menu-btn" onclick="showTransferPage()">⇆ Transfer Location</button>
       <button class="menu-btn" onclick="exportExcel()">  📊 Export Excel</button>
       <button class="menu-btn logout" onclick="logout()">ออกจากระบบ</button>
     </aside>
@@ -2185,6 +2186,9 @@ body{
           <button class="quick-item red" onclick="showFgPage('OUT')">
             <i>⬆</i><span><b>FG OUT</b><small>ตัดสินค้าออกจากคลัง</small></span><em>›</em>
           </button>
+          <button id="quickTransferLocationBtn" class="quick-item red transfer-location-btn" onclick="showTransferPage()">
+            <i>⇆</i><span><b>Transfer Location</b><small>โอนย้ายสินค้าระหว่างโลเคชั่น</small></span><em>›</em>
+          </button>
           <button class="quick-item red" onclick="showPage('master')">
             <i>▦</i><span><b>Master Data</b><small>ข้อมูลสินค้า</small></span><em>›</em>
           </button>
@@ -2262,10 +2266,15 @@ body{
                 <input id="fgAssort" class="fg-row-input" oninput="handleFgInput('assort')" onfocus="handleFgFocus('assort')" autocomplete="off" placeholder="-">
                 <div id="fgAssortSuggest" class="fg-suggest"></div>
               </div>
-              <div class="fg-info-row fg-field">
-                <div class="fg-row-label">Location</div>
+              <div class="fg-info-row fg-field" id="fgFromLocationRow">
+                <div class="fg-row-label" id="fgLocationLabel">Location</div>
                 <input id="fgLocation" class="fg-row-input" oninput="handleFgInput('location')" onfocus="handleFgFocus('location')" autocomplete="off" placeholder="-">
                 <div id="fgLocationSuggest" class="fg-suggest"></div>
+              </div>
+              <div id="fgTransferToLocationRow" class="fg-info-row fg-field transfer-to-row" style="display:none;">
+                <div class="fg-row-label">To Location</div>
+                <input id="fgToLocation" class="fg-row-input" list="fgTransferLocationList" autocomplete="off" placeholder="">
+                <datalist id="fgTransferLocationList"></datalist>
               </div>
               <div class="fg-info-row fg-field">
                 <div class="fg-row-label">Customer</div>
@@ -2278,6 +2287,28 @@ body{
               <div class="fg-stock-label">ยอดคงเหลือปัจจุบัน (Available Stock)</div>
               <input id="fgSystemQty" class="fg-stock-number" type="number" readonly value="0">
               <div class="fg-unit">CARTON</div>
+            </div>
+
+            <div id="transferBalancePreview" class="transfer-balance-preview" style="display:none;">
+              <div class="transfer-preview-head">ผลลัพธ์หลังย้าย (เรียลไทม์)</div>
+              <div class="transfer-preview-grid">
+                <div class="transfer-result-card transfer-out-card">
+                  <small>FG OUT · ต้นทาง</small>
+                  <b id="transferSourceLocation">-</b>
+                  <span id="transferSourceBalance">0 → 0</span>
+                  <em id="transferSourceFormula">0 - 0 = 0 CARTON</em>
+                </div>
+                <div class="transfer-arrow">→</div>
+                <div class="transfer-result-card transfer-in-card">
+                  <small>FG IN · ปลายทาง</small>
+                  <b id="transferDestinationLocation">-</b>
+                  <span id="transferDestinationBalance">0 → 0</span>
+                  <em id="transferDestinationFormula">0 + 0 = 0 CARTON</em>
+                </div>
+              </div>
+              <div class="transfer-move-qty">จำนวนที่ย้าย <b id="transferMoveQtyText">0</b> CARTON</div>
+              <div id="transferRealtimeResult" class="transfer-realtime-result">กรอกข้อมูลและจำนวนที่ต้องการย้าย ระบบจะแสดงผลลัพธ์ทันที</div>
+              <div id="transferRealtimeWarning" class="transfer-realtime-warning" style="display:none;"></div>
             </div>
 
             <div class="fg-qty-title">จำนวนที่ต้องการ <span id="fgQtyModeText">IN</span></div>
@@ -3540,6 +3571,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       <button id="btnHome" class="menu-btn" onclick="showPage('home')">🏠 Home</button>
       <button id="btnFgIn" class="menu-btn" onclick="showFgPage('IN')">⬇ FG IN</button>
       <button id="btnFgOut" class="menu-btn" onclick="showFgPage('OUT')">⬆ FG OUT</button>
+      <button id="btnTransferLocation" class="menu-btn transfer-menu-btn" onclick="showTransferPage()">⇆ Transfer Location</button>
       <button id="btnCountLotus" class="menu-btn" onclick="showCountPage('LOTUS')">📝 Stock Count LOTUS</button>
       <button id="btnCountBigC" class="menu-btn" onclick="showCountPage('BIG C')">📝 Stock Count BIG C</button>
       ${admin ? `
@@ -3567,6 +3599,7 @@ window.addEventListener('DOMContentLoaded',()=>{
           <div class="role-menu-grid admin-menu-grid">
             <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
             <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
+            <button class="transfer-home-btn" onclick="showTransferPage()"><i>⇆</i><b>TRANSFER<br>LOCATION</b><span>โอนย้ายสินค้า</span></button>
             <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br>LOTUS</b><span>นับสต็อก โลตัส</span></button>
             <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br>BIG C</b><span>นับสต็อก บิ๊กซี</span></button>
             <button onclick="showPage('dashboard')"><i>📊</i><b>DASHBOARD</b><span>ภาพรวมข้อมูล</span></button>
@@ -3592,6 +3625,7 @@ window.addEventListener('DOMContentLoaded',()=>{
           <div class="role-menu-grid user-menu-grid">
             <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
             <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
+            <button class="transfer-home-btn" onclick="showTransferPage()"><i>⇆</i><b>TRANSFER<br>LOCATION</b><span>โอนย้ายสินค้า</span></button>
             <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br><em>LOTUS</em></b><span>นับสต็อก โลตัส</span></button>
             <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br><em class="red">BIG C</em></b><span>นับสต็อก บิ๊กซี</span></button>
           </div>
@@ -20334,7 +20368,7 @@ V8 PRODUCTION CLEANUP PATCH
     selectedPendingRow=r; showV9Page();
     q('fgV9Page').innerHTML = `${topV9('แปลงเป็น SOLID',`Size ${r.size}`,'pending')}
       <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลรายการ</h3><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Customer :</b> ${esc(r.customer||'-')}</p><p><b>Assort เดิม :</b> ${esc(r.assort)}</p><p><b>Size :</b> ${esc(r.size)}</p><p><b>คงเหลือ :</b> <span style="color:#b91c1c;font-weight:900">${nf(r.remaining_qty)} คู่</span></p></div>
-      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder="เช่น E12"></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะบันทึกเฉพาะจำนวนที่ครบกล่อง: 6 คู่ = 1 กล่อง เข้า Location / เศษที่เหลือจะเข้า งานเศษ อัตโนมัติ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
+      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder=""></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะบันทึกเฉพาะจำนวนที่ครบกล่อง: 6 คู่ = 1 กล่อง เข้า Location / เศษที่เหลือจะเข้า งานเศษ อัตโนมัติ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
   };
   async function insertOrUpdateMasterSolid(r, location, pairQty){
     const cartonQty = Math.floor(Number(pairQty || 0) / 6);
@@ -21014,6 +21048,317 @@ V8 PRODUCTION CLEANUP PATCH
 })();
 </script>
 <!-- ===== END V25 FIX ===== -->
+
+
+
+<!-- ===== V27 TRANSFER LOCATION: ONE CLICK = FG OUT + FG IN ===== -->
+<style id="transferLocationV27Style">
+  .transfer-menu-btn{background:linear-gradient(135deg,#f97316,#dc2626)!important;color:#fff!important}
+  .transfer-location-btn i,.transfer-home-btn i{background:linear-gradient(135deg,#f97316,#dc2626)!important;color:#fff!important}
+  .transfer-to-row{border:2px dashed #fb923c!important;background:#fff7ed!important;border-radius:16px!important}
+  #fgPage.fg-mode-transfer .fg-confirm-btn{background:linear-gradient(135deg,#f97316,#dc2626)!important}
+  #fgPage.fg-mode-transfer #fgActionIcon{color:#dc2626!important}
+  .transfer-balance-preview{margin:14px 0;padding:15px;border:1px solid #fed7aa;border-radius:18px;background:#fff7ed}
+  .transfer-preview-head{font-size:14px;font-weight:800;color:#9a3412;margin-bottom:10px;text-align:center}
+  .transfer-preview-grid{display:grid;grid-template-columns:1fr 34px 1fr;gap:8px;align-items:center}
+  .transfer-preview-grid>div:not(.transfer-arrow){background:#fff;border:1px solid #ffedd5;border-radius:14px;padding:12px;text-align:center}
+  .transfer-preview-grid small{display:block;color:#9a3412;font-size:11px;font-weight:700}
+  .transfer-preview-grid b{display:block;font-size:18px;margin:2px 0;color:#111827}
+  .transfer-preview-grid span{display:block;font-size:17px;font-weight:900;color:#c2410c}
+  .transfer-arrow{text-align:center;font-size:24px;font-weight:900;color:#f97316}
+  .transfer-move-qty{text-align:center;margin-top:10px;font-size:13px;color:#7c2d12}
+  .transfer-move-qty b{font-size:18px;color:#dc2626}
+  .transfer-result-card em{display:block;margin-top:7px;font-style:normal;font-size:12px;font-weight:800;color:#6b7280}
+  .transfer-out-card{box-shadow:inset 0 3px 0 #ef4444}
+  .transfer-in-card{box-shadow:inset 0 3px 0 #22c55e}
+  .transfer-realtime-result{margin-top:12px;padding:12px 14px;border-radius:14px;background:#fff;border:1px solid #fed7aa;text-align:center;font-size:14px;font-weight:800;color:#7c2d12;line-height:1.7}
+  .transfer-realtime-result strong{color:#c2410c;font-size:16px}
+  .transfer-realtime-warning{margin-top:8px;padding:10px 12px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;color:#be123c;text-align:center;font-size:13px;font-weight:800}
+  .transfer-balance-preview.transfer-invalid{border-color:#fb7185;background:#fff1f2}
+  @media(max-width:420px){.transfer-preview-grid{grid-template-columns:1fr 26px 1fr}.transfer-preview-grid span{font-size:15px}.transfer-result-card em{font-size:11px}.transfer-realtime-result{font-size:13px}}
+</style>
+<script id="transferLocationV27Script">
+(function(){
+  const qid = id => document.getElementById(id);
+  const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
+  const clean = v => String(v ?? '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
+  const fmt = v => num(v).toLocaleString('th-TH');
+
+  function fieldValues(){
+    return {
+      item: (qid('fgItem')?.value || '').trim(),
+      code: (qid('fgCode')?.value || '').trim(),
+      assort: (qid('fgAssort')?.value || '').trim(),
+      from: (qid('fgLocation')?.value || '').trim().toUpperCase(),
+      to: (qid('fgToLocation')?.value || '').trim().toUpperCase(),
+      customer: (qid('fgCustomer')?.value || '').trim(),
+      qty: num(qid('fgMoveQty')?.value)
+    };
+  }
+
+  function makeKey(f, location){
+    if(typeof buildItemKeyV7 === 'function') return buildItemKeyV7(f.item, f.code, f.assort, location, f.customer);
+    if(typeof buildItemKey === 'function') return buildItemKey(f.item, f.code, f.assort, location, f.customer);
+    return String(f.item||'') + String(f.code||'').toUpperCase() + String(f.assort||'') + String(location||'') + String(f.customer||'');
+  }
+
+  function rowQtyByKey(itemKey){
+    const k = clean(itemKey);
+    const a = (availableRows || []).find(r => clean(r.item_key) === k);
+    if(a) return {found:true, row:a, qty:num(a.available_qty ?? a.available_Qty ?? a.Quantity ?? a.quantity)};
+    const m = (masterRows || []).find(r => clean(r.item_key) === k);
+    if(m) return {found:true, row:m, qty:num(m.Quantity ?? m.quantity)};
+    return {found:false, row:null, qty:0};
+  }
+
+  function hasMasterDestination(itemKey){
+    const k = clean(itemKey);
+    return (masterRows || []).some(r => clean(r.item_key) === k);
+  }
+
+  function fillDestinationLocations(){
+    const f = fieldValues();
+    const dl = qid('fgTransferLocationList');
+    if(!dl) return;
+    const locations = new Set();
+    (masterRows || []).forEach(r => {
+      const sameItem = clean(r.Item ?? r.item) === clean(f.item);
+      const sameCode = clean(r.CODE ?? r.code) === clean(f.code);
+      const sameAssort = clean(r.Assort ?? r.assort) === clean(f.assort);
+      const sameCustomer = clean(r.customer ?? r.Customer) === clean(f.customer);
+      const loc = String(r.Location ?? r.location ?? '').trim().toUpperCase();
+      if(sameItem && sameCode && sameAssort && sameCustomer && loc && clean(loc) !== clean(f.from)) locations.add(loc);
+    });
+    dl.innerHTML = Array.from(locations).sort().map(v => `<option value="${String(v).replace(/"/g,'&quot;')}"></option>`).join('');
+  }
+
+  function updatePreview(){
+    if(currentFgMode !== 'TRANSFER') return;
+    const f = fieldValues();
+    const src = rowQtyByKey(makeKey(f, f.from));
+    const dst = rowQtyByKey(makeKey(f, f.to));
+    const srcAfter = src.qty - f.qty;
+    const dstAfter = dst.qty + f.qty;
+    const invalidQty = f.qty > 0 && src.found && srcAfter < 0;
+    const sameLocation = !!f.from && !!f.to && clean(f.from) === clean(f.to);
+
+    if(qid('fgSystemQty')) qid('fgSystemQty').value = src.qty;
+    if(qid('transferSourceLocation')) qid('transferSourceLocation').textContent = f.from || '-';
+    if(qid('transferDestinationLocation')) qid('transferDestinationLocation').textContent = f.to || '-';
+    if(qid('transferSourceBalance')) qid('transferSourceBalance').textContent = `${fmt(src.qty)} → ${fmt(srcAfter)}`;
+    if(qid('transferDestinationBalance')) qid('transferDestinationBalance').textContent = `${fmt(dst.qty)} → ${fmt(dstAfter)}`;
+    if(qid('transferMoveQtyText')) qid('transferMoveQtyText').textContent = fmt(f.qty);
+    if(qid('transferSourceFormula')) qid('transferSourceFormula').textContent = `${fmt(src.qty)} - ${fmt(f.qty)} = ${fmt(srcAfter)} CARTON`;
+    if(qid('transferDestinationFormula')) qid('transferDestinationFormula').textContent = `${fmt(dst.qty)} + ${fmt(f.qty)} = ${fmt(dstAfter)} CARTON`;
+
+    const result = qid('transferRealtimeResult');
+    if(result){
+      if(f.from && f.to && f.qty > 0){
+        result.innerHTML = `หลังย้าย <strong>${f.from}</strong> จะเหลือ <strong>${fmt(srcAfter)}</strong> CARTON &nbsp;|&nbsp; <strong>${f.to}</strong> จะมี <strong>${fmt(dstAfter)}</strong> CARTON`;
+      }else{
+        result.textContent = 'กรอก From Location, To Location และจำนวนที่ต้องการย้าย ระบบจะแสดงผลลัพธ์ทันที';
+      }
+    }
+
+    const warning = qid('transferRealtimeWarning');
+    const preview = qid('transferBalancePreview');
+    if(warning){
+      if(invalidQty){
+        warning.style.display = 'block';
+        warning.textContent = `จำนวนย้ายเกินสต็อกต้นทาง: ${f.from} มี ${fmt(src.qty)} แต่ต้องการย้าย ${fmt(f.qty)} CARTON`;
+      }else if(sameLocation){
+        warning.style.display = 'block';
+        warning.textContent = 'From Location และ To Location ต้องไม่เหมือนกัน';
+      }else{
+        warning.style.display = 'none';
+        warning.textContent = '';
+      }
+    }
+    if(preview) preview.classList.toggle('transfer-invalid', invalidQty || sameLocation);
+
+    const st = qid('fgFormStatus');
+    if(st){
+      if(!f.item || !f.code || !f.assort || !f.from || !f.customer){
+        st.textContent = 'เลือกสินค้าและ Location ต้นทางให้ครบ';
+        st.className = 'fg-status-mini';
+      }else if(!src.found){
+        st.textContent = `ไม่พบสต็อกต้นทาง ${f.from || '-'}`;
+        st.className = 'fg-status-mini';
+      }else if(invalidQty){
+        st.textContent = `สต็อกไม่พอ: ${f.from} มี ${fmt(src.qty)} CARTON`;
+        st.className = 'fg-status-mini';
+      }else{
+        st.textContent = `ต้นทาง ${f.from} คงเหลือ ${fmt(src.qty)} CARTON`;
+        st.className = 'fg-status-mini selected';
+      }
+    }
+    fillDestinationLocations();
+  }
+
+  // เปิดให้ปุ่ม + / - และส่วนอื่นเรียกอัปเดตผลลัพธ์แบบเรียลไทม์ได้
+  window.updateTransferPreview = updatePreview;
+
+  function transferUi(show){
+    const row = qid('fgTransferToLocationRow');
+    const preview = qid('transferBalancePreview');
+    if(row) row.style.display = show ? 'grid' : 'none';
+    if(preview) preview.style.display = show ? 'block' : 'none';
+    const page = qid('fgPage');
+    if(page) page.classList.toggle('fg-mode-transfer', show);
+    const label = qid('fgLocationLabel');
+    if(label) label.textContent = show ? 'From Location' : 'Location';
+    if(!show){
+      const to = qid('fgToLocation');
+      if(to) to.value = '';
+    }
+  }
+
+  function setTransferHeader(){
+    transferUi(true);
+    if(qid('fgPoRow')) qid('fgPoRow').style.display = 'none';
+    if(qid('fgTitle')) qid('fgTitle').textContent = 'Transfer Location';
+    if(qid('fgQtyModeText')) qid('fgQtyModeText').textContent = 'TRANSFER';
+    if(qid('fgUserText')) qid('fgUserText').textContent = currentUser || '-';
+    if(qid('fgNowText') && typeof fgNowText === 'function') qid('fgNowText').textContent = fgNowText();
+    const btn = qid('fgSaveBtn');
+    if(btn) btn.innerHTML = '<span id="fgActionIcon">⇆</span><b>ยืนยัน Transfer</b><small>FG OUT ต้นทาง + FG IN ปลายทาง</small>';
+    ['btnHome','btnMaster','btnCountBigC','btnCountLotus','btnFgIn','btnFgOut','btnDashboard','btnTransferLocation'].forEach(id => {
+      const el = qid(id); if(el) el.classList.toggle('active', id === 'btnTransferLocation');
+    });
+    updatePreview();
+  }
+
+  window.showTransferPage = function(){
+    currentFgMode = 'TRANSFER';
+    currentFgRow = null;
+    try{ if(typeof clearFgForm === 'function') clearFgForm(false); }catch(e){}
+    currentFgMode = 'TRANSFER';
+    ['fgItem','fgCode','fgAssort','fgLocation','fgCustomer','fgSystemQty'].forEach(id => { const el=qid(id); if(el) el.value=''; });
+    if(qid('fgMoveQty')) qid('fgMoveQty').value = 0;
+    if(qid('fgToLocation')) qid('fgToLocation').value = '';
+    setTransferHeader();
+    if(typeof showPage === 'function') showPage('fg');
+    setTransferHeader();
+    if(qid('fgItem')) qid('fgItem').focus();
+  };
+
+  const oldShowFgPage = window.showFgPage;
+  window.showFgPage = function(mode){
+    const m = String(mode || 'IN').toUpperCase();
+    if(m === 'TRANSFER') return window.showTransferPage();
+    transferUi(false);
+    const res = oldShowFgPage ? oldShowFgPage.apply(this, arguments) : undefined;
+    setTimeout(() => transferUi(false), 0);
+    return res;
+  };
+
+  function movementPayload(f, location){
+    return {
+      item_key: makeKey(f, location),
+      "Item": f.item,
+      "CODE": f.code,
+      "Assort": Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort),
+      "Location": location,
+      "Quantity": f.qty,
+      customer: f.customer,
+      created_by: currentUser
+    };
+  }
+
+  window.saveLocationTransfer = async function(){
+    const f = fieldValues();
+    if(!f.item || !f.code || !f.assort || !f.from || !f.to || !f.customer){
+      return alert('กรุณากรอก Item, CODE, Assort, From Location, To Location และ Customer ให้ครบ');
+    }
+    if(f.qty <= 0) return alert('กรุณาใส่จำนวนที่ต้องการโอนย้ายมากกว่า 0 CARTON');
+    if(clean(f.from) === clean(f.to)) return alert('From Location และ To Location ต้องไม่เหมือนกัน');
+
+    const srcKey = makeKey(f, f.from);
+    const dstKey = makeKey(f, f.to);
+    const src = rowQtyByKey(srcKey);
+    const dst = rowQtyByKey(dstKey);
+
+    if(!src.found) return alert(`ไม่พบสินค้า ${f.item} ${f.code} ${f.assort} ที่ Location ${f.from}`);
+    if(src.qty < f.qty) return alert(`สต็อกต้นทางไม่พอ\n${f.from} คงเหลือ ${fmt(src.qty)} CARTON\nต้องการย้าย ${fmt(f.qty)} CARTON`);
+    if(!hasMasterDestination(dstKey)){
+      return alert(`ไม่พบ Item Key ปลายทางใน Master Data\nกรุณาตรวจสอบ Location ${f.to} ก่อนโอนย้าย\nMaster Data จะไม่ถูกแก้ไขอัตโนมัติ`);
+    }
+
+    const sourceAfter = src.qty - f.qty;
+    const destinationAfter = dst.qty + f.qty;
+    const ok = confirm(
+      `ยืนยันโอนย้ายสินค้า\n\n${f.item} ${f.code} ${f.assort}\n${f.from} → ${f.to}\nจำนวน ${fmt(f.qty)} CARTON\n\n${f.from}: ${fmt(src.qty)} → ${fmt(sourceAfter)}\n${f.to}: ${fmt(dst.qty)} → ${fmt(destinationAfter)}`
+    );
+    if(!ok) return;
+
+    setLoading(true, 'กำลังบันทึก Transfer Location...');
+    try{
+      const outRes = await getSupabase().from('fg_out').insert(movementPayload(f, f.from));
+      if(outRes.error) throw new Error('FG OUT ต้นทางไม่สำเร็จ: ' + outRes.error.message);
+
+      const inRes = await getSupabase().from('fg_in').insert(movementPayload(f, f.to));
+      if(inRes.error){
+        throw new Error('FG IN ปลายทางไม่สำเร็จ หลัง FG OUT ถูกบันทึกแล้ว: ' + inRes.error.message);
+      }
+
+      try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('รีเฟรช available_stock ไม่สำเร็จ', e); }
+      if(typeof updateHomeStats === 'function') await updateHomeStats();
+      updatePreview();
+      showToast(`Transfer สำเร็จ: ${f.from} เหลือ ${fmt(sourceAfter)} / ${f.to} เป็น ${fmt(destinationAfter)} CARTON`);
+
+      ['fgItem','fgCode','fgAssort','fgLocation','fgCustomer'].forEach(id => { const el=qid(id); if(el) el.value=''; });
+      if(qid('fgToLocation')) qid('fgToLocation').value='';
+      if(qid('fgMoveQty')) qid('fgMoveQty').value=0;
+      if(qid('fgSystemQty')) qid('fgSystemQty').value=0;
+      setTransferHeader();
+    }catch(err){
+      alert('โอนย้ายไม่สำเร็จ: ' + (err?.message || err));
+    }finally{
+      setLoading(false);
+    }
+  };
+
+  const oldSaveFgMovement = window.saveFgMovement;
+  window.saveFgMovement = function(){
+    if(currentFgMode === 'TRANSFER') return window.saveLocationTransfer();
+    return oldSaveFgMovement ? oldSaveFgMovement.apply(this, arguments) : undefined;
+  };
+
+  // ปุ่ม +1 / -1 และ +10 / -10 เปลี่ยนค่าแบบ programmatic จึงต้องอัปเดต Preview เอง
+  const oldChangeFgQtyTransfer = window.changeFgQty;
+  window.changeFgQty = function(delta){
+    const res = oldChangeFgQtyTransfer ? oldChangeFgQtyTransfer.apply(this, arguments) : undefined;
+    if(currentFgMode === 'TRANSFER') updatePreview();
+    return res;
+  };
+
+  const oldAddFgQtyTransfer = window.addFgQty;
+  window.addFgQty = function(qty){
+    const res = oldAddFgQtyTransfer ? oldAddFgQtyTransfer.apply(this, arguments) : undefined;
+    if(currentFgMode === 'TRANSFER') updatePreview();
+    return res;
+  };
+
+  // เมื่อเลือกค่าจาก Dropdown ซึ่งเป็นการ set value ด้วย JavaScript ให้ Preview เปลี่ยนทันที
+  const oldSelectFgSuggestTransfer = window.selectFgSuggest;
+  window.selectFgSuggest = function(field, value){
+    const res = oldSelectFgSuggestTransfer ? oldSelectFgSuggestTransfer.apply(this, arguments) : undefined;
+    if(currentFgMode === 'TRANSFER') setTimeout(updatePreview, 0);
+    return res;
+  };
+
+  document.addEventListener('input', function(e){
+    if(currentFgMode !== 'TRANSFER') return;
+    if(['fgItem','fgCode','fgAssort','fgLocation','fgCustomer','fgToLocation','fgMoveQty'].includes(e.target?.id)){
+      setTimeout(updatePreview, 0);
+    }
+  }, true);
+  document.addEventListener('change', function(e){
+    if(currentFgMode === 'TRANSFER' && ['fgToLocation','fgMoveQty'].includes(e.target?.id)) updatePreview();
+  }, true);
+})();
+</script>
+<!-- ===== END V27 TRANSFER LOCATION ===== -->
 
 </body>
 </html>
