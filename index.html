@@ -2290,24 +2290,19 @@ body{
             </div>
 
             <div id="transferBalancePreview" class="transfer-balance-preview" style="display:none;">
-              <div class="transfer-preview-head">ผลลัพธ์หลังย้าย (เรียลไทม์)</div>
               <div class="transfer-preview-grid">
                 <div class="transfer-result-card transfer-out-card">
                   <small>FG OUT · ต้นทาง</small>
                   <b id="transferSourceLocation">-</b>
                   <span id="transferSourceBalance">0 → 0</span>
-                  <em id="transferSourceFormula">0 - 0 = 0 CARTON</em>
                 </div>
                 <div class="transfer-arrow">→</div>
                 <div class="transfer-result-card transfer-in-card">
                   <small>FG IN · ปลายทาง</small>
                   <b id="transferDestinationLocation">-</b>
                   <span id="transferDestinationBalance">0 → 0</span>
-                  <em id="transferDestinationFormula">0 + 0 = 0 CARTON</em>
                 </div>
               </div>
-              <div class="transfer-move-qty">จำนวนที่ย้าย <b id="transferMoveQtyText">0</b> CARTON</div>
-              <div id="transferRealtimeResult" class="transfer-realtime-result">กรอกข้อมูลและจำนวนที่ต้องการย้าย ระบบจะแสดงผลลัพธ์ทันที</div>
               <div id="transferRealtimeWarning" class="transfer-realtime-warning" style="display:none;"></div>
             </div>
 
@@ -20368,7 +20363,7 @@ V8 PRODUCTION CLEANUP PATCH
     selectedPendingRow=r; showV9Page();
     q('fgV9Page').innerHTML = `${topV9('แปลงเป็น SOLID',`Size ${r.size}`,'pending')}
       <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลรายการ</h3><p><b>PO :</b> ${esc(r.po||'-')}</p><p><b>Item :</b> ${esc(r.source_item)}</p><p><b>CODE :</b> ${esc(r.code)}</p><p><b>Customer :</b> ${esc(r.customer||'-')}</p><p><b>Assort เดิม :</b> ${esc(r.assort)}</p><p><b>Size :</b> ${esc(r.size)}</p><p><b>คงเหลือ :</b> <span style="color:#b91c1c;font-weight:900">${nf(r.remaining_qty)} คู่</span></p></div>
-      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder=""></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะบันทึกเฉพาะจำนวนที่ครบกล่อง: 6 คู่ = 1 กล่อง เข้า Location / เศษที่เหลือจะเข้า งานเศษ อัตโนมัติ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
+      <div class="fgv9-card"><h3 class="fgv9-title">ข้อมูลเข้า Location</h3><div class="fgv9-field"><label>Location ปลายทาง *</label><input id="solidLocation" placeholder="เช่น E12"></div><div class="fgv9-field"><label>จำนวนคงเหลือ</label><input id="solidQty" type="number" value="${Number(r.remaining_qty||0)}" readonly></div><div class="fgv9-warn">ระบบจะบันทึกเฉพาะจำนวนที่ครบกล่อง: 6 คู่ = 1 กล่อง เข้า Location / เศษที่เหลือจะเข้า งานเศษ อัตโนมัติ</div><div class="fgv9-actions"><button class="fgv9-btn fgv9-secondary" onclick="openAssortPendingDetail(${Number(r.id)})">ยกเลิก</button><button class="fgv9-btn fgv9-primary" onclick="saveConvertToSolid(${Number(r.id)})">บันทึก</button></div></div>${bottomV9('FGIN')}`;
   };
   async function insertOrUpdateMasterSolid(r, location, pairQty){
     const cartonQty = Math.floor(Number(pairQty || 0) / 6);
@@ -21075,7 +21070,16 @@ V8 PRODUCTION CLEANUP PATCH
   .transfer-realtime-result strong{color:#c2410c;font-size:16px}
   .transfer-realtime-warning{margin-top:8px;padding:10px 12px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;color:#be123c;text-align:center;font-size:13px;font-weight:800}
   .transfer-balance-preview.transfer-invalid{border-color:#fb7185;background:#fff1f2}
-  @media(max-width:420px){.transfer-preview-grid{grid-template-columns:1fr 26px 1fr}.transfer-preview-grid span{font-size:15px}.transfer-result-card em{font-size:11px}.transfer-realtime-result{font-size:13px}}
+  @media(max-width:420px){
+    .transfer-balance-preview{padding:10px;margin:10px 0}
+    .transfer-preview-grid{grid-template-columns:1fr 22px 1fr;gap:5px}
+    .transfer-preview-grid>div:not(.transfer-arrow){padding:9px 6px}
+    .transfer-preview-grid small{font-size:10px}
+    .transfer-preview-grid b{font-size:16px}
+    .transfer-preview-grid span{font-size:14px}
+    .transfer-arrow{font-size:20px}
+    .transfer-realtime-warning{font-size:12px;padding:8px 10px}
+  }
 </style>
 <script id="transferLocationV27Script">
 (function(){
@@ -21121,15 +21125,19 @@ V8 PRODUCTION CLEANUP PATCH
     const dl = qid('fgTransferLocationList');
     if(!dl) return;
     const locations = new Set();
+
+    // To Location: ดึง Location ทั้งหมดจาก Master Data
     (masterRows || []).forEach(r => {
-      const sameItem = clean(r.Item ?? r.item) === clean(f.item);
-      const sameCode = clean(r.CODE ?? r.code) === clean(f.code);
-      const sameAssort = clean(r.Assort ?? r.assort) === clean(f.assort);
-      const sameCustomer = clean(r.customer ?? r.Customer) === clean(f.customer);
       const loc = String(r.Location ?? r.location ?? '').trim().toUpperCase();
-      if(sameItem && sameCode && sameAssort && sameCustomer && loc && clean(loc) !== clean(f.from)) locations.add(loc);
+      if(loc && /^[A-Z0-9]+$/.test(loc) && clean(loc) !== clean(f.from)) {
+        locations.add(loc);
+      }
     });
-    dl.innerHTML = Array.from(locations).sort().map(v => `<option value="${String(v).replace(/"/g,'&quot;')}"></option>`).join('');
+
+    dl.innerHTML = Array.from(locations)
+      .sort((a,b) => a.localeCompare(b, 'en', { numeric:true, sensitivity:'base' }))
+      .map(v => `<option value="${String(v).replace(/"/g,'&quot;')}"></option>`)
+      .join('');
   }
 
   function updatePreview(){
@@ -21147,18 +21155,6 @@ V8 PRODUCTION CLEANUP PATCH
     if(qid('transferDestinationLocation')) qid('transferDestinationLocation').textContent = f.to || '-';
     if(qid('transferSourceBalance')) qid('transferSourceBalance').textContent = `${fmt(src.qty)} → ${fmt(srcAfter)}`;
     if(qid('transferDestinationBalance')) qid('transferDestinationBalance').textContent = `${fmt(dst.qty)} → ${fmt(dstAfter)}`;
-    if(qid('transferMoveQtyText')) qid('transferMoveQtyText').textContent = fmt(f.qty);
-    if(qid('transferSourceFormula')) qid('transferSourceFormula').textContent = `${fmt(src.qty)} - ${fmt(f.qty)} = ${fmt(srcAfter)} CARTON`;
-    if(qid('transferDestinationFormula')) qid('transferDestinationFormula').textContent = `${fmt(dst.qty)} + ${fmt(f.qty)} = ${fmt(dstAfter)} CARTON`;
-
-    const result = qid('transferRealtimeResult');
-    if(result){
-      if(f.from && f.to && f.qty > 0){
-        result.innerHTML = `หลังย้าย <strong>${f.from}</strong> จะเหลือ <strong>${fmt(srcAfter)}</strong> CARTON &nbsp;|&nbsp; <strong>${f.to}</strong> จะมี <strong>${fmt(dstAfter)}</strong> CARTON`;
-      }else{
-        result.textContent = 'กรอก From Location, To Location และจำนวนที่ต้องการย้าย ระบบจะแสดงผลลัพธ์ทันที';
-      }
-    }
 
     const warning = qid('transferRealtimeWarning');
     const preview = qid('transferBalancePreview');
@@ -21215,6 +21211,13 @@ V8 PRODUCTION CLEANUP PATCH
 
   function setTransferHeader(){
     transferUi(true);
+    const customerInput = qid('fgCustomer');
+    if(customerInput){
+      customerInput.readOnly = false;
+      customerInput.disabled = false;
+      customerInput.removeAttribute('readonly');
+      customerInput.removeAttribute('disabled');
+    }
     if(qid('fgPoRow')) qid('fgPoRow').style.display = 'none';
     if(qid('fgTitle')) qid('fgTitle').textContent = 'Transfer Location';
     if(qid('fgQtyModeText')) qid('fgQtyModeText').textContent = 'TRANSFER';
@@ -21280,19 +21283,51 @@ V8 PRODUCTION CLEANUP PATCH
 
     if(!src.found) return alert(`ไม่พบสินค้า ${f.item} ${f.code} ${f.assort} ที่ Location ${f.from}`);
     if(src.qty < f.qty) return alert(`สต็อกต้นทางไม่พอ\n${f.from} คงเหลือ ${fmt(src.qty)} CARTON\nต้องการย้าย ${fmt(f.qty)} CARTON`);
-    if(!hasMasterDestination(dstKey)){
-      return alert(`ไม่พบ Item Key ปลายทางใน Master Data\nกรุณาตรวจสอบ Location ${f.to} ก่อนโอนย้าย\nMaster Data จะไม่ถูกแก้ไขอัตโนมัติ`);
-    }
+    const destinationMasterExists = hasMasterDestination(dstKey);
 
     const sourceAfter = src.qty - f.qty;
     const destinationAfter = dst.qty + f.qty;
     const ok = confirm(
-      `ยืนยันโอนย้ายสินค้า\n\n${f.item} ${f.code} ${f.assort}\n${f.from} → ${f.to}\nจำนวน ${fmt(f.qty)} CARTON\n\n${f.from}: ${fmt(src.qty)} → ${fmt(sourceAfter)}\n${f.to}: ${fmt(dst.qty)} → ${fmt(destinationAfter)}`
+      `ยืนยันโอนย้ายสินค้า\n\n${f.item} ${f.code} ${f.assort}\n${f.from} → ${f.to}\nจำนวน ${fmt(f.qty)} CARTON\n\n${f.from}: ${fmt(src.qty)} → ${fmt(sourceAfter)}\n${f.to}: ${fmt(dst.qty)} → ${fmt(destinationAfter)}` +
+      (!destinationMasterExists ? `\n\nระบบจะสร้าง Master Data ปลายทาง ${f.to} ให้อัตโนมัติ (Quantity เริ่มต้น 0)` : '')
     );
     if(!ok) return;
 
     setLoading(true, 'กำลังบันทึก Transfer Location...');
     try{
+      // หากปลายทางยังไม่มี Item Key ให้สร้าง Master Data อัตโนมัติด้วยยอดตั้งต้น 0
+      // จำนวนที่โอนจริงจะเข้าผ่าน FG IN เพื่อไม่ให้ Available Stock ถูกบวกซ้ำ
+      if(!destinationMasterExists){
+        const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
+        const masterPayload = {
+          Item: f.item,
+          CODE: f.code,
+          Assort: assortValue,
+          Location: f.to,
+          Quantity: 0,
+          customer: f.customer
+        };
+
+        const masterRes = await getSupabase()
+          .from(MASTER_TABLE)
+          .insert(masterPayload)
+          .select('*')
+          .single();
+
+        if(masterRes.error && masterRes.error.code !== '23505'){
+          throw new Error('สร้าง Master Data ปลายทางไม่สำเร็จ: ' + masterRes.error.message);
+        }
+
+        try{
+          masterRows = await fetchAll(MASTER_TABLE);
+          window.masterRows = masterRows;
+          if(typeof buildOfflineIndex === 'function') buildOfflineIndex(masterRows);
+          if(typeof renderMasterTable === 'function') renderMasterTable(masterRows);
+        }catch(e){
+          console.warn('รีเฟรช Master Data หลังสร้างปลายทางไม่สำเร็จ', e);
+        }
+      }
+
       const outRes = await getSupabase().from('fg_out').insert(movementPayload(f, f.from));
       if(outRes.error) throw new Error('FG OUT ต้นทางไม่สำเร็จ: ' + outRes.error.message);
 
@@ -21304,7 +21339,7 @@ V8 PRODUCTION CLEANUP PATCH
       try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('รีเฟรช available_stock ไม่สำเร็จ', e); }
       if(typeof updateHomeStats === 'function') await updateHomeStats();
       updatePreview();
-      showToast(`Transfer สำเร็จ: ${f.from} เหลือ ${fmt(sourceAfter)} / ${f.to} เป็น ${fmt(destinationAfter)} CARTON`);
+      showToast(`Transfer สำเร็จ: ${f.from} เหลือ ${fmt(sourceAfter)} / ${f.to} เป็น ${fmt(destinationAfter)} CARTON${!destinationMasterExists ? ' | เพิ่ม Master Data ปลายทางแล้ว' : ''}`);
 
       ['fgItem','fgCode','fgAssort','fgLocation','fgCustomer'].forEach(id => { const el=qid(id); if(el) el.value=''; });
       if(qid('fgToLocation')) qid('fgToLocation').value='';
@@ -21342,10 +21377,27 @@ V8 PRODUCTION CLEANUP PATCH
   // เมื่อเลือกค่าจาก Dropdown ซึ่งเป็นการ set value ด้วย JavaScript ให้ Preview เปลี่ยนทันที
   const oldSelectFgSuggestTransfer = window.selectFgSuggest;
   window.selectFgSuggest = function(field, value){
+    const customerInput = qid('fgCustomer');
+    const manualCustomer = currentFgMode === 'TRANSFER' ? (customerInput?.value || '') : '';
     const res = oldSelectFgSuggestTransfer ? oldSelectFgSuggestTransfer.apply(this, arguments) : undefined;
+
+    // หน้า Transfer: Customer ต้องแก้ไขได้ตลอด และห้าม Dropdown ช่องอื่นเขียนทับค่าที่ผู้ใช้กรอกเอง
+    if(currentFgMode === 'TRANSFER' && field !== 'customer' && customerInput && manualCustomer.trim()){
+      customerInput.value = manualCustomer;
+      customerInput.readOnly = false;
+      customerInput.disabled = false;
+    }
     if(currentFgMode === 'TRANSFER') setTimeout(updatePreview, 0);
     return res;
   };
+
+
+  // จำกัด To Location ให้กรอกได้เฉพาะ A-Z และ 0-9
+  document.addEventListener('input', function(e){
+    if(e.target?.id !== 'fgToLocation') return;
+    const cleaned = String(e.target.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if(e.target.value !== cleaned) e.target.value = cleaned;
+  }, true);
 
   document.addEventListener('input', function(e){
     if(currentFgMode !== 'TRANSFER') return;
