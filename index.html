@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Stock App Mobile | MT Warehouse</title>
+  <!-- V32: FG IN/OUT schema case-sensitivity fix -->
 
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#0f172a">
@@ -19424,24 +19425,28 @@ html body.count-settings-open-v91 #countSettingsPageV89{display:block !important
       if(movementType === 'IN') masterInfo = await ensureMasterForInV7(f, moveQty, itemKey);
       else if(!(await findRemoteMasterV7(itemKey))) throw new Error('ไม่พบข้อมูลใน Master Data สำหรับ FG OUT');
 
+      // V32 FIX:
+      // fg_in / fg_out ใช้ชื่อคอลัมน์จริงตาม Supabase schema:
+      // item_key, Item, CODE, Assort, Location, Quantity, customer, created_by
+      // ห้ามส่งชื่อ lowercase ซ้ำ เช่น assort/location/quantity เพราะตารางใช้ชื่อแบบ Case-sensitive
       const payload = {
-        item_key:itemKey,
-        Item:f.item, item:f.item,
-        CODE:f.code, code:f.code,
-        Assort:assortValue, assort:assortValue,
-        Location:f.location, location:f.location,
-        Quantity:moveQty, quantity:moveQty,
-        customer:f.customer,
-        PO:f.po || null,
-        po:f.po || null,
-        transaction_type:movementType,
-        movement_type:movementType,
-        created_by:currentUser || window.currentUser || null
+        item_key: itemKey,
+        Item: f.item,
+        CODE: f.code,
+        Assort: assortValue,
+        Location: f.location,
+        Quantity: moveQty,
+        customer: f.customer,
+        created_by: currentUser || window.currentUser || null
       };
-      const inserted = await insertSmartV7(tableName, payload, [
-        {item_key:itemKey, Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:moveQty, customer:f.customer, PO:f.po || null, created_by:currentUser || window.currentUser || null},
-        {item_key:itemKey, item:f.item, code:f.code, assort:assortValue, location:f.location, quantity:moveQty, customer:f.customer, po:f.po || null, created_by:currentUser || window.currentUser || null}
-      ]);
+
+      const { data: inserted, error: insertError } = await getSupabase()
+        .from(tableName)
+        .insert(payload)
+        .select('*')
+        .single();
+
+      if(insertError) throw insertError;
       if(f.po) await updatePoToTransactionV7(tableName, inserted?.id, f.po);
 
       try{ masterRows = await fetchAllV7(MASTER_TABLE); window.masterRows = masterRows; }catch(e){}
