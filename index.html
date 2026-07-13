@@ -2277,10 +2277,18 @@ body{
                 <input id="fgToLocation" class="fg-row-input" list="fgTransferLocationList" autocomplete="off" placeholder="">
                 <datalist id="fgTransferLocationList"></datalist>
               </div>
-              <div class="fg-info-row fg-field">
-                <div class="fg-row-label">Customer</div>
+              <div class="fg-info-row fg-field" id="fgCustomerRow">
+                <div class="fg-row-label" id="fgCustomerLabel">Customer</div>
                 <input id="fgCustomer" class="fg-row-input" oninput="handleFgInput('customer')" onfocus="handleFgFocus('customer')" autocomplete="off" placeholder="LOTUS / BIG C">
                 <div id="fgCustomerSuggest" class="fg-suggest"></div>
+              </div>
+              <div id="fgTransferFromCustomerRow" class="fg-info-row transfer-customer-row" style="display:none;">
+                <div class="fg-row-label">From Customer</div>
+                <select id="fgFromCustomer" class="fg-row-input"></select>
+              </div>
+              <div id="fgTransferToCustomerRow" class="fg-info-row transfer-customer-row" style="display:none;">
+                <div class="fg-row-label">To Customer</div>
+                <select id="fgToCustomer" class="fg-row-input"></select>
               </div>
             </div>
 
@@ -21075,6 +21083,7 @@ V8 PRODUCTION CLEANUP PATCH
   .transfer-realtime-result strong{color:#c2410c;font-size:16px}
   .transfer-realtime-warning{margin-top:8px;padding:10px 12px;border-radius:12px;background:#fff1f2;border:1px solid #fecdd3;color:#be123c;text-align:center;font-size:13px;font-weight:800}
   .transfer-balance-preview.transfer-invalid{border-color:#fb7185;background:#fff1f2}
+  .transfer-customer-row select{width:100%;border:0;background:#fff;font:inherit;font-weight:800;color:#111827;outline:0;appearance:auto}
   @media(max-width:420px){
     .transfer-balance-preview{padding:10px;margin:10px 0}
     .transfer-preview-grid{grid-template-columns:1fr 22px 1fr;gap:5px}
@@ -21092,23 +21101,28 @@ V8 PRODUCTION CLEANUP PATCH
   const num = v => Number.isFinite(Number(v)) ? Number(v) : 0;
   const clean = v => String(v ?? '').toLowerCase().replace(/\s+/g,'').replace(/-/g,'');
   const fmt = v => num(v).toLocaleString('th-TH');
+  const TRANSFER_CUSTOMERS = ['LOTUS','BIG C','Villa Market','Maxmart','7-11','PTT','CJ'];
 
   function fieldValues(){
+    const legacyCustomer = (qid('fgCustomer')?.value || '').trim();
     return {
       item: (qid('fgItem')?.value || '').trim(),
       code: (qid('fgCode')?.value || '').trim(),
       assort: (qid('fgAssort')?.value || '').trim(),
       from: (qid('fgLocation')?.value || '').trim().toUpperCase(),
       to: (qid('fgToLocation')?.value || '').trim().toUpperCase(),
-      customer: (qid('fgCustomer')?.value || '').trim(),
+      fromCustomer: currentFgMode === 'TRANSFER' ? (qid('fgFromCustomer')?.value || '').trim() : legacyCustomer,
+      toCustomer: currentFgMode === 'TRANSFER' ? (qid('fgToCustomer')?.value || '').trim() : legacyCustomer,
+      customer: legacyCustomer,
       qty: num(qid('fgMoveQty')?.value)
     };
   }
 
-  function makeKey(f, location){
-    if(typeof buildItemKeyV7 === 'function') return buildItemKeyV7(f.item, f.code, f.assort, location, f.customer);
-    if(typeof buildItemKey === 'function') return buildItemKey(f.item, f.code, f.assort, location, f.customer);
-    return String(f.item||'') + String(f.code||'').toUpperCase() + String(f.assort||'') + String(location||'') + String(f.customer||'');
+  function makeKey(f, location, customer){
+    const c = customer ?? f.customer ?? f.fromCustomer ?? '';
+    if(typeof buildItemKeyV7 === 'function') return buildItemKeyV7(f.item, f.code, f.assort, location, c);
+    if(typeof buildItemKey === 'function') return buildItemKey(f.item, f.code, f.assort, location, c);
+    return String(f.item||'') + String(f.code||'').toUpperCase() + String(f.assort||'') + String(location||'') + String(c||'');
   }
 
   function rowQtyByKey(itemKey){
@@ -21148,16 +21162,16 @@ V8 PRODUCTION CLEANUP PATCH
   function updatePreview(){
     if(currentFgMode !== 'TRANSFER') return;
     const f = fieldValues();
-    const src = rowQtyByKey(makeKey(f, f.from));
-    const dst = rowQtyByKey(makeKey(f, f.to));
+    const src = rowQtyByKey(makeKey(f, f.from, f.fromCustomer));
+    const dst = rowQtyByKey(makeKey(f, f.to, f.toCustomer));
     const srcAfter = src.qty - f.qty;
     const dstAfter = dst.qty + f.qty;
     const invalidQty = f.qty > 0 && src.found && srcAfter < 0;
-    const sameLocation = !!f.from && !!f.to && clean(f.from) === clean(f.to);
+    const sameDestination = !!f.from && !!f.to && !!f.fromCustomer && !!f.toCustomer && clean(f.from) === clean(f.to) && clean(f.fromCustomer) === clean(f.toCustomer);
 
     if(qid('fgSystemQty')) qid('fgSystemQty').value = src.qty;
-    if(qid('transferSourceLocation')) qid('transferSourceLocation').textContent = f.from || '-';
-    if(qid('transferDestinationLocation')) qid('transferDestinationLocation').textContent = f.to || '-';
+    if(qid('transferSourceLocation')) qid('transferSourceLocation').textContent = f.from ? `${f.from} · ${f.fromCustomer || '-'}` : '-';
+    if(qid('transferDestinationLocation')) qid('transferDestinationLocation').textContent = f.to ? `${f.to} · ${f.toCustomer || '-'}` : '-';
     if(qid('transferSourceBalance')) qid('transferSourceBalance').textContent = `${fmt(src.qty)} → ${fmt(srcAfter)}`;
     if(qid('transferDestinationBalance')) qid('transferDestinationBalance').textContent = `${fmt(dst.qty)} → ${fmt(dstAfter)}`;
 
@@ -21167,29 +21181,29 @@ V8 PRODUCTION CLEANUP PATCH
       if(invalidQty){
         warning.style.display = 'block';
         warning.textContent = `จำนวนย้ายเกินสต็อกต้นทาง: ${f.from} มี ${fmt(src.qty)} แต่ต้องการย้าย ${fmt(f.qty)} CARTON`;
-      }else if(sameLocation){
+      }else if(sameDestination){
         warning.style.display = 'block';
-        warning.textContent = 'From Location และ To Location ต้องไม่เหมือนกัน';
+        warning.textContent = 'From และ To ต้องไม่เป็น Location + Customer เดียวกัน';
       }else{
         warning.style.display = 'none';
         warning.textContent = '';
       }
     }
-    if(preview) preview.classList.toggle('transfer-invalid', invalidQty || sameLocation);
+    if(preview) preview.classList.toggle('transfer-invalid', invalidQty || sameDestination);
 
     const st = qid('fgFormStatus');
     if(st){
-      if(!f.item || !f.code || !f.assort || !f.from || !f.customer){
+      if(!f.item || !f.code || !f.assort || !f.from || !f.fromCustomer || !f.toCustomer){
         st.textContent = 'เลือกสินค้าและ Location ต้นทางให้ครบ';
         st.className = 'fg-status-mini';
       }else if(!src.found){
-        st.textContent = `ไม่พบสต็อกต้นทาง ${f.from || '-'}`;
+        st.textContent = `ไม่พบสต็อกต้นทาง ${f.from || '-'} · ${f.fromCustomer || '-'}`;
         st.className = 'fg-status-mini';
       }else if(invalidQty){
-        st.textContent = `สต็อกไม่พอ: ${f.from} มี ${fmt(src.qty)} CARTON`;
+        st.textContent = `สต็อกไม่พอ: ${f.from} · ${f.fromCustomer} มี ${fmt(src.qty)} CARTON`;
         st.className = 'fg-status-mini';
       }else{
-        st.textContent = `ต้นทาง ${f.from} คงเหลือ ${fmt(src.qty)} CARTON`;
+        st.textContent = `ต้นทาง ${f.from} · ${f.fromCustomer} คงเหลือ ${fmt(src.qty)} CARTON`;
         st.className = 'fg-status-mini selected';
       }
     }
@@ -21199,11 +21213,28 @@ V8 PRODUCTION CLEANUP PATCH
   // เปิดให้ปุ่ม + / - และส่วนอื่นเรียกอัปเดตผลลัพธ์แบบเรียลไทม์ได้
   window.updateTransferPreview = updatePreview;
 
+  function fillTransferCustomers(){
+    ['fgFromCustomer','fgToCustomer'].forEach(id => {
+      const el = qid(id);
+      if(!el) return;
+      const oldValue = el.value;
+      el.innerHTML = '<option value="">เลือก Customer</option>' + TRANSFER_CUSTOMERS.map(c => `<option value="${c}">${c}</option>`).join('');
+      if(TRANSFER_CUSTOMERS.includes(oldValue)) el.value = oldValue;
+    });
+  }
+
   function transferUi(show){
     const row = qid('fgTransferToLocationRow');
     const preview = qid('transferBalancePreview');
+    const normalCustomerRow = qid('fgCustomerRow');
+    const fromCustomerRow = qid('fgTransferFromCustomerRow');
+    const toCustomerRow = qid('fgTransferToCustomerRow');
     if(row) row.style.display = show ? 'grid' : 'none';
     if(preview) preview.style.display = show ? 'block' : 'none';
+    if(normalCustomerRow) normalCustomerRow.style.display = show ? 'none' : 'grid';
+    if(fromCustomerRow) fromCustomerRow.style.display = show ? 'grid' : 'none';
+    if(toCustomerRow) toCustomerRow.style.display = show ? 'grid' : 'none';
+    if(show) fillTransferCustomers();
     const page = qid('fgPage');
     if(page) page.classList.toggle('fg-mode-transfer', show);
     const label = qid('fgLocationLabel');
@@ -21244,6 +21275,8 @@ V8 PRODUCTION CLEANUP PATCH
     ['fgItem','fgCode','fgAssort','fgLocation','fgCustomer','fgSystemQty'].forEach(id => { const el=qid(id); if(el) el.value=''; });
     if(qid('fgMoveQty')) qid('fgMoveQty').value = 0;
     if(qid('fgToLocation')) qid('fgToLocation').value = '';
+    if(qid('fgFromCustomer')) qid('fgFromCustomer').value = '';
+    if(qid('fgToCustomer')) qid('fgToCustomer').value = '';
     setTransferHeader();
     if(typeof showPage === 'function') showPage('fg');
     setTransferHeader();
@@ -21260,33 +21293,33 @@ V8 PRODUCTION CLEANUP PATCH
     return res;
   };
 
-  function movementPayload(f, location){
+  function movementPayload(f, location, customer){
     return {
-      item_key: makeKey(f, location),
+      item_key: makeKey(f, location, customer),
       "Item": f.item,
       "CODE": f.code,
       "Assort": Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort),
       "Location": location,
       "Quantity": f.qty,
-      customer: f.customer,
+      customer: customer,
       created_by: currentUser
     };
   }
 
   window.saveLocationTransfer = async function(){
     const f = fieldValues();
-    if(!f.item || !f.code || !f.assort || !f.from || !f.to || !f.customer){
-      return alert('กรุณากรอก Item, CODE, Assort, From Location, To Location และ Customer ให้ครบ');
+    if(!f.item || !f.code || !f.assort || !f.from || !f.to || !f.fromCustomer || !f.toCustomer){
+      return alert('กรุณากรอก Item, CODE, Assort, From Location, To Location, From Customer และ To Customer ให้ครบ');
     }
     if(f.qty <= 0) return alert('กรุณาใส่จำนวนที่ต้องการโอนย้ายมากกว่า 0 CARTON');
-    if(clean(f.from) === clean(f.to)) return alert('From Location และ To Location ต้องไม่เหมือนกัน');
+    if(clean(f.from) === clean(f.to) && clean(f.fromCustomer) === clean(f.toCustomer)) return alert('From และ To ต้องไม่เป็น Location + Customer เดียวกัน');
 
-    const srcKey = makeKey(f, f.from);
-    const dstKey = makeKey(f, f.to);
+    const srcKey = makeKey(f, f.from, f.fromCustomer);
+    const dstKey = makeKey(f, f.to, f.toCustomer);
     const src = rowQtyByKey(srcKey);
     const dst = rowQtyByKey(dstKey);
 
-    if(!src.found) return alert(`ไม่พบสินค้า ${f.item} ${f.code} ${f.assort} ที่ Location ${f.from}`);
+    if(!src.found) return alert(`ไม่พบสินค้า ${f.item} ${f.code} ${f.assort} ที่ Location ${f.from} Customer ${f.fromCustomer}`);
     if(src.qty < f.qty) return alert(`สต็อกต้นทางไม่พอ\n${f.from} คงเหลือ ${fmt(src.qty)} CARTON\nต้องการย้าย ${fmt(f.qty)} CARTON`);
     const destinationMasterExists = hasMasterDestination(dstKey);
 
@@ -21294,7 +21327,7 @@ V8 PRODUCTION CLEANUP PATCH
     const destinationAfter = dst.qty + f.qty;
     const ok = confirm(
       `ยืนยันโอนย้ายสินค้า\n\n${f.item} ${f.code} ${f.assort}\n${f.from} → ${f.to}\nจำนวน ${fmt(f.qty)} CARTON\n\n${f.from}: ${fmt(src.qty)} → ${fmt(sourceAfter)}\n${f.to}: ${fmt(dst.qty)} → ${fmt(destinationAfter)}` +
-      (!destinationMasterExists ? `\n\nระบบจะสร้าง Master Data ปลายทาง ${f.to} ให้อัตโนมัติ (Quantity เริ่มต้น 0)` : '')
+      (!destinationMasterExists ? `\n\nระบบจะสร้าง Master Data ปลายทาง ${f.to} · ${f.toCustomer} ให้อัตโนมัติ (Quantity เริ่มต้น 0)` : '')
     );
     if(!ok) return;
 
@@ -21310,7 +21343,7 @@ V8 PRODUCTION CLEANUP PATCH
           Assort: assortValue,
           Location: f.to,
           Quantity: 0,
-          customer: f.customer
+          customer: f.toCustomer
         };
 
         const masterRes = await getSupabase()
@@ -21333,10 +21366,10 @@ V8 PRODUCTION CLEANUP PATCH
         }
       }
 
-      const outRes = await getSupabase().from('fg_out').insert(movementPayload(f, f.from));
+      const outRes = await getSupabase().from('fg_out').insert(movementPayload(f, f.from, f.fromCustomer));
       if(outRes.error) throw new Error('FG OUT ต้นทางไม่สำเร็จ: ' + outRes.error.message);
 
-      const inRes = await getSupabase().from('fg_in').insert(movementPayload(f, f.to));
+      const inRes = await getSupabase().from('fg_in').insert(movementPayload(f, f.to, f.toCustomer));
       if(inRes.error){
         throw new Error('FG IN ปลายทางไม่สำเร็จ หลัง FG OUT ถูกบันทึกแล้ว: ' + inRes.error.message);
       }
@@ -21344,10 +21377,12 @@ V8 PRODUCTION CLEANUP PATCH
       try{ availableRows = await fetchAll(AVAILABLE_TABLE); }catch(e){ console.warn('รีเฟรช available_stock ไม่สำเร็จ', e); }
       if(typeof updateHomeStats === 'function') await updateHomeStats();
       updatePreview();
-      showToast(`Transfer สำเร็จ: ${f.from} เหลือ ${fmt(sourceAfter)} / ${f.to} เป็น ${fmt(destinationAfter)} CARTON${!destinationMasterExists ? ' | เพิ่ม Master Data ปลายทางแล้ว' : ''}`);
+      showToast(`Transfer สำเร็จ: ${f.from} · ${f.fromCustomer} เหลือ ${fmt(sourceAfter)} / ${f.to} · ${f.toCustomer} เป็น ${fmt(destinationAfter)} CARTON${!destinationMasterExists ? ' | เพิ่ม Master Data ปลายทางแล้ว' : ''}`);
 
       ['fgItem','fgCode','fgAssort','fgLocation','fgCustomer'].forEach(id => { const el=qid(id); if(el) el.value=''; });
       if(qid('fgToLocation')) qid('fgToLocation').value='';
+      if(qid('fgFromCustomer')) qid('fgFromCustomer').value='';
+      if(qid('fgToCustomer')) qid('fgToCustomer').value='';
       if(qid('fgMoveQty')) qid('fgMoveQty').value=0;
       if(qid('fgSystemQty')) qid('fgSystemQty').value=0;
       setTransferHeader();
@@ -21406,12 +21441,12 @@ V8 PRODUCTION CLEANUP PATCH
 
   document.addEventListener('input', function(e){
     if(currentFgMode !== 'TRANSFER') return;
-    if(['fgItem','fgCode','fgAssort','fgLocation','fgCustomer','fgToLocation','fgMoveQty'].includes(e.target?.id)){
+    if(['fgItem','fgCode','fgAssort','fgLocation','fgCustomer','fgFromCustomer','fgToCustomer','fgToLocation','fgMoveQty'].includes(e.target?.id)){
       setTimeout(updatePreview, 0);
     }
   }, true);
   document.addEventListener('change', function(e){
-    if(currentFgMode === 'TRANSFER' && ['fgToLocation','fgMoveQty'].includes(e.target?.id)) updatePreview();
+    if(currentFgMode === 'TRANSFER' && ['fgFromCustomer','fgToCustomer','fgToLocation','fgMoveQty'].includes(e.target?.id)) updatePreview();
   }, true);
 })();
 </script>
