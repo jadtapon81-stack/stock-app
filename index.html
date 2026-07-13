@@ -3068,7 +3068,7 @@ window.addEventListener('DOMContentLoaded',()=>{
     add('CODE', f.code);
     add('Assort', Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort));
     add('Location', f.location);
-    add('Quantity', qty);
+    add('Quantity', 0);
     add('customer', f.customer);
     add('Customer', f.customer);
     add('created_by', currentUser || null);
@@ -3081,7 +3081,7 @@ window.addEventListener('DOMContentLoaded',()=>{
       add('code', f.code);
       add('assort', Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort));
       add('location', f.location);
-      add('quantity', qty);
+      add('quantity', 0);
     }
 
     return payload;
@@ -10127,7 +10127,8 @@ main{
       CODE: f.code,
       Assort: assortValue,
       Location: f.location,
-      Quantity: qty,
+      // Master ใหม่เป็นยอดตั้งต้น 0 เพื่อไม่บวก FG IN ซ้ำ
+      Quantity: 0,
       customer: f.customer
     };
 
@@ -10971,7 +10972,7 @@ main{
       CODE:f.code,
       Assort:assortValue,
       Location:f.location,
-      Quantity:qty,
+      Quantity:0,
       customer:f.customer
     };
     const {data, error} = await getSupabase().from(MASTER_TABLE).insert(payload).select('*').single();
@@ -19367,7 +19368,7 @@ html body.count-settings-open-v91 #countSettingsPageV89{display:block !important
     const found = await findRemoteMasterV7(itemKey);
     if(found) return {inserted:false,row:found};
     const assortValue = Number.isNaN(Number(f.assort)) ? f.assort : Number(f.assort);
-    const payload = {Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:qty, customer:f.customer};
+    const payload = {Item:f.item, CODE:f.code, Assort:assortValue, Location:f.location, Quantity:0, customer:f.customer};
     const {data,error}=await getSupabase().from(MASTER_TABLE).insert(payload).select('*').single();
     if(error){
       if(error.code === '23505') return {inserted:false,row: await findRemoteMasterV7(itemKey)};
@@ -21454,3 +21455,6 @@ V8 PRODUCTION CLEANUP PATCH
 
 </body>
 </html>
+
+/* FG MASTER ZERO FINAL V35: new Master from FG IN starts at Quantity 0 */
+<script>console.log('FG MASTER ZERO FINAL V35 ACTIVE');</script>
