@@ -21458,3 +21458,154 @@ V8 PRODUCTION CLEANUP PATCH
 
 
 <script>console.log('FG MASTER ZERO FINAL V35 ACTIVE');</script>
+
+<!-- ===== FINAL PATCH: STOCK COUNT USES available_stock.available_qty ===== -->
+<script>
+(function(){
+  'use strict';
+
+  function text(v){
+    return String(v == null ? '' : v).trim();
+  }
+
+  function norm(v){
+    return text(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g, '');
+  }
+
+  function isLooseCount(){
+    return String(window.currentCountWorkType || 'FULL_BOX').toUpperCase() === 'LOOSE';
+  }
+
+  function allAvailableRows(){
+    try{
+      if(Array.isArray(window.availableRows)) return window.availableRows;
+      if(typeof availableRows !== 'undefined' && Array.isArray(availableRows)) return availableRows;
+    }catch(e){}
+    return [];
+  }
+
+  function rowItemKey(row){
+    var key = text(row && row.item_key);
+    if(key) return key;
+
+    var item = text(row && (row.Item ?? row.item));
+    var code = text(row && (row.CODE ?? row.code)).toUpperCase();
+    var assort = text(row && (row.Assort ?? row.assort));
+    var location = text(row && (row.Location ?? row.location));
+    var customer = text(row && (row.customer ?? row.Customer ?? row.channel ?? row.Channel));
+
+    try{
+      if(typeof window.buildCanonicalItemKey === 'function'){
+        return window.buildCanonicalItemKey(item, code, assort, location, customer, false);
+      }
+      if(typeof window.buildItemKey === 'function'){
+        return window.buildItemKey(item, code, assort, location, customer);
+      }
+    }catch(e){}
+
+    return item + code + assort + location + customer;
+  }
+
+  function availableRowFor(row){
+    var wantedKey = norm(rowItemKey(row));
+    if(!wantedKey) return null;
+
+    return allAvailableRows().find(function(r){
+      return norm(r && r.item_key) === wantedKey;
+    }) || null;
+  }
+
+  function numberValue(v, fallback){
+    if(v === null || v === undefined || v === '') return fallback;
+    var n = Number(String(v).replace(/,/g, '').trim());
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function currentAvailableQty(row){
+    var available = availableRowFor(row);
+    if(available){
+      var value = available.available_qty ?? available.available_Qty ?? available.Available_Qty;
+      if(value !== null && value !== undefined && value !== ''){
+        return numberValue(value, 0);
+      }
+    }
+
+    return numberValue(
+      row && (row.__master_quantity_for_count ?? row.Quantity ?? row.quantity ?? row.system_qty),
+      0
+    );
+  }
+
+  function makeCountRow(row){
+    if(!row || isLooseCount()) return row;
+    if(row.__count_uses_available_qty === true) return row;
+
+    var clone = Object.assign({}, row);
+    var masterQty = row.Quantity ?? row.quantity ?? row.system_qty ?? 0;
+
+    Object.defineProperty(clone, '__master_quantity_for_count', {
+      value: masterQty,
+      writable: true,
+      configurable: true,
+      enumerable: false
+    });
+
+    Object.defineProperty(clone, '__count_uses_available_qty', {
+      value: true,
+      writable: false,
+      configurable: true,
+      enumerable: false
+    });
+
+    // Quantity เป็น accessor เพื่อให้แม้ผู้ใช้เปลี่ยน Location
+    // ระบบก็อ่าน available_qty ของ item_key ใหม่ก่อนบันทึกเสมอ
+    Object.defineProperty(clone, 'Quantity', {
+      configurable: true,
+      enumerable: true,
+      get: function(){
+        return currentAvailableQty(this);
+      },
+      set: function(v){
+        this.__master_quantity_for_count = v;
+      }
+    });
+
+    return clone;
+  }
+
+  function prepareRows(rows){
+    if(!Array.isArray(rows) || isLooseCount()) return rows || [];
+    return rows.map(makeCountRow);
+  }
+
+  var oldSearchOfflineRows = window.searchOfflineRows;
+  if(typeof oldSearchOfflineRows === 'function'){
+    window.searchOfflineRows = function(){
+      return prepareRows(oldSearchOfflineRows.apply(this, arguments));
+    };
+    try{ searchOfflineRows = window.searchOfflineRows; }catch(e){}
+  }
+
+  var oldRenderCountResult = window.renderCountResult;
+  if(typeof oldRenderCountResult === 'function'){
+    window.renderCountResult = function(rows){
+      return oldRenderCountResult.call(this, prepareRows(rows));
+    };
+    try{ renderCountResult = window.renderCountResult; }catch(e){}
+  }
+
+  var oldRenderCountResultV86 = window.renderCountResultV86;
+  if(typeof oldRenderCountResultV86 === 'function'){
+    window.renderCountResultV86 = function(rows){
+      return oldRenderCountResultV86.call(this, prepareRows(rows));
+    };
+  }
+
+  window.getCountAvailableQty = function(row){
+    return currentAvailableQty(row);
+  };
+
+  console.log('Stock Count source: available_stock.available_qty');
+})();
+</script>
+<!-- ===== END FINAL PATCH ===== -->
