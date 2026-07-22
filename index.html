@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Stock App V122 | MT Warehouse</title>
+  <title>Stock App V129 | MT Warehouse</title>
   
 
   <link rel="manifest" href="/manifest.json">
@@ -7132,34 +7132,16 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
 
   function addOtherCustomerButtons(){
-    patchMasterCustomerOptions();
-
-    document.querySelectorAll('.role-menu-grid').forEach(grid => {
-      if(grid.querySelector('.other-customer-btn')) return;
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'other-customer-btn';
-      btn.setAttribute('onclick','showOtherCustomerPage()');
-      btn.innerHTML = `${customerIconHtml('OTHER')}<span><b>Other customer</b><span></span></span>`;
-      const dashboardBtn = Array.from(grid.querySelectorAll('button')).find(b => /dashboard/i.test(b.textContent || '') || /showPage\('dashboard'\)/.test(b.getAttribute('onclick') || ''));
-      if(dashboardBtn) grid.insertBefore(btn, dashboardBtn);
-      else grid.appendChild(btn);
-    });
-
-    const menu = document.getElementById('sideMenu');
-    if(menu && !document.getElementById('btnOtherCustomer')){
-      const btn = document.createElement('button');
-      btn.id = 'btnOtherCustomer';
-      btn.className = 'menu-btn';
-      btn.type = 'button';
-      btn.setAttribute('onclick','showOtherCustomerPage()');
-      btn.textContent = '🧩 Other customer';
-      const anchor = document.getElementById('btnDashboard') || document.getElementById('btnMaster') || document.querySelector('#sideMenu .logout');
-      if(anchor) menu.insertBefore(btn, anchor);
-      else menu.appendChild(btn);
-    }
-
-    ensureOtherCustomerPage();
+    /* V127: Other customer เป็นฟังก์ชันเก่าที่ถูกสร้างด้วย JavaScript เฉพาะบางขนาดหน้าจอ
+       ไม่ให้สร้างปุ่มนี้บน Home หรือ Side Menu อีก เพื่อให้ Desktop และ Mobile เหมือนกัน */
+    document.querySelectorAll(
+      '#homePage .other-customer-btn,' +
+      '#homePage .other-customer-menu-btn,' +
+      '#homePage button[onclick*="showOtherCustomerPage"],' +
+      '#homePage button[onclick*="otherCustomer"],' +
+      '#sideMenu #btnOtherCustomer,' +
+      '#sideMenu button[onclick*="showOtherCustomerPage"]'
+    ).forEach(function(el){ el.remove(); });
   }
 
   window.showOtherCustomerPage = function(){
@@ -21839,7 +21821,8 @@ V8 PRODUCTION CLEANUP PATCH
   if(window.__V107_COUNT_FILTER_FIX__) return;
   window.__V107_COUNT_FILTER_FIX__=true;
 
-  var state='all';
+  var state=window.__COUNT_FILTER_STATE__||'all';
+  window.__COUNT_FILTER_STATE__=state;
   function byId(id){return document.getElementById(id);}
   function clean(v){return v==='counted'?'counted':(v==='uncounted'?'uncounted':'all');}
   function label(v){return v==='counted'?'นับแล้ว':(v==='uncounted'?'ยังไม่นับ':'ทั้งหมด');}
@@ -21893,12 +21876,17 @@ V8 PRODUCTION CLEANUP PATCH
     /* V102/ระบบทีมอ่านค่าจาก countFilterText โดยตรง */
     var legacyText=byId('countFilterText'); if(legacyText) legacyText.textContent=label(state);
     try{
-      if(typeof window.searchForCount==='function') window.searchForCount();
-      else if(typeof window.renderCurrentRowsV102==='function') window.renderCurrentRowsV102();
+      if(typeof window.renderCurrentRowsV102==='function') window.renderCurrentRowsV102();
+      else if(typeof window.searchForCount==='function') window.searchForCount();
     }catch(err){console.error('V107 filter render failed',err);}
     paint(); close();
   }
-  function select(v){state=clean(v);paint();render();}
+  function select(v){
+    state=clean(v);
+    window.__COUNT_FILTER_STATE__=state;
+    paint();
+    render();
+  }
 
   /* ใช้ ID ใหม่ทั้งหมด จึงไม่โดน document listener รุ่นเก่าที่จับ #countFilterMenu */
   document.addEventListener('click',function(e){
@@ -23106,6 +23094,10 @@ V8 PRODUCTION CLEANUP PATCH
     if(toolbar){
       toolbar.classList.toggle('admin-view',isAdmin);
       toolbar.classList.toggle('user-view',!isAdmin);
+      var locBox=toolbar.querySelector('.v102-location-box');
+      var custBox=toolbar.querySelector('.v102-customer-box');
+      if(locBox)locBox.style.display='block';
+      if(custBox)custBox.style.display='block';
     }
     [1,2,3].forEach(function(team){
       var btn=byIdV102('v102TeamBtn'+team);if(!btn)return;
@@ -23184,7 +23176,7 @@ V8 PRODUCTION CLEANUP PATCH
         if(round!==3)return true;
         return eligibleRound3CompareV102(round3CompareForRowV102(r),team);
       });
-      var resultRes=await getSupabase().from(RESULT_TABLE_V102).select('*').eq('cycle_code',cycle).eq('round_no',round).order('counted_at',{ascending:false});
+      var resultRes=await getSupabase().from(RESULT_TABLE_V102).select('*').eq('cycle_code',cycle).eq('team_no',team).eq('round_no',round).order('counted_at',{ascending:false});
       if(resultRes.error)throw resultRes.error;
       stateV102.teamResults=resultRes.data||[];
       var locRes=await getSupabase().from(LOCATION_TABLE_V102).select('location').eq('team_no',team).eq('round_no',round).eq('is_active',true).order('location',{ascending:true});
@@ -23243,12 +23235,20 @@ V8 PRODUCTION CLEANUP PATCH
 
   function savedMapV102(){
     var map=new Map();
-    stateV102.teamResults.forEach(function(r){var key=txtV102(r.item_key);if(key&&!map.has(key))map.set(key,r);});
+    var team=Number(stateV102.selectedTeam||0),round=activeRoundV102(),cycle=txtV102(stateV102.control.cycle_code||defaultCycleV102());
+    stateV102.teamResults.forEach(function(r){
+      if(Number(r.team_no||0)!==team)return;
+      if(Number(r.round_no||0)!==round)return;
+      if(txtV102(r.cycle_code)!==cycle)return;
+      var key=txtV102(r.item_key);
+      if(key&&!map.has(key))map.set(key,r);
+    });
     return map;
   }
   function currentFilterV102(){
-    var t=txtV102(byIdV102('countFilterText')&&byIdV102('countFilterText').textContent||'ทั้งหมด');
-    if(t==='นับแล้ว')return 'counted';if(t==='ยังไม่นับ')return 'uncounted';return 'all';
+    var globalFilter=txtV102(window.__COUNT_FILTER_STATE__||'all').toLowerCase();
+    if(globalFilter==='counted'||globalFilter==='uncounted'||globalFilter==='all')return globalFilter;
+    return 'all';
   }
   function filteredRowsV102(keyword){
     var q=normV102(keyword),loc=stateV102.selectedLocation,customer=stateV102.selectedCustomer,saved=savedMapV102(),seen=new Set();
@@ -23334,6 +23334,7 @@ V8 PRODUCTION CLEANUP PATCH
     var keyword=txtV102(byIdV102('countSearch')&&byIdV102('countSearch').value||'');
     renderRowsV102(filteredRowsV102(keyword));
   }
+  window.renderCurrentRowsV102=renderCurrentRowsV102;
 
   function clearCountInputV102(focus){
     var input=byIdV102('countSearch');if(input)input.value='';
@@ -23366,6 +23367,8 @@ V8 PRODUCTION CLEANUP PATCH
 
   window.applyCountFilter=function(){renderCurrentRowsV102();};
   window.setCountFilter=function(filter){
+    filter=filter==='counted'?'counted':(filter==='uncounted'?'uncounted':'all');
+    window.__COUNT_FILTER_STATE__=filter;
     var label=filter==='counted'?'นับแล้ว':(filter==='uncounted'?'ยังไม่นับ':'ทั้งหมด');
     var text=byIdV102('countFilterText');if(text)text.textContent=label;
     var menu=byIdV102('countFilterMenu');if(menu)menu.classList.remove('show');
@@ -23406,9 +23409,9 @@ V8 PRODUCTION CLEANUP PATCH
     };
     try{
       var btn=input.closest('.v102-count-input-row')&&input.closest('.v102-count-input-row').querySelector('.v102-save-btn');if(btn)btn.disabled=true;
-      var res=await getSupabase().from(RESULT_TABLE_V102).upsert(payload,{onConflict:'cycle_code,round_no,item_key'}).select('*').single();
+      var res=await getSupabase().from(RESULT_TABLE_V102).upsert(payload,{onConflict:'cycle_code,team_no,round_no,item_key'}).select('*').single();
       if(res.error)throw res.error;
-      stateV102.teamResults=stateV102.teamResults.filter(function(r){return txtV102(r.item_key)!==itemKey;});
+      stateV102.teamResults=stateV102.teamResults.filter(function(r){return !(txtV102(r.item_key)===itemKey&&Number(r.team_no||0)===team&&Number(r.round_no||0)===round&&txtV102(r.cycle_code)===payload.cycle_code);});
       stateV102.teamResults.unshift(res.data||payload);
       renderCurrentRowsV102();
       var compare=await compareStatusV102(itemKey),message='บันทึก TEAM '+team+' รอบ '+round+' สำเร็จ';
@@ -23423,6 +23426,8 @@ V8 PRODUCTION CLEANUP PATCH
   };
 
   async function showTeamCountPageV102(){
+    window.__COUNT_FILTER_STATE__='all';
+    if(typeof window.setCountFilterV107==='function')window.setCountFilterV107('all');
     var old=window.__showAllItemKeyCountPageV101Original || window.showAllItemKeyCountPageV101;
     if(typeof old==='function'){
       var out=old.apply(this,arguments);if(out&&typeof out.then==='function')await out;
@@ -23936,7 +23941,10 @@ main{padding-inline:clamp(10px,2vw,22px)!important}
   z-index:20!important;
 }
 #v107CountFilterBtn,#countFilterBtn{width:100%!important;min-height:52px!important}
-#v107CountFilterMenu,#countFilterMenu{left:0!important;right:0!important;width:100%!important;max-width:none!important}
+#v107CountFilterMenu,#countFilterMenu{left:0!important;right:0!important;width:100%!important;max-width:none!important;position:absolute!important;top:calc(100% + 6px)!important;z-index:1000!important}
+#countTitleBar{z-index:40!important}
+#v102TeamToolbar{z-index:20!important}
+#countPage .count-search-row{z-index:10!important}
 
 #v102TeamToolbar{
   position:relative!important;
@@ -24005,7 +24013,10 @@ main{padding-inline:clamp(10px,2vw,22px)!important}
 table{width:100%;border-collapse:collapse}
 
 /* TEAM visibility: ผู้ใช้ทั่วไปไม่เห็นตัวเลือกหรือรายละเอียดทีมอื่น; Admin เห็นครบ */
-#v102TeamToolbar.user-view{display:none!important}
+#v102TeamToolbar.user-view{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important}
+#v102TeamToolbar.user-view .v102-team-btn{display:none!important}
+#v102TeamToolbar.user-view .v102-location-box{grid-column:1!important}
+#v102TeamToolbar.user-view .v102-customer-box{grid-column:2!important}
 #v102TeamToolbar.admin-view{display:grid!important}
 #v102TeamBanner:not(.show),#v102TeamBanner:empty{display:none!important}
 #v102TeamSummary{
@@ -24146,6 +24157,14 @@ table{width:100%;border-collapse:collapse}
   }
   #countPage{max-width:1480px!important;margin:0 auto!important;padding:20px 24px 40px!important}
   #countTitleBar>#countTitle,#countTitle{font-size:clamp(30px,3vw,44px)!important}
+  /* Priority: FG/Transfer are primary; Stock Count and Loose are supporting tools. */
+  #homePage #v101GlobalStockCountBtn{min-height:132px!important;padding:20px 26px!important;border:1.5px solid #e5e7eb!important;background:#fff!important;box-shadow:0 8px 18px rgba(15,23,42,.06)!important}
+  #homePage #v101GlobalStockCountBtn>i{width:58px!important;height:58px!important;min-width:58px!important;min-height:58px!important;font-size:28px!important;border-radius:16px!important}
+  #homePage #v101GlobalStockCountBtn>b{font-size:28px!important;color:#374151!important}
+  #homePage #v101GlobalStockCountBtn>span{font-size:15px!important;color:#6b7280!important}
+  #homePage #v122LooseHomeCard{min-height:210px!important;padding:18px!important;border-color:#ead7c4!important;background:#fffdfa!important;box-shadow:0 6px 14px rgba(15,23,42,.045)!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-btn{min-height:105px!important}
+  #homePage .role-menu-grid>button:not(#v101GlobalStockCountBtn),#homePage .admin-menu-grid>button:not(#v101GlobalStockCountBtn),#homePage .user-menu-grid>button:not(#v101GlobalStockCountBtn){min-height:230px!important;border:2px solid #ef4444!important;background:linear-gradient(180deg,#fff 0%,#fff5f5 100%)!important;box-shadow:0 16px 30px rgba(220,38,38,.14)!important}
 }
 
 @media (max-width:767px){
@@ -24291,9 +24310,21 @@ table{width:100%;border-collapse:collapse}
   }
   #homePage #v122LooseHomeCard .v122-loose-store-btn b{font-size:18px!important;line-height:1.1!important}
 
-  #countTitleBar{grid-template-columns:1fr!important;align-items:stretch!important;gap:8px!important}
-  #countTitleBar>.count-filter-wrap,#countTitleBar>#v107CountFilterWrap,#v107CountFilterWrap{max-width:none!important}
-  #v102TeamToolbar{grid-template-columns:1fr!important;gap:8px!important}
+  /* Primary action hierarchy on mobile */
+  #homePage #v101GlobalStockCountBtn{grid-column:1 / -1!important;min-height:122px!important;padding:12px!important;border:1.5px solid #e5e7eb!important;background:#fff!important;box-shadow:0 6px 14px rgba(15,23,42,.05)!important}
+  #homePage #v101GlobalStockCountBtn>i{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;font-size:21px!important}
+  #homePage #v101GlobalStockCountBtn>b{font-size:20px!important;color:#374151!important}
+  #homePage #v101GlobalStockCountBtn>span{font-size:11px!important;color:#6b7280!important}
+  #homePage #v122LooseHomeCard{grid-column:1 / -1!important;border-color:#ead7c4!important;background:#fffdfa!important;box-shadow:0 5px 12px rgba(15,23,42,.04)!important}
+  #homePage #v122LooseHomeCard .v122-loose-copy b{color:#6b4f3a!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-btn{min-height:92px!important;border-color:#ead7c4!important}
+  #homePage .role-menu-grid>button:not(#v101GlobalStockCountBtn),#homePage .admin-menu-grid>button:not(#v101GlobalStockCountBtn),#homePage .user-menu-grid>button:not(#v101GlobalStockCountBtn){min-height:178px!important;border:2px solid #ef4444!important;background:linear-gradient(180deg,#fff 0%,#fff5f5 100%)!important;box-shadow:0 12px 24px rgba(220,38,38,.13)!important}
+
+  #countTitleBar{grid-template-columns:1fr!important;align-items:stretch!important;gap:10px!important;margin-bottom:10px!important}
+  #countTitleBar>.count-filter-wrap,#countTitleBar>#v107CountFilterWrap,#v107CountFilterWrap{max-width:none!important;position:relative!important;z-index:60!important}
+  #v102TeamToolbar{grid-template-columns:1fr!important;gap:8px!important;z-index:20!important}
+  #v102TeamToolbar.user-view{display:grid!important;grid-template-columns:1fr!important}
+  #v102TeamToolbar.user-view .v102-location-box,#v102TeamToolbar.user-view .v102-customer-box{grid-column:auto!important;display:block!important}
   #v102TeamToolbar .v102-location-box,
   #v102TeamToolbar .v102-customer-box{grid-column:auto!important}
   #v102TeamToolbar .v102-team-btn{min-height:88px!important}
@@ -24326,13 +24357,20 @@ table{width:100%;border-collapse:collapse}
   #countPage .count-search-row{grid-template-columns:1fr!important}
   #countPage .count-search-row>button{width:100%!important}
 }
+
+/* V126: visual priority and click-safe home order */
+#homePage .v126-fg-in{order:10!important}#homePage .v126-fg-out{order:11!important}#homePage .v126-transfer{order:12!important}#homePage #v122LooseHomeCard{order:20!important}#homePage #v101GlobalStockCountBtn{order:30!important}#homePage .v126-other{order:40!important}
+#homePage .role-menu-grid>*{pointer-events:auto!important}
+@media(min-width:768px){#homePage .role-menu-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important}#homePage .v126-fg-in,#homePage .v126-fg-out,#homePage .v126-transfer{min-height:210px!important;border:2px solid #dc2626!important;background:linear-gradient(180deg,#fff 0%,#fff5f5 100%)!important;box-shadow:0 16px 30px rgba(220,38,38,.14)!important}#homePage #v122LooseHomeCard{grid-column:1/-1!important;min-height:145px!important;padding:14px 18px!important;border:1px solid #ead7c4!important;box-shadow:0 4px 10px rgba(15,23,42,.035)!important}#homePage #v122LooseHomeCard .v122-loose-head{grid-template-columns:48px minmax(0,1fr)!important;gap:10px!important;margin-bottom:8px!important}#homePage #v122LooseHomeCard .v122-loose-head>div:last-child{display:none!important}#homePage #v122LooseHomeCard .v122-loose-icon{width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;font-size:23px!important;border-radius:13px!important;box-shadow:none!important}#homePage #v122LooseHomeCard .v122-loose-copy{text-align:left!important}#homePage #v122LooseHomeCard .v122-loose-copy b{font-size:20px!important}#homePage #v122LooseHomeCard .v122-loose-copy span{font-size:12px!important;margin-top:1px!important}#homePage #v122LooseHomeCard .v122-loose-store-btn{min-height:58px!important;padding:7px 10px!important;flex-direction:row!important;gap:8px!important;border-width:1px!important;border-radius:13px!important;box-shadow:none!important}#homePage #v122LooseHomeCard .v122-loose-code{width:32px!important;height:32px!important;min-width:32px!important;min-height:32px!important;font-size:14px!important;border-radius:9px!important}#homePage #v122LooseHomeCard .v122-loose-store-btn b{font-size:15px!important}#homePage #v101GlobalStockCountBtn{grid-column:1/-1!important;min-height:82px!important;padding:10px 16px!important;box-shadow:0 4px 10px rgba(15,23,42,.04)!important}}
+@media(max-width:767px){#homePage .role-menu-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:10px!important}#homePage .v126-transfer{grid-column:1/-1!important;min-height:126px!important}#homePage #v122LooseHomeCard{grid-column:1/-1!important;min-height:0!important;padding:11px!important}#homePage #v122LooseHomeCard .v122-loose-head{grid-template-columns:40px minmax(0,1fr)!important;gap:7px!important;margin-bottom:7px!important}#homePage #v122LooseHomeCard .v122-loose-head>div:last-child{display:none!important}#homePage #v122LooseHomeCard .v122-loose-icon{width:38px!important;height:38px!important;min-width:38px!important;min-height:38px!important;font-size:19px!important;border-radius:11px!important;box-shadow:none!important}#homePage #v122LooseHomeCard .v122-loose-copy b{font-size:17px!important}#homePage #v122LooseHomeCard .v122-loose-copy span{font-size:10px!important}#homePage #v122LooseHomeCard .v122-loose-store-btn{min-height:56px!important;padding:7px 5px!important;flex-direction:row!important;gap:5px!important;border-width:1px!important;box-shadow:none!important}#homePage #v122LooseHomeCard .v122-loose-code{width:29px!important;height:29px!important;min-width:29px!important;min-height:29px!important;font-size:13px!important;border-radius:8px!important}#homePage #v122LooseHomeCard .v122-loose-store-btn b{font-size:13px!important}#homePage #v101GlobalStockCountBtn{grid-column:1/-1!important;min-height:78px!important;padding:9px 11px!important}}
+
 </style>
 <script id="responsiveUiController">
 (function(){
   'use strict';
   if(window.__RESPONSIVE_UI_CONTROLLER__) return;
   window.__RESPONSIVE_UI_CONTROLLER__=true;
-  window.__STOCK_APP_UI_VERSION__='V123';
+  window.__STOCK_APP_UI_VERSION__='V129';
 
   var scheduled=false;
 
@@ -24371,21 +24409,49 @@ table{width:100%;border-collapse:collapse}
         '</div>';
     }
 
-    var countBtn=document.getElementById('v101GlobalStockCountBtn');
-    if(countBtn&&countBtn.parentElement===grid){
-      if(card.parentElement!==grid || card.previousElementSibling!==countBtn) countBtn.insertAdjacentElement('afterend',card);
-    }else if(card.parentElement!==grid){
-      grid.insertBefore(card,grid.firstElementChild||null);
-    }
+    if(card.parentElement!==grid) grid.appendChild(card);
+  }
+
+  function classifyHomeButtonsV126(){
+    var home=document.getElementById('homePage');
+    if(!home)return;
+    var grid=home.querySelector('.role-menu-grid');
+    if(!grid)return;
+    Array.from(grid.children).forEach(function(el){
+      el.classList.remove('v126-fg-in','v126-fg-out','v126-transfer','v126-other');
+      if(el.id==='v122LooseHomeCard'||el.id==='v101GlobalStockCountBtn')return;
+      var on=String(el.getAttribute&&el.getAttribute('onclick')||'').toUpperCase();
+      var tx=String(el.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
+      if(on.indexOf("SHOWFGPAGE('IN')")!==-1||tx.indexOf('FG IN')!==-1)el.classList.add('v126-fg-in');
+      else if(on.indexOf("SHOWFGPAGE('OUT')")!==-1||tx.indexOf('FG OUT')!==-1)el.classList.add('v126-fg-out');
+      else if(on.indexOf('SHOWTRANSFERPAGE')!==-1||tx.indexOf('TRANSFER LOCATION')!==-1||tx.indexOf('TRANSACTION')!==-1)el.classList.add('v126-transfer');
+      else el.classList.add('v126-other');
+    });
   }
 
   function normalizeLayout(){
     scheduled=false;
     ensureLooseHomeCard();
+    classifyHomeButtonsV126();
     var page=document.getElementById('countPage');
     var title=document.getElementById('countTitle');
     var bar=document.getElementById('countTitleBar');
     var toolbar=document.getElementById('v102TeamToolbar');
+
+    if(page){
+      /* Remove obsolete V99/V101 helper panels that overlap the current TEAM UI. */
+      ['countEmployeePolicyBannerV99','globalEmployeeSectionTitleV99','globalEmployeeSectionV99','customerSectionTitleV99','customerSectionV99'].forEach(function(id){var el=document.getElementById(id);if(el)el.style.display='none';});
+      page.querySelectorAll('.count-settings-card-v89,.count-employee-policy-v99,.global-employee-section-v99').forEach(function(el){el.style.display='none';});
+      page.querySelectorAll('*').forEach(function(el){
+        if(el.children.length===0){
+          var t=String(el.textContent||'').trim();
+          if(t==='__ALL_ITEM_KEYS_V101__'||t==='สมาชิกใน COUNT SETTING'){
+            var box=el.closest('.empty,.count-settings-card-v89,.result-card,section,div');
+            if(box&&box!==page)box.style.display='none';
+          }
+        }
+      });
+    }
 
     if(page&&title){
       if(!bar){
@@ -24420,6 +24486,18 @@ table{width:100%;border-collapse:collapse}
   new MutationObserver(schedule).observe(document.documentElement,{childList:true,subtree:true});
   window.addEventListener('resize',schedule,{passive:true});
   window.addEventListener('orientationchange',schedule,{passive:true});
+  document.addEventListener('click',function(event){
+    var t=event.target;if(!(t instanceof Element))return;
+    var loose=t.closest('#v122LooseHomeCard [data-v126-loose]');
+    if(loose){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();var c=loose.getAttribute('data-v126-loose');if(typeof window.showLooseCountPage==='function')window.showLooseCountPage(c);else if(typeof window.openLooseStoreV109==='function')window.openLooseStoreV109(c);return;}
+    var b=t.closest('#homePage .v126-fg-in,#homePage .v126-fg-out,#homePage .v126-transfer,#homePage #v101GlobalStockCountBtn');if(!b)return;
+    event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();
+    if(b.classList.contains('v126-fg-in')){if(typeof window.showFgPage==='function')window.showFgPage('IN');return;}
+    if(b.classList.contains('v126-fg-out')){if(typeof window.showFgPage==='function')window.showFgPage('OUT');return;}
+    if(b.classList.contains('v126-transfer')){if(typeof window.showTransferPage==='function')window.showTransferPage();return;}
+    if(b.id==='v101GlobalStockCountBtn'){if(typeof window.openGlobalStockCountV101==='function')window.openGlobalStockCountV101();else if(typeof window.showAllStockCountV101==='function')window.showAllStockCountV101();else if(typeof b.onclick==='function')b.onclick();}
+  },true);
+
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',schedule,{once:true});
   else schedule();
 })();
