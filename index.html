@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Stock App Mobile | MT Warehouse</title>
+  <title>Stock App V122 | MT Warehouse</title>
   
 
   <link rel="manifest" href="/manifest.json">
@@ -3601,11 +3601,11 @@ window.addEventListener('DOMContentLoaded',()=>{
         <section class="role-sheet admin-sheet">
           <div class="role-title-row"><h2>แผงควบคุมผู้ดูแล</h2></div>
           <div class="role-menu-grid admin-menu-grid">
+            <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br><em>LOTUS</em></b><span>นับสต็อก โลตัส</span></button>
+            <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br><em class="red">BIG C</em></b><span>นับสต็อก บิ๊กซี</span></button>
             <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
             <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
             <button class="transfer-home-btn" onclick="showTransferPage()"><i>⇆</i><b>TRANSFER<br>LOCATION</b><span>โอนย้ายสินค้า</span></button>
-            <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br>LOTUS</b><span>นับสต็อก โลตัส</span></button>
-            <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br>BIG C</b><span>นับสต็อก บิ๊กซี</span></button>
             <button onclick="showPage('dashboard')"><i>📊</i><b>DASHBOARD</b><span>ภาพรวมข้อมูล</span></button>
             <button onclick="showPage('master')"><i>📦</i><b>MASTER DATA</b><span>ตรวจสอบฐานข้อมูล</span></button>
             <button onclick="exportExcel()"><i>📤</i><b>EXPORT DATA</b><span>ส่งออกข้อมูล</span></button>
@@ -3627,11 +3627,11 @@ window.addEventListener('DOMContentLoaded',()=>{
         <section class="role-sheet">
           <div class="role-title-row user-title-row"><h2>HOME</h2><button class="role-refresh-btn user-refresh-btn" onclick="refreshAppData()">รีเฟรช</button></div>
           <div class="role-menu-grid user-menu-grid">
+            <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br><em>LOTUS</em></b><span>นับสต็อก โลตัส</span></button>
+            <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br><em class="red">BIG C</em></b><span>นับสต็อก บิ๊กซี</span></button>
             <button onclick="showFgPage('IN')"><i>⬇</i><b>FG IN</b><span>นำสินค้าเข้า</span></button>
             <button onclick="showFgPage('OUT')"><i>⬆</i><b>FG OUT</b><span>นำสินค้าออก</span></button>
             <button class="transfer-home-btn" onclick="showTransferPage()"><i>⇆</i><b>TRANSFER<br>LOCATION</b><span>โอนย้ายสินค้า</span></button>
-            <button onclick="showCountPage('LOTUS')"><i>✅</i><b>STOCK COUNT<br><em>LOTUS</em></b><span>นับสต็อก โลตัส</span></button>
-            <button onclick="showCountPage('BIG C')"><i>📋</i><b>STOCK COUNT<br><em class="red">BIG C</em></b><span>นับสต็อก บิ๊กซี</span></button>
           </div>
           <div id="userCountOverview" class="role-card"></div>
         </section>`;
@@ -22282,10 +22282,1379 @@ V8 PRODUCTION CLEANUP PATCH
 <!-- ===== END PATCH V115 ===== -->
 
 
+
+
+<!-- V121: V115 SINGLE STOCK COUNT + THREE TEAM SETTINGS SYSTEM -->
+<!-- ===== PATCH V101: ONE STOCK COUNT + STABLE USER BUTTON CONTROL ===== -->
+<style>
+  /* ซ่อนปุ่มนับสต็อกเดิมแบบคงที่ ไม่ลบ/สร้างซ้ำ จึงไม่กระพริบ */
+  #homePage .role-menu-grid > button[onclick*="showCountPage("]:not(#v101GlobalStockCountBtn),
+  #homePage .role-menu-grid > button[onclick*="showLooseCountPage("],
+  #homePage .role-menu-grid > button[onclick*="showOtherCustomerPage("],
+  #homePage .role-menu-grid > .loose-count-btn,
+  #homePage .role-menu-grid > .other-customer-btn,
+  #homePage .role-menu-grid > .other-customer-menu-btn,
+  #sideMenu button[onclick*="showCountPage("]:not(#btnCountAllV101),
+  #sideMenu button[onclick*="showLooseCountPage("],
+  #sideMenu button[onclick*="showOtherCustomerPage("],
+  #sideMenu #btnCountBigC,
+  #sideMenu #btnCountLotus,
+  #sideMenu #btnOtherCustomer{
+    display:none !important;
+  }
+
+  #homePage #v101GlobalStockCountBtn{
+    display:flex !important;
+    grid-column:1 / -1 !important;
+    border:2px solid #ff9a3d !important;
+    background:linear-gradient(180deg,#ffffff 0%,#fff8f2 100%) !important;
+    animation:none !important;
+    transition:box-shadow .15s ease,transform .08s ease !important;
+    box-shadow:0 12px 28px rgba(217,88,0,.12) !important;
+  }
+  #homePage #v101GlobalStockCountBtn > i{
+    background:linear-gradient(135deg,#ef233c,#b91c1c) !important;
+    color:#fff !important;
+    animation:none !important;
+  }
+  #homePage #v101GlobalStockCountBtn > b{color:#991b1b !important;}
+  #homePage #v101GlobalStockCountBtn > span{color:#6b7280 !important;}
+
+  #v101AdminButtonControlHome,
+  #v101AdminButtonControlSide{
+    animation:none !important;
+  }
+  #v101AdminButtonControlHome.is-off,
+  #v101AdminButtonControlSide.is-off{
+    background:#fff1f2 !important;
+    color:#be123c !important;
+  }
+
+  .v101-control-card{
+    border:2px solid #fecaca !important;
+    background:linear-gradient(180deg,#ffffff 0%,#fff7f7 100%) !important;
+  }
+  .v101-control-status{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:92px;
+    padding:7px 12px;
+    border-radius:999px;
+    background:#ecfdf3;
+    color:#166534;
+    font-size:12px;
+    font-weight:900;
+  }
+  .v101-control-status.off{background:#fff1f2;color:#be123c;}
+  .v101-control-warning{
+    display:none;
+    margin-top:10px;
+    padding:10px 12px;
+    border-radius:11px;
+    background:#fffbeb;
+    color:#92400e;
+    font-size:12px;
+    font-weight:800;
+  }
+  .v101-control-warning.show{display:block;}
+
+  #v101UserLockOverlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:rgba(15,23,42,.78);
+    backdrop-filter:blur(7px);
+  }
+  body.v101-user-actions-locked #v101UserLockOverlay{display:flex;}
+  .v101-lock-card{
+    width:min(440px,100%);
+    padding:28px 22px;
+    border-radius:26px;
+    background:#fff;
+    text-align:center;
+    box-shadow:0 30px 80px rgba(0,0,0,.28);
+  }
+  .v101-lock-icon{
+    width:76px;
+    height:76px;
+    margin:0 auto 14px;
+    border-radius:999px;
+    display:grid;
+    place-items:center;
+    background:#fff1f2;
+    color:#be123c;
+    font-size:34px;
+  }
+  .v101-lock-card h2{margin:0;color:#111827;font-size:25px;font-weight:900;}
+  .v101-lock-card p{margin:9px 0 18px;color:#6b7280;line-height:1.55;font-weight:700;}
+  .v101-lock-card button{
+    width:100%;
+    min-height:52px;
+    border:0;
+    border-radius:14px;
+    background:#dc2626;
+    color:#fff;
+    font:inherit;
+    font-size:17px;
+    font-weight:900;
+  }
+
+  .v101-itemkey-row{overflow-wrap:anywhere;word-break:break-word;}
+  .v101-itemkey-row strong{max-width:65%;font-size:13px !important;color:#1d4ed8 !important;}
+
+  @media(max-width:720px){
+    #homePage #v101GlobalStockCountBtn{grid-column:1 / -1 !important;min-height:150px !important;}
+    .v101-lock-card{padding:24px 18px;border-radius:22px;}
+    .v101-lock-card h2{font-size:22px;}
+    .v101-itemkey-row{grid-template-columns:110px minmax(0,1fr) !important;}
+    .v101-itemkey-row strong{max-width:100%;font-size:11px !important;}
+  }
+</style>
+<script>
+(function(){
+  'use strict';
+
+  var VERSION_V101 = 'V101';
+  var ALL_CUSTOMER_V101 = '__ALL_ITEM_KEYS_V101__';
+  var CONTROL_TABLE_V101 = 'count_user_location_global_control';
+  var controlV101 = {enabled:true,loaded:false,loading:null,lastLocked:null};
+  var baseShowCountPageV101 = window.showCountPage;
+
+  function byIdV101(id){return document.getElementById(id);}
+  function txtV101(v){return String(v == null ? '' : v).trim();}
+  function normV101(v){return txtV101(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g,'');}
+  function escV101(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function userV101(){
+    try{return txtV101(window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : '') || localStorage.getItem('stock_user') || '');}
+    catch(e){return txtV101(localStorage.getItem('stock_user') || '');}
+  }
+  function adminV101(){
+    try{if(typeof window.isAdminUser === 'function') return !!window.isAdminUser();}catch(e){}
+    try{if(typeof window.isMooUser === 'function') return !!window.isMooUser();}catch(e){}
+    return normV101(userV101()) === 'MOO';
+  }
+  function allModeV101(value){
+    var n = normV101(value);
+    return n === normV101(ALL_CUSTOMER_V101) || n === 'ALL' || n === 'ALLITEMKEYS' || n === 'ทุกITEMKEY';
+  }
+
+  var oldIsCustomerRowV101 = window.isCustomerRow;
+  window.isCustomerRow = function(row,customer){
+    if(allModeV101(customer)) return true;
+    if(typeof oldIsCustomerRowV101 === 'function') return oldIsCustomerRowV101.apply(this,arguments);
+    return true;
+  };
+  try{isCustomerRow = window.isCustomerRow;}catch(e){}
+
+  function setAllModeV101(){
+    window.currentCountWorkType = 'FULL_BOX';
+    window.currentCountCustomer = ALL_CUSTOMER_V101;
+    try{currentCountCustomer = ALL_CUSTOMER_V101;}catch(e){}
+  }
+
+  function updateCountTitleV101(){
+    var current = window.currentCountCustomer || (typeof currentCountCustomer !== 'undefined' ? currentCountCustomer : '');
+    if(!allModeV101(current)) return;
+    var title = byIdV101('countTitle');
+    if(title) title.innerHTML = 'Stock Count · ทุก Item Key <span class="count-mode-chip full">ทุก Customer · หน่วย กล่อง</span>';
+    var input = byIdV101('countSearch');
+    if(input) input.placeholder = 'ค้นหา Item Key / Item / CODE / Assort / Location / Customer';
+    var result = byIdV101('countResult');
+    if(result && !result.querySelector('.result-card,.count-card-v86')){
+      result.innerHTML = '<div class="empty">ค้นหาได้ทุก Customer และทุก Item Key</div>';
+    }
+  }
+
+  window.showAllItemKeyCountPageV101 = async function(){
+    if(!adminV101() && controlV101.loaded && controlV101.enabled === false){
+      applyControlV101();
+      return;
+    }
+    setAllModeV101();
+    try{
+      if(typeof window.ensureMasterDataLoaded === 'function') await window.ensureMasterDataLoaded('all-item-key-count-v101');
+    }catch(e){console.warn(e);}
+    var result;
+    if(typeof baseShowCountPageV101 === 'function'){
+      result = baseShowCountPageV101.call(this,ALL_CUSTOMER_V101);
+      if(result && typeof result.then === 'function') result = await result;
+    }else if(typeof window.showPage === 'function'){
+      window.showPage('count');
+    }
+    setAllModeV101();
+    updateCountTitleV101();
+    setTimeout(function(){setAllModeV101();updateCountTitleV101();},80);
+    setTimeout(function(){setAllModeV101();updateCountTitleV101();},350);
+    return result;
+  };
+
+  function makeCountHomeV101(){
+    var btn = document.createElement('button');
+    btn.id = 'v101GlobalStockCountBtn';
+    btn.type = 'button';
+    btn.className = 'v101-global-stock-count-btn full-count-btn menu-action-card';
+    btn.setAttribute('onclick','showAllItemKeyCountPageV101()');
+    btn.innerHTML = '<i>▣</i><b>STOCK COUNT</b><span>3 ทีม · ทุก Customer · ทุก Item Key</span>';
+    return btn;
+  }
+
+  function ensureCountButtonsV101(){
+    var grid = document.querySelector('#homePage .role-menu-grid');
+    if(grid && !byIdV101('v101GlobalStockCountBtn')){
+      var btn = makeCountHomeV101();
+      grid.insertBefore(btn,grid.firstElementChild || null);
+    }
+
+    var side = byIdV101('sideMenu');
+    if(side && !byIdV101('btnCountAllV101')){
+      var sideBtn = document.createElement('button');
+      sideBtn.id = 'btnCountAllV101';
+      sideBtn.type = 'button';
+      sideBtn.className = 'menu-btn';
+      sideBtn.setAttribute('onclick','showAllItemKeyCountPageV101()');
+      sideBtn.textContent = '📝 Stock Count · ทุก Item Key';
+      var sideAnchor = byIdV101('btnDashboard') || byIdV101('btnMaster') || side.querySelector('.menu-btn.logout');
+      if(sideAnchor) side.insertBefore(sideBtn,sideAnchor); else side.appendChild(sideBtn);
+    }
+  }
+
+  function injectItemKeysV101(rows){
+    var current = window.currentCountCustomer || (typeof currentCountCustomer !== 'undefined' ? currentCountCustomer : '');
+    if(!allModeV101(current)) return;
+    var store = window.__countCardRowsV86 || {};
+    document.querySelectorAll('#countResult .count-card-v86[data-v86-key]').forEach(function(card){
+      if(card.querySelector('.v101-itemkey-row')) return;
+      var row = store[card.getAttribute('data-v86-key')];
+      if(!row) return;
+      var product = card.querySelector('.count-product-box-v86');
+      var systemRow = product && product.querySelector('.count-system-row-v86');
+      if(!product) return;
+      var html = '<div class="count-product-row-v86 v101-itemkey-row"><span>Item Key</span><strong>'+escV101(row.item_key || '-')+'</strong></div>';
+      if(systemRow) systemRow.insertAdjacentHTML('beforebegin',html); else product.insertAdjacentHTML('beforeend',html);
+    });
+  }
+
+  var oldRenderV86V101 = window.renderCountResultV86;
+  if(typeof oldRenderV86V101 === 'function'){
+    window.renderCountResultV86 = function(rows){
+      var result = oldRenderV86V101.apply(this,arguments);
+      setTimeout(function(){injectItemKeysV101(rows);updateCountTitleV101();},0);
+      return result;
+    };
+  }
+  var oldRenderCountV101 = window.renderCountResult;
+  if(typeof oldRenderCountV101 === 'function'){
+    window.renderCountResult = function(rows){
+      var result = oldRenderCountV101.apply(this,arguments);
+      setTimeout(function(){injectItemKeysV101(rows);updateCountTitleV101();},0);
+      return result;
+    };
+    try{renderCountResult = window.renderCountResult;}catch(e){}
+  }
+
+  function ensureOverlayV101(){
+    if(byIdV101('v101UserLockOverlay')) return;
+    var app = byIdV101('appPage') || document.body;
+    app.insertAdjacentHTML('beforeend',
+      '<div id="v101UserLockOverlay" role="dialog" aria-modal="true">'+
+        '<div class="v101-lock-card">'+
+          '<div class="v101-lock-icon">🔒</div>'+
+          '<h2>ระบบปิดการใช้งานชั่วคราว</h2>'+
+          '<p>ผู้ดูแลปิดปุ่มการทำงานสำหรับผู้ใช้งานทั่วไป กรุณาติดต่อ Admin</p>'+
+          '<button type="button" onclick="logout()">ออกจากระบบ</button>'+
+        '</div>'+
+      '</div>'
+    );
+  }
+
+  function warningV101(message){
+    var el = byIdV101('v101ButtonControlWarning');
+    if(!el) return;
+    el.textContent = message || '';
+    el.classList.toggle('show',!!message);
+  }
+
+  function updateControlLabelsV101(){
+    var enabled = controlV101.enabled !== false;
+    var toggle = byIdV101('v101AllButtonsEnabledToggle');
+    if(toggle && toggle.checked !== enabled) toggle.checked = enabled;
+    var status = byIdV101('v101ButtonControlStatus');
+    if(status){status.textContent = enabled ? 'เปิดใช้งาน' : 'ปิดใช้งาน';status.classList.toggle('off',!enabled);}
+    var home = byIdV101('v101AdminButtonControlHome');
+    if(home){
+      home.classList.toggle('is-off',!enabled);
+      var icon = home.querySelector('i');
+      var desc = home.querySelector('span');
+      if(icon) icon.textContent = enabled ? '🔓' : '🔒';
+      if(desc) desc.textContent = enabled ? 'เปิดอยู่ · กดเพื่อปิด' : 'ปิดอยู่ · กดเพื่อเปิด';
+    }
+    var side = byIdV101('v101AdminButtonControlSide');
+    if(side){side.classList.toggle('is-off',!enabled);side.textContent = enabled ? '🔓 ปุ่มพนักงาน: เปิดอยู่' : '🔒 ปุ่มพนักงาน: ปิดอยู่';}
+  }
+
+  function applyControlV101(){
+    ensureOverlayV101();
+    var locked = !adminV101() && controlV101.loaded && controlV101.enabled === false;
+    if(controlV101.lastLocked !== locked){
+      document.body.classList.toggle('v101-user-actions-locked',locked);
+      controlV101.lastLocked = locked;
+      if(locked){try{if(typeof window.closeMenu === 'function') window.closeMenu();}catch(e){}}
+    }
+    updateControlLabelsV101();
+  }
+
+  async function loadControlV101(force){
+    if(controlV101.loading) return controlV101.loading;
+    if(controlV101.loaded && !force) return controlV101;
+    controlV101.loading = (async function(){
+      try{
+        var res = await getSupabase().from(CONTROL_TABLE_V101).select('enabled,all_buttons_enabled').eq('id',1).maybeSingle();
+        if(res.error) throw res.error;
+        var next = !res.data || res.data.all_buttons_enabled !== false;
+        controlV101.enabled = next;
+        warningV101('');
+      }catch(err){
+        controlV101.enabled = true;
+        if(adminV101()) warningV101('ยังไม่พบคอลัมน์ all_buttons_enabled กรุณารัน SQL V101');
+        console.warn('V101 button control fallback = enabled',err);
+      }finally{
+        controlV101.loaded = true;
+        controlV101.loading = null;
+        applyControlV101();
+      }
+      return controlV101;
+    })();
+    return controlV101.loading;
+  }
+
+  async function saveControlV101(enabled){
+    if(!adminV101()) return false;
+    var old = controlV101.enabled;
+    controlV101.enabled = !!enabled;
+    controlV101.loaded = true;
+    applyControlV101();
+    try{
+      var current = await getSupabase().from(CONTROL_TABLE_V101).select('enabled').eq('id',1).maybeSingle();
+      if(current.error) throw current.error;
+      var payload = {
+        id:1,
+        enabled:current.data ? current.data.enabled !== false : true,
+        all_buttons_enabled:!!enabled,
+        updated_at:new Date().toISOString(),
+        updated_by:userV101() || null
+      };
+      var res = await getSupabase().from(CONTROL_TABLE_V101).upsert(payload,{onConflict:'id'});
+      if(res.error) throw res.error;
+      warningV101('');
+      try{if(typeof window.showToast === 'function') window.showToast(enabled ? 'เปิดปุ่มพนักงานแล้ว' : 'ปิดปุ่มพนักงานแล้ว');}catch(e){}
+      return true;
+    }catch(err){
+      controlV101.enabled = old;
+      applyControlV101();
+      alert('บันทึกไม่สำเร็จ: '+txtV101(err && (err.message || err))+'\nกรุณารัน SQL V101 ก่อน');
+      return false;
+    }
+  }
+
+  window.saveAllButtonsControlV101 = function(){
+    var toggle = byIdV101('v101AllButtonsEnabledToggle');
+    return saveControlV101(!toggle || toggle.checked);
+  };
+
+  window.toggleAllUserButtonsV101 = async function(){
+    if(!adminV101()) return;
+    await loadControlV101(false);
+    var next = !controlV101.enabled;
+    if(!confirm(next ? 'ยืนยันเปิดปุ่มทั้งหมดให้พนักงานหรือไม่' : 'ยืนยันปิดปุ่มทั้งหมดของพนักงานหรือไม่')) return;
+    await saveControlV101(next);
+  };
+
+  function ensureAdminControlV101(){
+    if(!adminV101()) return;
+    var grid = document.querySelector('#homePage .admin-menu-grid');
+    if(grid && !byIdV101('v101AdminButtonControlHome')){
+      var btn = document.createElement('button');
+      btn.id = 'v101AdminButtonControlHome';
+      btn.type = 'button';
+      btn.setAttribute('onclick','toggleAllUserButtonsV101()');
+      btn.innerHTML = '<i>🔓</i><b>USER BUTTONS</b><span>เปิดอยู่ · กดเพื่อปิด</span>';
+      grid.appendChild(btn);
+    }
+    var side = byIdV101('sideMenu');
+    if(side && !byIdV101('v101AdminButtonControlSide')){
+      var sideBtn = document.createElement('button');
+      sideBtn.id = 'v101AdminButtonControlSide';
+      sideBtn.type = 'button';
+      sideBtn.className = 'menu-btn admin-only';
+      sideBtn.setAttribute('onclick','toggleAllUserButtonsV101()');
+      sideBtn.textContent = '🔓 ปุ่มพนักงาน: เปิดอยู่';
+      var logout = side.querySelector('.menu-btn.logout');
+      if(logout) side.insertBefore(sideBtn,logout); else side.appendChild(sideBtn);
+    }
+    updateControlLabelsV101();
+  }
+
+  function ensureSettingsControlV101(){
+    if(!adminV101()) return;
+    var page = byIdV101('countSettingsPageV89');
+    var wrap = page && page.querySelector('.count-settings-wrap-v89');
+    if(!page || !wrap || byIdV101('v101ButtonControlCard')) return;
+    var anchor = byIdV101('customerSectionTitleV99') || wrap.querySelector('.count-settings-card-v89');
+    var html =
+      '<div class="count-setting-section-title-v99"><b>ส่วนควบคุมปุ่มผู้ใช้งาน</b><span>มีผลเฉพาะผู้ใช้งานทั่วไป ไม่กระทบ Admin และ MOO</span></div>'+
+      '<div id="v101ButtonControlCard" class="count-settings-card-v89 count-settings-toggle-card-v89 v101-control-card">'+
+        '<div><b>เปิดปุ่มทั้งหมดสำหรับพนักงาน</b><span>เมื่อปิด ผู้ใช้งานทั่วไปจะเข้าเมนูทำงานไม่ได้</span><div id="v101ButtonControlWarning" class="v101-control-warning"></div></div>'+
+        '<div style="display:flex;align-items:center;gap:10px;"><span id="v101ButtonControlStatus" class="v101-control-status">เปิดใช้งาน</span><label class="count-switch-v89"><input id="v101AllButtonsEnabledToggle" type="checkbox" onchange="saveAllButtonsControlV101()"><span></span></label></div>'+
+      '</div>';
+    if(anchor) anchor.insertAdjacentHTML('beforebegin',html); else wrap.insertAdjacentHTML('afterbegin',html);
+    updateControlLabelsV101();
+  }
+
+  function ensureUiV101(){
+    ensureCountButtonsV101();
+    ensureAdminControlV101();
+    ensureSettingsControlV101();
+    applyControlV101();
+  }
+
+  var oldRenderHomeV101 = window.renderHomeByRole;
+  if(typeof oldRenderHomeV101 === 'function'){
+    window.renderHomeByRole = function(){var r=oldRenderHomeV101.apply(this,arguments);ensureUiV101();return r;};
+    try{renderHomeByRole = window.renderHomeByRole;}catch(e){}
+  }
+  var oldRenderSideV101 = window.renderSideMenuByRole;
+  if(typeof oldRenderSideV101 === 'function'){
+    window.renderSideMenuByRole = function(){var r=oldRenderSideV101.apply(this,arguments);ensureUiV101();return r;};
+    try{renderSideMenuByRole = window.renderSideMenuByRole;}catch(e){}
+  }
+  var oldShowPageV101 = window.showPage;
+  if(typeof oldShowPageV101 === 'function'){
+    window.showPage = function(page){var r=oldShowPageV101.apply(this,arguments);setTimeout(function(){ensureUiV101();if(page==='count')updateCountTitleV101();},0);return r;};
+    try{showPage = window.showPage;}catch(e){}
+  }
+  var oldOpenSettingsV101 = window.openCountSettingsV89;
+  if(typeof oldOpenSettingsV101 === 'function'){
+    window.openCountSettingsV89 = async function(){
+      var r=oldOpenSettingsV101.apply(this,arguments);if(r&&typeof r.then==='function')r=await r;
+      ensureSettingsControlV101();await loadControlV101(true);return r;
+    };
+  }
+  var oldLoginV101 = window.login;
+  if(typeof oldLoginV101 === 'function'){
+    window.login = async function(){
+      var r=oldLoginV101.apply(this,arguments);if(r&&typeof r.then==='function')r=await r;
+      ensureUiV101();await loadControlV101(true);return r;
+    };
+  }
+
+  async function initV101(){
+    ensureOverlayV101();
+    ensureUiV101();
+    await loadControlV101(true);
+    console.log('ONE STOCK COUNT + STABLE BUTTON CONTROL '+VERSION_V101+' ACTIVE');
+  }
+
+  document.addEventListener('visibilitychange',function(){if(!document.hidden) loadControlV101(true);});
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(initV101,700);setTimeout(ensureUiV101,1600);});
+  else setTimeout(initV101,350);
+  setInterval(function(){loadControlV101(true);},30000);
+})();
+</script>
+<!-- ===== END PATCH V101 ===== -->
+
+<!-- ===== PATCH V102: THREE TEAM STOCK COUNT ===== -->
+<style>
+  #countEmployeePolicyBannerV99,
+  #globalEmployeeSectionTitleV99,
+  #globalEmployeeSectionV99{display:none !important;}
+  #countFilterSummary{display:none !important;}
+
+  #v102TeamToolbar{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr) minmax(0,1fr) minmax(210px,.95fr) minmax(210px,.95fr);
+    gap:10px;
+    margin:0 0 12px;
+  }
+  .v102-team-btn{
+    min-height:72px;
+    border:1.5px solid #e5e7eb;
+    border-radius:17px;
+    background:#fff;
+    color:#111827;
+    padding:10px 12px;
+    text-align:left;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    box-shadow:0 7px 18px rgba(15,23,42,.06);
+    transition:.14s ease;
+  }
+  .v102-team-btn:hover{border-color:#fb7185;transform:translateY(-1px);}
+  .v102-team-btn.active{border:2px solid #dc2626;background:linear-gradient(180deg,#fff 0%,#fff5f5 100%);box-shadow:0 10px 24px rgba(220,38,38,.13);}
+  .v102-team-btn:disabled{opacity:.42;cursor:not-allowed;transform:none;}
+  .v102-team-no{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:#111827;color:#fff;font-size:19px;font-weight:950;flex:0 0 auto;}
+  .v102-team-btn.active .v102-team-no{background:#dc2626;}
+  .v102-team-copy{min-width:0;}
+  .v102-team-copy b{display:block;font-size:16px;font-weight:950;}
+  .v102-team-copy span{display:block;margin-top:2px;color:#6b7280;font-size:11px;font-weight:800;}
+
+  .v102-location-box,.v102-customer-box{border:1.5px solid #e5e7eb;border-radius:17px;background:#fff;padding:9px 11px;box-shadow:0 7px 18px rgba(15,23,42,.06);}
+  .v102-location-box label,.v102-customer-box label{display:block;margin:0 0 5px;color:#6b7280;font-size:11px;font-weight:900;}
+  .v102-location-row{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:7px;}
+  .v102-location-row select,.v102-customer-box select{width:100%;min-height:43px;border:1px solid #d1d5db;border-radius:11px;background:#fff;padding:0 9px;font:inherit;font-size:13px;font-weight:850;color:#111827;outline:0;}
+  .v102-location-row button{border:0;border-radius:11px;background:#111827;color:#fff;font-size:18px;font-weight:950;}
+  .v102-customer-box select{border-color:#fecaca;background:#fffafa;color:#991b1b;}
+
+  #v102TeamBanner{display:none;margin:0 0 10px;padding:11px 13px;border-radius:13px;background:#eff6ff;border:1px solid #bfdbfe;color:#1e3a8a;font-size:13px;font-weight:850;}
+  #v102TeamBanner.show{display:block;}
+  #v102TeamBanner.error{background:#fff1f2;border-color:#fecdd3;color:#be123c;}
+  #v102TeamSummary{margin:7px 0 12px;color:#4b5563;font-size:12px;font-weight:800;}
+  #v102TeamSummary b{color:#111827;font-weight:950;}
+
+  .v102-count-card{padding:17px;border-radius:20px;background:#fff;border:1px solid #e5e7eb;box-shadow:0 10px 26px rgba(15,23,42,.07);margin-bottom:13px;}
+  .v102-count-card.saved{border:2px solid #22c55e;background:linear-gradient(180deg,#fff 0%,#f4fff7 100%);}
+  .v102-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px;}
+  .v102-card-head h3{margin:0;color:#111827;font-size:20px;font-weight:950;overflow-wrap:anywhere;}
+  .v102-card-head small{display:block;margin-top:3px;color:#2563eb;font-size:11px;font-weight:850;overflow-wrap:anywhere;}
+  .v102-saved-badge{display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:999px;background:#dcfce7;color:#166534;font-size:11px;font-weight:950;white-space:nowrap;}
+  .v102-info-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:11px;}
+  .v102-info{padding:9px 10px;border-radius:12px;background:#f8fafc;border:1px solid #eef2f7;min-width:0;}
+  .v102-info span{display:block;color:#6b7280;font-size:10px;font-weight:850;}
+  .v102-info b{display:block;margin-top:3px;color:#111827;font-size:15px;font-weight:950;overflow-wrap:anywhere;}
+  .v102-info.system b{color:#dc2626;font-size:20px;}
+  .v102-count-input-row{display:grid;grid-template-columns:minmax(170px,.8fr) minmax(170px,.8fr) minmax(170px,.8fr);gap:9px;align-items:end;}
+  .v102-field label{display:block;margin:0 0 5px;color:#374151;font-size:11px;font-weight:900;}
+  .v102-field input{width:100%;min-height:50px;border:1.5px solid #d1d5db;border-radius:12px;background:#fff;padding:8px 11px;font:inherit;font-size:19px;font-weight:950;outline:0;}
+  .v102-field input:focus{border-color:#dc2626;box-shadow:0 0 0 4px rgba(220,38,38,.10);}
+  .v102-field input[readonly]{background:#f8fafc;color:#475569;}
+  .v102-save-btn{min-height:50px;border:0;border-radius:12px;background:#dc2626;color:#fff;font:inherit;font-size:16px;font-weight:950;}
+  .v102-save-meta{margin-top:9px;color:#166534;font-size:11px;font-weight:850;}
+  .v102-round-compare{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 12px;padding:10px;border-radius:14px;background:#fff7ed;border:1px solid #fed7aa;}
+  .v102-round-compare>div{padding:9px 11px;border-radius:11px;background:#fff;border:1px solid #ffedd5;text-align:center;}
+  .v102-round-compare span{display:block;color:#7c2d12;font-size:10px;font-weight:900;}
+  .v102-round-compare b{display:block;margin-top:2px;color:#111827;font-size:22px;font-weight:950;}
+  .v102-round-compare small{display:block;color:#9a3412;font-size:10px;font-weight:850;}
+  .v102-round-compare .difference{background:#fff1f2;border-color:#fecdd3;}
+  .v102-round-compare .difference b{color:#dc2626;}
+
+  #v102TeamSettingsSection{margin:15px 0;}
+  .v102-settings-title{margin:0 0 10px;padding:12px 14px;border-left:5px solid #dc2626;border-radius:12px;background:#fff7f7;}
+  .v102-settings-title b{display:block;font-size:18px;color:#111827;}
+  .v102-settings-title span{display:block;margin-top:3px;color:#6b7280;font-size:12px;}
+  .v102-cycle-card{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:end;padding:14px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;margin-bottom:11px;}
+  .v102-cycle-card label,.v102-team-setting label{display:block;margin:0 0 5px;color:#374151;font-size:11px;font-weight:900;}
+  .v102-cycle-card input[type="text"],.v102-team-setting select{width:100%;min-height:44px;border:1.5px solid #d1d5db;border-radius:11px;background:#fff;padding:0 10px;font:inherit;font-size:13px;font-weight:850;outline:0;}
+  .v102-cycle-toggle{display:flex;align-items:center;gap:7px;min-height:44px;padding:0 10px;border-radius:11px;background:#f8fafc;font-size:12px;font-weight:900;}
+  .v102-cycle-toggle input{width:18px;height:18px;accent-color:#dc2626;}
+  .v102-settings-save{min-height:44px;border:0;border-radius:11px;background:#111827;color:#fff;padding:0 17px;font:inherit;font-weight:950;}
+  .v102-team-settings-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px;}
+  .v102-team-setting{padding:14px;border:1px solid #e5e7eb;border-radius:17px;background:#fff;box-shadow:0 7px 18px rgba(15,23,42,.05);}
+  .v102-team-setting-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:11px;}
+  .v102-team-setting-head b{font-size:18px;color:#111827;font-weight:950;}
+  .v102-round-chip{padding:5px 9px;border-radius:999px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:950;}
+  .v102-setting-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .v102-setting-grid .full{grid-column:1/-1;}
+  .v102-location-add{display:grid;grid-template-columns:minmax(0,1fr) 42px;gap:7px;}
+  .v102-location-add button{border:0;border-radius:11px;background:#e5e7eb;color:#111827;font-size:20px;font-weight:950;}
+  .v102-location-chips{display:flex;gap:6px;flex-wrap:wrap;min-height:39px;margin-top:8px;padding:7px;border:1px dashed #d1d5db;border-radius:11px;background:#fafafa;}
+  .v102-location-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-size:10px;font-weight:950;}
+  .v102-location-chip button{border:0;background:transparent;color:#be123c;font-size:13px;font-weight:950;padding:0;}
+  .v102-location-chip.conflict{background:#fee2e2;color:#991b1b;box-shadow:inset 0 0 0 1px #fca5a5;}
+  .v102-location-warning{display:block;width:100%;padding:7px 8px;border-radius:9px;background:#fff1f2;color:#be123c;font-size:10px;font-weight:900;}
+  .v102-empty-chip{color:#9ca3af;font-size:11px;font-weight:800;}
+  .v102-team-save{width:100%;min-height:44px;margin-top:10px;border:0;border-radius:11px;background:#dc2626;color:#fff;font:inherit;font-weight:950;}
+  .v102-settings-note{margin-top:10px;padding:10px 12px;border-radius:11px;background:#fffbeb;color:#92400e;font-size:11px;font-weight:800;}
+
+  @media(max-width:1100px){
+    #v102TeamToolbar{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .v102-location-box,.v102-customer-box{grid-column:span 1;}
+  }
+  @media(max-width:920px){
+    #v102TeamToolbar{grid-template-columns:repeat(3,minmax(0,1fr));}
+    .v102-location-box,.v102-customer-box{grid-column:span 1;}
+    .v102-team-settings-grid{grid-template-columns:1fr;}
+    .v102-info-grid{grid-template-columns:repeat(3,minmax(0,1fr));}
+  }
+  @media(max-width:680px){
+    #v102TeamToolbar{grid-template-columns:1fr;}
+    .v102-team-btn{min-height:62px;}
+    .v102-location-box,.v102-customer-box{grid-column:auto;}
+    .v102-info-grid{grid-template-columns:1fr 1fr;}
+    .v102-count-input-row{grid-template-columns:1fr;}
+    .v102-cycle-card{grid-template-columns:1fr;}
+    .v102-setting-grid{grid-template-columns:1fr;}
+    .v102-setting-grid .full{grid-column:auto;}
+  }
+</style>
+<script>
+(function(){
+  'use strict';
+
+  var VERSION_V102 = 'V102.3 ROUND 3 MISMATCH QUEUE';
+  var CONTROL_TABLE_V102 = 'count_team_control';
+  var SETTINGS_TABLE_V102 = 'count_team_settings';
+  var EMPLOYEE_TABLE_V102 = 'count_team_employee_directory';
+  var MEMBER_TABLE_V102 = 'count_team_members';
+  var LOCATION_TABLE_V102 = 'count_team_locations';
+  var RESULT_TABLE_V102 = 'stock_count_team_results';
+  var COMPARE_VIEW_V102 = 'stock_count_team_compare';
+  var TEAM_VIEWS_V102 = {1:'available_stock_team_1',2:'available_stock_team_2',3:'available_stock_team_3'};
+
+  var stateV102 = {
+    loaded:false,
+    loading:null,
+    configError:'',
+    control:{cycle_code:'',is_active:true},
+    settings:{1:{team_no:1,team_name:'TEAM 1',active_round:1,enabled:true},2:{team_no:2,team_name:'TEAM 2',active_round:1,enabled:true},3:{team_no:3,team_name:'TEAM 3',active_round:1,enabled:true}},
+    members:[],
+    userTeams:[],
+    selectedTeam:0,
+    selectedLocation:'ALL',
+    selectedCustomer:'ALL',
+    teamCustomers:[],
+    teamRows:[],
+    teamResults:[],
+    teamLocations:[],
+    rowMap:{},
+    employees:[],
+    allLocations:[],
+    editLocations:{},
+    settingsLoaded:false,
+    customerPolicies:{},
+    compareRows:[],
+    compareMap:new Map(),
+    mismatchLocationsByTeam:{1:[],2:[],3:[]}
+  };
+
+  function byIdV102(id){return document.getElementById(id);}
+  function txtV102(v){return String(v == null ? '' : v).trim();}
+  function normV102(v){return txtV102(v).toUpperCase().replace(/[\s\-_'".\/’`]+/g,'');}
+  function userKeyV102(v){return txtV102(v).replace(/\s+/g,' ').toUpperCase();}
+  function escV102(v){return String(v == null ? '' : v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function numV102(v){var n=Number(String(v == null ? 0 : v).replace(/,/g,'').trim());return Number.isFinite(n)?n:0;}
+  function currentUserV102(){
+    try{return txtV102(window.currentUser || (typeof currentUser !== 'undefined' ? currentUser : '') || localStorage.getItem('stock_user') || '');}
+    catch(e){return txtV102(localStorage.getItem('stock_user') || '');}
+  }
+  function adminV102(){
+    try{if(typeof window.isAdminUser==='function')return !!window.isAdminUser();}catch(e){}
+    try{if(typeof window.isMooUser==='function')return !!window.isMooUser();}catch(e){}
+    return userKeyV102(currentUserV102())==='MOO';
+  }
+  function defaultCycleV102(){
+    var d=new Date();
+    var parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Bangkok',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(d);
+    var m={};parts.forEach(function(p){m[p.type]=p.value;});
+    return 'SC-'+(m.year||'')+(m.month||'')+(m.day||'');
+  }
+  function teamSettingV102(team){return stateV102.settings[Number(team)] || {team_no:Number(team),team_name:'TEAM '+team,active_round:1,enabled:true};}
+  function activeRoundV102(){return Number(teamSettingV102(stateV102.selectedTeam).active_round || 1);}
+  function hasTeamAccessV102(team){return adminV102() || stateV102.userTeams.indexOf(Number(team))>=0;}
+  function rowValueV102(row,names){for(var i=0;i<names.length;i++){if(row && row[names[i]]!==undefined && row[names[i]]!==null)return row[names[i]];}return '';}
+  function rowItemKeyV102(row){return txtV102(rowValueV102(row,['item_key','Item_Key']));}
+  function rowLocationV102(row){return txtV102(rowValueV102(row,['Location','location']));}
+  function rowQtyV102(row){return numV102(rowValueV102(row,['available_qty','available_Qty','Quantity','quantity']));}
+  function rowCustomerV102(row){return txtV102(rowValueV102(row,['customer','Customer','channel','Channel']));}
+  function rowItemV102(row){return txtV102(rowValueV102(row,['Item','item']));}
+  function rowCodeV102(row){return txtV102(rowValueV102(row,['CODE','code']));}
+  function rowAssortV102(row){return txtV102(rowValueV102(row,['Assort','assort']));}
+  function resultKeyV102(row){return rowItemKeyV102(row);}
+  function compareItemKeyV102(row){return txtV102(rowValueV102(row,['item_key','Item_Key']));}
+  function isMismatchCompareV102(row){
+    if(!row)return false;
+    var r1=row.round1_qty,r2=row.round2_qty;
+    return r1!==null&&r1!==undefined&&r2!==null&&r2!==undefined&&numV102(r1)!==numV102(r2);
+  }
+  function eligibleRound3CompareV102(row,team){
+    return isMismatchCompareV102(row)&&Number(row.round1_team||0)!==Number(team)&&Number(row.round2_team||0)!==Number(team);
+  }
+  function rebuildCompareStateV102(rows){
+    stateV102.compareRows=Array.isArray(rows)?rows:[];
+    stateV102.compareMap=new Map();
+    var locMaps={1:new Map(),2:new Map(),3:new Map()};
+    stateV102.compareRows.forEach(function(r){
+      var key=compareItemKeyV102(r);if(key)stateV102.compareMap.set(key,r);
+      if(!isMismatchCompareV102(r))return;
+      var loc=txtV102(r.location);if(!loc)return;
+      [1,2,3].forEach(function(team){
+        if(eligibleRound3CompareV102(r,team)&&!locMaps[team].has(normV102(loc)))locMaps[team].set(normV102(loc),loc);
+      });
+    });
+    stateV102.mismatchLocationsByTeam={
+      1:Array.from(locMaps[1].values()).sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});}),
+      2:Array.from(locMaps[2].values()).sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});}),
+      3:Array.from(locMaps[3].values()).sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});})
+    };
+  }
+  function round3CompareForRowV102(row){return stateV102.compareMap.get(rowItemKeyV102(row))||null;}
+  function round3EligibleLocationsV102(team){return (stateV102.mismatchLocationsByTeam[Number(team)]||[]).slice();}
+  function isRound3LocationEligibleV102(team,loc){return round3EligibleLocationsV102(team).some(function(x){return normV102(x)===normV102(loc);});}
+
+  async function loadCustomerPoliciesV102(){
+    try{
+      var res=await getSupabase().from('count_settings').select('customer,show_zero_available');
+      if(res.error)throw res.error;
+      var map={};
+      (res.data||[]).forEach(function(r){
+        var key=normV102(r.customer);
+        if(key)map[key]={showZeroAvailable:r.show_zero_available!==false};
+      });
+      stateV102.customerPolicies=map;
+    }catch(err){
+      console.warn('V102.1 load count zero settings failed',err);
+      stateV102.customerPolicies={};
+    }
+  }
+
+  function visibleByZeroPolicyV102(row){
+    if(rowQtyV102(row)!==0)return true;
+    var policy=stateV102.customerPolicies[normV102(rowCustomerV102(row))];
+    return !policy || policy.showZeroAvailable!==false;
+  }
+
+  async function registerCurrentUserV102(){
+    var name=currentUserV102(),key=userKeyV102(name);if(!name||!key)return;
+    try{
+      var res=await getSupabase().from(EMPLOYEE_TABLE_V102).upsert({user_key:key,user_name:name,last_seen:new Date().toISOString()},{onConflict:'user_key'});
+      if(res.error)throw res.error;
+    }catch(e){console.warn('V102 register employee failed',e);}
+  }
+
+  async function fetchAllV102(table){
+    var all=[],from=0,size=1000;
+    while(true){
+      var res=await getSupabase().from(table).select('*').range(from,from+size-1);
+      if(res.error)throw res.error;
+      var part=res.data||[];all=all.concat(part);
+      if(part.length<size)break;
+      from+=size;
+    }
+    return all;
+  }
+
+  async function loadConfigV102(force){
+    if(stateV102.loading)return stateV102.loading;
+    if(stateV102.loaded&&!force)return stateV102;
+    stateV102.loading=(async function(){
+      try{
+        var controlRes=await getSupabase().from(CONTROL_TABLE_V102).select('*').eq('id',1).maybeSingle();
+        if(controlRes.error)throw controlRes.error;
+        stateV102.control=controlRes.data||{id:1,cycle_code:defaultCycleV102(),is_active:true};
+        if(!stateV102.control.cycle_code)stateV102.control.cycle_code=defaultCycleV102();
+
+        var settingRes=await getSupabase().from(SETTINGS_TABLE_V102).select('*').order('team_no',{ascending:true});
+        if(settingRes.error)throw settingRes.error;
+        (settingRes.data||[]).forEach(function(r){stateV102.settings[Number(r.team_no)]=r;});
+
+        var memberRes=await getSupabase().from(MEMBER_TABLE_V102).select('*').eq('is_active',true).order('team_no',{ascending:true}).order('slot_no',{ascending:true});
+        if(memberRes.error)throw memberRes.error;
+        stateV102.members=memberRes.data||[];
+        var key=userKeyV102(currentUserV102());
+        stateV102.userTeams=Array.from(new Set(stateV102.members.filter(function(r){return userKeyV102(r.user_key||r.user_name)===key;}).map(function(r){return Number(r.team_no);}))).sort();
+        stateV102.configError='';
+        stateV102.loaded=true;
+      }catch(err){
+        stateV102.configError=txtV102(err&&(err.message||err));
+        stateV102.loaded=true;
+        console.error('V102 config load failed',err);
+      }finally{
+        stateV102.loading=null;
+        renderTeamButtonsV102();
+        updateTeamBannerV102();
+      }
+      return stateV102;
+    })();
+    return stateV102.loading;
+  }
+
+  function ensureCountUiV102(){
+    var page=byIdV102('countPage'),title=byIdV102('countTitle');
+    if(!page||!title)return;
+    if(!byIdV102('v102TeamToolbar')){
+      title.insertAdjacentHTML('afterend',
+        '<div id="v102TeamToolbar">'+
+          [1,2,3].map(function(team){return '<button id="v102TeamBtn'+team+'" class="v102-team-btn" type="button" onclick="selectCountTeamV102('+team+')"><span class="v102-team-no">'+team+'</span><span class="v102-team-copy"><b>TEAM '+team+'</b><span>กำลังโหลด...</span></span></button>';}).join('')+
+          '<div class="v102-location-box"><label>Location ของทีม</label><div class="v102-location-row"><select id="v102LocationSelect" onchange="changeTeamLocationV102(this.value)"><option value="ALL">ทั้งหมดในทีม</option></select><button type="button" onclick="refreshSelectedTeamV102()">↻</button></div></div>'+
+          '<div class="v102-customer-box"><label>กรองร้านค้า</label><select id="v102CustomerSelect" onchange="changeTeamCustomerV102(this.value)"><option value="ALL">ทุก Customer</option></select></div>'+
+        '</div>'
+      );
+    }
+    var searchRow=page.querySelector('.count-search-row');
+    if(searchRow&&!byIdV102('v102TeamBanner'))searchRow.insertAdjacentHTML('afterend','<div id="v102TeamBanner"></div><div id="v102TeamSummary"></div>');
+    var input=byIdV102('countSearch');
+    if(input)input.placeholder='ค้นหา Item Key / Item / CODE / Assort / Location / Customer';
+  }
+
+  function teamMembersTextV102(team){
+    var names=stateV102.members.filter(function(r){return Number(r.team_no)===Number(team)&&r.is_active!==false;}).sort(function(a,b){return Number(a.slot_no)-Number(b.slot_no);}).map(function(r){return txtV102(r.user_name);}).filter(Boolean);
+    return names.length?names.join(', '):'ยังไม่เลือกสมาชิก';
+  }
+
+  function renderTeamButtonsV102(){
+    ensureCountUiV102();
+    var isAdmin=adminV102();
+    var toolbar=byIdV102('v102TeamToolbar');
+    if(toolbar){
+      toolbar.classList.toggle('admin-view',isAdmin);
+      toolbar.classList.toggle('user-view',!isAdmin);
+    }
+    [1,2,3].forEach(function(team){
+      var btn=byIdV102('v102TeamBtn'+team);if(!btn)return;
+      var setting=teamSettingV102(team),access=hasTeamAccessV102(team)&&setting.enabled!==false;
+      btn.disabled=!access;
+      btn.classList.toggle('active',stateV102.selectedTeam===team);
+      var copy=btn.querySelector('.v102-team-copy span');
+      if(copy)copy.textContent=isAdmin?('รอบ '+Number(setting.active_round||1)+' · '+teamMembersTextV102(team)):('รอบ '+Number(setting.active_round||1));
+    });
+  }
+
+  function updateTeamTitleV102(){
+    var title=byIdV102('countTitle');if(!title)return;
+    if(!stateV102.selectedTeam){title.innerHTML='Stock Count · 3 Teams';return;}
+    var setting=teamSettingV102(stateV102.selectedTeam);
+    var customerText=stateV102.selectedCustomer&&stateV102.selectedCustomer!=='ALL'?stateV102.selectedCustomer:'ทุก Customer';
+    title.innerHTML='Stock Count · '+escV102(setting.team_name||('TEAM '+stateV102.selectedTeam))+' <span class="count-mode-chip full">รอบ '+activeRoundV102()+' · '+escV102(customerText)+'</span>';
+  }
+
+  function updateTeamBannerV102(){
+    ensureCountUiV102();
+    var box=byIdV102('v102TeamBanner');if(!box)return;
+    if(stateV102.configError){
+      box.className='show error';
+      box.innerHTML='ยังใช้งานระบบ 3 ทีมไม่ได้ กรุณารัน SQL V102 ก่อน · '+escV102(stateV102.configError);
+      return;
+    }
+    if(!stateV102.selectedTeam){
+      box.className='show';
+      box.innerHTML=adminV102()?'เลือก TEAM 1, TEAM 2 หรือ TEAM 3 เพื่อเริ่มนับ':'ชื่อผู้ใช้งานนี้ยังไม่ได้อยู่ในทีม กรุณาให้ Admin เลือกสมาชิกใน COUNT SETTING';
+      return;
+    }
+    /* เมื่อเลือกทีมแล้วให้แสดงเฉพาะบรรทัดสรุป ไม่แสดง Banner รายละเอียดซ้ำ */
+    box.className='';
+    box.innerHTML='';
+  }
+
+  function populateLocationSelectV102(){
+    var select=byIdV102('v102LocationSelect');if(!select)return;
+    var current=stateV102.selectedLocation||'ALL';
+    select.innerHTML='<option value="ALL">ทั้งหมดในทีม</option>'+stateV102.teamLocations.map(function(loc){return '<option value="'+escV102(loc)+'">'+escV102(loc)+'</option>';}).join('');
+    if(current==='ALL'||stateV102.teamLocations.some(function(x){return normV102(x)===normV102(current);})){select.value=current;}else{select.value='ALL';stateV102.selectedLocation='ALL';}
+  }
+
+
+
+  function populateCustomerSelectV102(){
+    var select=byIdV102('v102CustomerSelect');if(!select)return;
+    var map=new Map();
+    stateV102.teamRows.forEach(function(r){var customer=rowCustomerV102(r);if(customer&&!map.has(normV102(customer)))map.set(normV102(customer),customer);});
+    stateV102.teamCustomers=Array.from(map.values()).sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+    var current=stateV102.selectedCustomer||'ALL';
+    select.innerHTML='<option value="ALL">ทุก Customer</option>'+stateV102.teamCustomers.map(function(customer){return '<option value="'+escV102(customer)+'">'+escV102(customer)+'</option>';}).join('');
+    if(current==='ALL'||stateV102.teamCustomers.some(function(x){return normV102(x)===normV102(current);})){select.value=current;}else{select.value='ALL';stateV102.selectedCustomer='ALL';}
+  }
+  async function loadSelectedTeamDataV102(){
+    var team=Number(stateV102.selectedTeam);if(!team)return;
+    var setting=teamSettingV102(team),round=Number(setting.active_round||1),cycle=txtV102(stateV102.control.cycle_code||defaultCycleV102());
+    try{
+      if(typeof window.setLoading==='function')window.setLoading(true,'กำลังโหลดข้อมูล TEAM '+team+'...');
+      else if(typeof setLoading==='function')setLoading(true,'กำลังโหลดข้อมูล TEAM '+team+'...');
+      await loadCustomerPoliciesV102();
+      var rows=await fetchAllV102(TEAM_VIEWS_V102[team]);
+      if(round===3){
+        var compareRes=await getSupabase().from(COMPARE_VIEW_V102).select('*').eq('cycle_code',cycle);
+        if(compareRes.error)throw compareRes.error;
+        rebuildCompareStateV102(compareRes.data||[]);
+      }else{
+        rebuildCompareStateV102([]);
+      }
+      stateV102.teamRows=(rows||[]).map(function(r){
+        var q=rowQtyV102(r);
+        r.Quantity=q;r.quantity=q;r.available_qty=q;r.__v102Team=team;r.__v102Round=round;
+        return r;
+      }).filter(function(r){
+        if(round!==3)return true;
+        return eligibleRound3CompareV102(round3CompareForRowV102(r),team);
+      });
+      var resultRes=await getSupabase().from(RESULT_TABLE_V102).select('*').eq('cycle_code',cycle).eq('round_no',round).order('counted_at',{ascending:false});
+      if(resultRes.error)throw resultRes.error;
+      stateV102.teamResults=resultRes.data||[];
+      var locRes=await getSupabase().from(LOCATION_TABLE_V102).select('location').eq('team_no',team).eq('round_no',round).eq('is_active',true).order('location',{ascending:true});
+      if(locRes.error)throw locRes.error;
+      stateV102.teamLocations=Array.from(new Set((locRes.data||[]).map(function(r){return txtV102(r.location);}).filter(Boolean)));
+      stateV102.selectedLocation='ALL';
+      stateV102.selectedCustomer='ALL';
+      populateLocationSelectV102();
+      populateCustomerSelectV102();
+      clearCountInputV102(false);
+      renderCurrentRowsV102();
+      renderTeamButtonsV102();
+      updateTeamTitleV102();
+      updateTeamBannerV102();
+    }catch(err){
+      stateV102.teamRows=[];stateV102.teamResults=[];stateV102.teamLocations=[];stateV102.teamCustomers=[];rebuildCompareStateV102([]);
+      populateLocationSelectV102();
+      populateCustomerSelectV102();
+      var box=byIdV102('countResult');if(box)box.innerHTML='<div class="empty">โหลดข้อมูล TEAM '+team+' ไม่สำเร็จ: '+escV102(err&&(err.message||err))+'</div>';
+      stateV102.configError=txtV102(err&&(err.message||err));
+      updateTeamBannerV102();
+    }finally{
+      try{if(typeof window.setLoading==='function')window.setLoading(false);else if(typeof setLoading==='function')setLoading(false);}catch(e){}
+    }
+  }
+
+  window.selectCountTeamV102=async function(team){
+    team=Number(team);
+    await loadConfigV102(false);
+    if(!hasTeamAccessV102(team))return alert('ผู้ใช้งาน '+currentUserV102()+' ไม่ได้อยู่ใน TEAM '+team);
+    if(teamSettingV102(team).enabled===false)return alert('TEAM '+team+' ถูกปิดใช้งาน');
+    stateV102.selectedTeam=team;
+    stateV102.selectedLocation='ALL';
+    stateV102.selectedCustomer='ALL';
+    renderTeamButtonsV102();
+    updateTeamTitleV102();
+    await loadSelectedTeamDataV102();
+  };
+
+  window.changeTeamLocationV102=function(value){
+    stateV102.selectedLocation=txtV102(value)||'ALL';
+    renderCurrentRowsV102();
+    updateTeamTitleV102();
+    updateTeamBannerV102();
+  };
+  window.changeTeamCustomerV102=function(value){
+    stateV102.selectedCustomer=txtV102(value)||'ALL';
+    renderCurrentRowsV102();
+    updateTeamTitleV102();
+    updateTeamBannerV102();
+  };
+  window.refreshSelectedTeamV102=async function(){
+    await loadConfigV102(true);
+    if(stateV102.selectedTeam)await loadSelectedTeamDataV102();
+  };
+
+  function savedMapV102(){
+    var map=new Map();
+    stateV102.teamResults.forEach(function(r){var key=txtV102(r.item_key);if(key&&!map.has(key))map.set(key,r);});
+    return map;
+  }
+  function currentFilterV102(){
+    var t=txtV102(byIdV102('countFilterText')&&byIdV102('countFilterText').textContent||'ทั้งหมด');
+    if(t==='นับแล้ว')return 'counted';if(t==='ยังไม่นับ')return 'uncounted';return 'all';
+  }
+  function filteredRowsV102(keyword){
+    var q=normV102(keyword),loc=stateV102.selectedLocation,customer=stateV102.selectedCustomer,saved=savedMapV102(),seen=new Set();
+    var rows=stateV102.teamRows.filter(function(r){
+      var key=rowItemKeyV102(r);if(!key||seen.has(key))return false;seen.add(key);
+      if(!visibleByZeroPolicyV102(r))return false;
+      if(activeRoundV102()===3&&!eligibleRound3CompareV102(round3CompareForRowV102(r),stateV102.selectedTeam))return false;
+      if(loc&&loc!=='ALL'&&normV102(rowLocationV102(r))!==normV102(loc))return false;
+      if(customer&&customer!=='ALL'&&normV102(rowCustomerV102(r))!==normV102(customer))return false;
+      if(q){
+        var text=[key,rowItemV102(r),rowCodeV102(r),rowAssortV102(r),rowLocationV102(r),rowCustomerV102(r)].map(normV102).join('|');
+        if(text.indexOf(q)<0)return false;
+      }
+      return true;
+    });
+    var filter=currentFilterV102();
+    if(filter==='counted')rows=rows.filter(function(r){return saved.has(rowItemKeyV102(r));});
+    if(filter==='uncounted')rows=rows.filter(function(r){return !saved.has(rowItemKeyV102(r));});
+    return rows;
+  }
+
+  function updateSummaryV102(rows){
+    var box=byIdV102('v102TeamSummary');if(!box)return;
+    if(!stateV102.selectedTeam){box.textContent='';return;}
+    var saved=savedMapV102(),baseRows=stateV102.teamRows.filter(function(r){
+      if(!visibleByZeroPolicyV102(r))return false;
+      if(activeRoundV102()===3&&!eligibleRound3CompareV102(round3CompareForRowV102(r),stateV102.selectedTeam))return false;
+      if(stateV102.selectedLocation!=='ALL'&&normV102(rowLocationV102(r))!==normV102(stateV102.selectedLocation))return false;
+      if(stateV102.selectedCustomer!=='ALL'&&normV102(rowCustomerV102(r))!==normV102(stateV102.selectedCustomer))return false;
+      return true;
+    });
+    var uniq=new Map();baseRows.forEach(function(r){uniq.set(rowItemKeyV102(r),r);});
+    var counted=Array.from(uniq.values()).filter(function(r){return saved.has(rowItemKeyV102(r));}).length;
+    var total=uniq.size;
+    box.innerHTML='<b>TEAM '+stateV102.selectedTeam+'</b> · รอบ <b>'+activeRoundV102()+'</b> · แสดง <b>'+Number((rows||[]).length).toLocaleString('th-TH')+'</b> รายการ · นับแล้ว <b>'+counted.toLocaleString('th-TH')+'</b> · ยังไม่นับ <b>'+Math.max(0,total-counted).toLocaleString('th-TH')+'</b>';
+  }
+
+  function renderRowsV102(rows){
+    var box=byIdV102('countResult');if(!box)return;
+    stateV102.rowMap={};
+    if(!rows.length){
+      box.className='empty';
+      box.innerHTML='<div class="empty">ไม่พบรายการใน TEAM '+stateV102.selectedTeam+' รอบ '+activeRoundV102()+' ตาม Location และตัวกรองที่เลือก</div>';
+      updateSummaryV102(rows);
+      return;
+    }
+    box.className='';
+    var saved=savedMapV102();
+    box.innerHTML=rows.map(function(r,index){
+      var mapKey='R'+index+'_'+Date.now();stateV102.rowMap[mapKey]=r;
+      var key=rowItemKeyV102(r),old=saved.get(key),savedQty=old?old.count_qty:'';
+      var compare=activeRoundV102()===3?round3CompareForRowV102(r):null;
+      var comparePanel='';
+      if(compare&&isMismatchCompareV102(compare)){
+        var difference=Math.abs(numV102(compare.round1_qty)-numV102(compare.round2_qty));
+        comparePanel='<div class="v102-round-compare">'+
+          '<div><span>ผลนับรอบ 1</span><b>'+escV102(compare.round1_qty)+'</b><small>TEAM '+escV102(compare.round1_team||'-')+'</small></div>'+
+          '<div><span>ผลนับรอบ 2</span><b>'+escV102(compare.round2_qty)+'</b><small>TEAM '+escV102(compare.round2_team||'-')+'</small></div>'+
+          '<div class="difference"><span>ผลต่าง</span><b>'+escV102(difference)+'</b><small>ส่งตรวจรอบ 3</small></div>'+
+        '</div>';
+      }
+      var meta=old?'<div class="v102-save-meta">นับโดย '+escV102(old.counted_by||'-')+' · จำนวน '+escV102(old.count_qty)+' · '+escV102(old.counted_at?new Date(old.counted_at).toLocaleString('th-TH',{timeZone:'Asia/Bangkok'}):'')+'</div>':'';
+      return '<article class="v102-count-card '+(old?'saved':'')+'">'+
+        '<div class="v102-card-head"><div><h3>'+escV102(rowItemV102(r)||key)+'</h3><small>'+escV102(key)+'</small></div>'+(old?'<span class="v102-saved-badge">✓ นับแล้ว</span>':'')+'</div>'+
+        '<div class="v102-info-grid">'+
+          '<div class="v102-info"><span>CODE</span><b>'+escV102(rowCodeV102(r)||'-')+'</b></div>'+
+          '<div class="v102-info"><span>Assort</span><b>'+escV102(rowAssortV102(r)||'-')+'</b></div>'+
+          '<div class="v102-info"><span>Customer</span><b>'+escV102(rowCustomerV102(r)||'-')+'</b></div>'+
+          '<div class="v102-info"><span>Location</span><b>'+escV102(rowLocationV102(r)||'-')+'</b></div>'+
+          '<div class="v102-info system"><span>Available</span><b>'+escV102(rowQtyV102(r))+'</b></div>'+
+        '</div>'+comparePanel+
+        '<div class="v102-count-input-row">'+
+          '<div class="v102-field"><label>Location ที่นับ</label><input value="'+escV102(rowLocationV102(r))+'" readonly></div>'+
+          '<div class="v102-field"><label>จำนวนที่นับได้ (กล่อง)</label><input id="v102Qty_'+mapKey+'" type="number" inputmode="decimal" value="'+escV102(savedQty)+'" placeholder="0"></div>'+
+          '<button class="v102-save-btn" type="button" onclick="saveTeamCountV102(\''+mapKey+'\')">'+(old?'อัปเดต':'บันทึก')+'</button>'+
+        '</div>'+meta+
+      '</article>';
+    }).join('');
+    updateSummaryV102(rows);
+  }
+
+  function renderCurrentRowsV102(){
+    var keyword=txtV102(byIdV102('countSearch')&&byIdV102('countSearch').value||'');
+    renderRowsV102(filteredRowsV102(keyword));
+  }
+
+  function clearCountInputV102(focus){
+    var input=byIdV102('countSearch');if(input)input.value='';
+    var suggest=byIdV102('countSuggest');if(suggest){suggest.innerHTML='';suggest.classList.remove('show');}
+    if(focus&&input)input.focus();
+  }
+
+  window.searchOfflineRows=function(keyword){return filteredRowsV102(keyword);};
+  try{searchOfflineRows=window.searchOfflineRows;}catch(e){}
+
+  window.searchForCount=function(){
+    if(!stateV102.selectedTeam)return alert('กรุณาเลือกทีมก่อน');
+    var suggest=byIdV102('countSuggest');if(suggest){suggest.innerHTML='';suggest.classList.remove('show');}
+    renderCurrentRowsV102();
+  };
+  try{searchForCount=window.searchForCount;}catch(e){}
+
+  window.clearCountSearch=function(){clearCountInputV102(true);renderCurrentRowsV102();};
+  try{clearCountSearch=window.clearCountSearch;}catch(e){}
+
+  window.showCountSuggest=function(){
+    var input=byIdV102('countSearch'),box=byIdV102('countSuggest');if(!input||!box||!stateV102.selectedTeam)return;
+    var q=txtV102(input.value);if(q.length<2){box.innerHTML='';box.classList.remove('show');return;}
+    var rows=filteredRowsV102(q).slice(0,50);
+    if(!rows.length){box.innerHTML='<div class="count-suggest-empty">ไม่พบข้อมูล</div>';box.classList.add('show');return;}
+    box.innerHTML=rows.map(function(r){var key=rowItemKeyV102(r);return '<button type="button" data-value="'+escV102(key)+'" onclick="selectTeamSuggestV102(this.getAttribute(\'data-value\'))">'+escV102(key+' | '+rowLocationV102(r)+' | '+rowCustomerV102(r))+'</button>';}).join('');
+    box.classList.add('show');
+  };
+  window.selectTeamSuggestV102=function(value){var input=byIdV102('countSearch');if(input)input.value=value;var box=byIdV102('countSuggest');if(box){box.innerHTML='';box.classList.remove('show');}renderCurrentRowsV102();};
+
+  window.applyCountFilter=function(){renderCurrentRowsV102();};
+  window.setCountFilter=function(filter){
+    var label=filter==='counted'?'นับแล้ว':(filter==='uncounted'?'ยังไม่นับ':'ทั้งหมด');
+    var text=byIdV102('countFilterText');if(text)text.textContent=label;
+    var menu=byIdV102('countFilterMenu');if(menu)menu.classList.remove('show');
+    renderCurrentRowsV102();
+  };
+
+  async function compareStatusV102(itemKey){
+    try{
+      var res=await getSupabase().from(COMPARE_VIEW_V102).select('count_status,round1_qty,round2_qty,round3_qty,final_qty').eq('cycle_code',stateV102.control.cycle_code).eq('item_key',itemKey).maybeSingle();
+      if(res.error)throw res.error;
+      return res.data||null;
+    }catch(e){console.warn('V102 compare failed',e);return null;}
+  }
+
+  window.saveTeamCountV102=async function(mapKey){
+    var row=stateV102.rowMap[mapKey];if(!row)return alert('ไม่พบข้อมูลรายการ กรุณาค้นหาใหม่');
+    var team=Number(stateV102.selectedTeam),round=activeRoundV102();
+    if(!hasTeamAccessV102(team))return alert('ไม่มีสิทธิ์บันทึก TEAM '+team);
+    var input=byIdV102('v102Qty_'+mapKey);if(!input||txtV102(input.value)==='')return alert('กรุณาใส่จำนวนที่นับได้');
+    var qty=numV102(input.value),itemKey=rowItemKeyV102(row);
+    if(!itemKey)return alert('รายการนี้ไม่มี item_key');
+    var payload={
+      cycle_code:txtV102(stateV102.control.cycle_code||defaultCycleV102()),
+      team_no:team,
+      round_no:round,
+      master_id:row.id==null?null:String(row.id),
+      item_key:itemKey,
+      item:rowItemV102(row)||null,
+      code:rowCodeV102(row)||null,
+      assort:rowAssortV102(row)||null,
+      location:rowLocationV102(row)||null,
+      customer:rowCustomerV102(row)||null,
+      system_qty:rowQtyV102(row),
+      count_qty:qty,
+      counted_by:currentUserV102()||'ไม่ระบุชื่อ',
+      counted_at:new Date().toISOString(),
+      updated_at:new Date().toISOString()
+    };
+    try{
+      var btn=input.closest('.v102-count-input-row')&&input.closest('.v102-count-input-row').querySelector('.v102-save-btn');if(btn)btn.disabled=true;
+      var res=await getSupabase().from(RESULT_TABLE_V102).upsert(payload,{onConflict:'cycle_code,round_no,item_key'}).select('*').single();
+      if(res.error)throw res.error;
+      stateV102.teamResults=stateV102.teamResults.filter(function(r){return txtV102(r.item_key)!==itemKey;});
+      stateV102.teamResults.unshift(res.data||payload);
+      renderCurrentRowsV102();
+      var compare=await compareStatusV102(itemKey),message='บันทึก TEAM '+team+' รอบ '+round+' สำเร็จ';
+      if(compare){
+        if(compare.count_status==='MATCHED')message='รอบ 1 และรอบ 2 ตรงกัน ไม่ต้องนับรอบ 3';
+        else if(compare.count_status==='WAITING_ROUND_3')message='รอบ 1 และรอบ 2 ไม่ตรงกัน ส่งเข้ารอบ 3 แล้ว';
+        else if(compare.count_status==='VERIFIED_BY_ROUND_3')message='รอบ 3 ยืนยันยอดสำเร็จ · ยอดสุดท้าย '+compare.final_qty;
+        else if(compare.count_status==='REVIEW_REQUIRED')message='ทั้ง 3 รอบไม่ตรงกัน ต้องให้ Admin ตรวจสอบ';
+      }
+      try{if(typeof window.showToast==='function')window.showToast(message);else if(typeof showToast==='function')showToast(message);else alert(message);}catch(e){alert(message);}
+    }catch(err){alert('บันทึกไม่สำเร็จ: '+txtV102(err&&(err.message||err))+'\nกรุณาตรวจสอบว่าได้รัน SQL V102 แล้ว');}
+  };
+
+  async function showTeamCountPageV102(){
+    var old=window.__showAllItemKeyCountPageV101Original || window.showAllItemKeyCountPageV101;
+    if(typeof old==='function'){
+      var out=old.apply(this,arguments);if(out&&typeof out.then==='function')await out;
+    }else if(typeof window.showPage==='function')window.showPage('count');
+    ensureCountUiV102();
+    await loadConfigV102(true);
+    var first=stateV102.selectedTeam;
+    if(!first){first=adminV102()?1:(stateV102.userTeams[0]||0);}
+    if(first)await window.selectCountTeamV102(first);
+    else{renderTeamButtonsV102();updateTeamTitleV102();updateTeamBannerV102();var box=byIdV102('countResult');if(box)box.innerHTML='<div class="empty">ยังไม่ได้กำหนดทีมให้ '+escV102(currentUserV102())+'</div>';}
+  }
+  window.showTeamCountPageV102=showTeamCountPageV102;
+
+  function patchHomeButtonsV102(){
+    var home=byIdV102('v101GlobalStockCountBtn');if(home){home.setAttribute('onclick','showTeamCountPageV102()');var span=home.querySelector('span');if(span)span.textContent='3 ทีม · รอบ · สมาชิก · Location · ทุก Customer';}
+    var side=byIdV102('btnCountAllV101');if(side){side.setAttribute('onclick','showTeamCountPageV102()');side.textContent='📝 Stock Count · 3 Teams';}
+  }
+
+  async function loadSettingsDataV102(){
+    await loadConfigV102(true);
+    try{
+      var empMap=new Map();
+      var dirRes=await getSupabase().from(EMPLOYEE_TABLE_V102).select('user_key,user_name,last_seen').order('last_seen',{ascending:false}).limit(2000);
+      if(dirRes.error)throw dirRes.error;
+      (dirRes.data||[]).forEach(function(r){var name=txtV102(r.user_name),key=userKeyV102(r.user_key||name);if(key&&!empMap.has(key))empMap.set(key,{key:key,name:name||key});});
+      try{
+        var empRes=await getSupabase().from('active_users').select('user_name,last_seen').order('last_seen',{ascending:false}).limit(1000);
+        if(!empRes.error)(empRes.data||[]).forEach(function(r){var name=txtV102(r.user_name),key=userKeyV102(name);if(key&&!empMap.has(key))empMap.set(key,{key:key,name:name});});
+      }catch(e){}
+      stateV102.members.forEach(function(r){var name=txtV102(r.user_name),key=userKeyV102(r.user_key||name);if(key&&!empMap.has(key))empMap.set(key,{key:key,name:name||key});});
+      stateV102.employees=Array.from(empMap.values()).sort(function(a,b){return a.name.localeCompare(b.name,'th');});
+
+      var rows=[];
+      try{rows=Array.isArray(window.availableRows)&&window.availableRows.length?window.availableRows:await fetchAllV102('available_stock');}catch(e){rows=await fetchAllV102('master_data');}
+      var locMap=new Map();rows.forEach(function(r){var loc=rowLocationV102(r);if(loc&&!locMap.has(normV102(loc)))locMap.set(normV102(loc),loc);});
+      stateV102.allLocations=Array.from(locMap.values()).sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});
+
+      var cycle=txtV102(stateV102.control.cycle_code||defaultCycleV102());
+      var compareRes=await getSupabase().from(COMPARE_VIEW_V102).select('*').eq('cycle_code',cycle);
+      if(compareRes.error)throw compareRes.error;
+      rebuildCompareStateV102(compareRes.data||[]);
+
+      var locRes=await getSupabase().from(LOCATION_TABLE_V102).select('*').eq('is_active',true).order('team_no',{ascending:true}).order('round_no',{ascending:true}).order('location',{ascending:true});
+      if(locRes.error)throw locRes.error;
+      stateV102.editLocations={};
+      (locRes.data||[]).forEach(function(r){var k=Number(r.team_no)+'-'+Number(r.round_no);if(!stateV102.editLocations[k])stateV102.editLocations[k]=[];stateV102.editLocations[k].push(txtV102(r.location));});
+      stateV102.settingsLoaded=true;
+      renderSettingsV102();
+    }catch(err){
+      var host=byIdV102('v102TeamSettingsSection');if(host)host.innerHTML='<div class="v102-settings-title"><b>โหลดการตั้งค่า 3 ทีมไม่สำเร็จ</b><span>'+escV102(err&&(err.message||err))+' · กรุณารัน SQL V102</span></div>';
+    }
+  }
+
+  function employeeOptionsV102(selectedKey){
+    return '<option value="">-- ไม่เลือก --</option>'+stateV102.employees.map(function(e){return '<option value="'+escV102(e.key)+'" data-name="'+escV102(e.name)+'" '+(userKeyV102(selectedKey)===e.key?'selected':'')+'>'+escV102(e.name)+'</option>';}).join('');
+  }
+  function memberForSlotV102(team,slot){return stateV102.members.find(function(r){return Number(r.team_no)===Number(team)&&Number(r.slot_no)===Number(slot)&&r.is_active!==false;})||null;}
+  function editLocationKeyV102(team,round){return Number(team)+'-'+Number(round);}
+  function editLocationsV102(team,round){var key=editLocationKeyV102(team,round);if(!stateV102.editLocations[key])stateV102.editLocations[key]=[];return stateV102.editLocations[key];}
+  function locationsUsedBySameTeamOtherRoundsV102(team,round){
+    var used=new Map();
+    [1,2,3].forEach(function(r){
+      if(Number(r)===Number(round))return;
+      editLocationsV102(team,r).forEach(function(loc){var key=normV102(loc);if(key&&!used.has(key))used.set(key,{location:loc,round:r});});
+    });
+    return used;
+  }
+  function duplicateRoundLocationsV102(team,round,locations){
+    var used=locationsUsedBySameTeamOtherRoundsV102(team,round);
+    return (locations||[]).map(function(loc){var hit=used.get(normV102(loc));return hit?{location:loc,round:hit.round}:null;}).filter(Boolean);
+  }
+
+  function ensureSettingsSectionV102(){
+    if(!adminV102())return null;
+    var page=byIdV102('countSettingsPageV89'),wrap=page&&page.querySelector('.count-settings-wrap-v89');if(!page||!wrap)return null;
+    var host=byIdV102('v102TeamSettingsSection');
+    if(!host){
+      host=document.createElement('div');host.id='v102TeamSettingsSection';
+      var anchor=byIdV102('v101ButtonControlCard')||wrap.firstElementChild;
+      if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(host,anchor.nextSibling);else wrap.insertBefore(host,wrap.firstChild);
+    }
+    return host;
+  }
+
+  function renderLocationChipsV102(team){
+    team=Number(team);
+    var round=Number(byIdV102('v102Round_'+team)&&byIdV102('v102Round_'+team).value||teamSettingV102(team).active_round||1);
+    var box=byIdV102('v102LocChips_'+team);if(!box)return;
+    var rows=editLocationsV102(team,round),usedOther=locationsUsedBySameTeamOtherRoundsV102(team,round);
+    var invalidRound3=round===3?rows.filter(function(loc){return !isRound3LocationEligibleV102(team,loc);}):[];
+    var chips=rows.length?rows.map(function(loc){
+      var conflict=usedOther.get(normV102(loc));
+      var noMismatch=round===3&&!isRound3LocationEligibleV102(team,loc);
+      var bad=conflict||noMismatch;
+      var detail=conflict?' · ทีมนี้เคยนับรอบ '+conflict.round:(noMismatch?' · ไม่มีผลต่างรอบ 1–2':'');
+      return '<span class="v102-location-chip '+(bad?'conflict':'')+'">'+escV102(loc)+detail+'<button type="button" data-loc="'+escV102(loc)+'" onclick="removeTeamLocationV102('+team+',this.getAttribute(\'data-loc\'))">×</button></span>';
+    }).join(''):'<span class="v102-empty-chip">ยังไม่ได้เลือก Location สำหรับรอบนี้</span>';
+    var conflicts=duplicateRoundLocationsV102(team,round,rows);
+    if(conflicts.length)chips+='<span class="v102-location-warning">TEAM '+team+' เคยนับ Location สีแดงในรอบก่อนแล้ว รอบ 3 ต้องใช้ทีมที่สามซึ่งยังไม่เคยนับ Location นี้</span>';
+    if(invalidRound3.length)chips+='<span class="v102-location-warning">รอบ 3 เลือกได้เฉพาะ Location ที่ผลรอบ 1 และรอบ 2 ไม่ตรงกัน กรุณาลบ '+escV102(invalidRound3.join(', '))+'</span>';
+    box.innerHTML=chips;
+    var picker=byIdV102('v102LocPicker_'+team);
+    if(picker){
+      var source=round===3?round3EligibleLocationsV102(team):stateV102.allLocations;
+      var allowed=source.filter(function(loc){return !usedOther.has(normV102(loc));});
+      picker.innerHTML='<option value="">-- เลือก Location --</option>'+allowed.map(function(loc){return '<option value="'+escV102(loc)+'">'+escV102(loc)+'</option>';}).join('');
+      if(round===3&&!allowed.length)picker.innerHTML='<option value="">-- ยังไม่มี Location ที่ต้องนับรอบ 3 --</option>';
+    }
+    var chip=byIdV102('v102RoundChip_'+team);if(chip)chip.textContent='รอบ '+round;
+  }
+
+  function renderSettingsV102(){
+    var host=ensureSettingsSectionV102();if(!host)return;
+    var cycle=stateV102.control.cycle_code||defaultCycleV102();
+    host.innerHTML='<div class="v102-settings-title"><b>ระบบ Stock Count 3 ทีม</b><span>แต่ละทีมมีสมาชิก 1–2 คน เลือก Location แยกตามรอบ และใช้ข้อมูลจาก available_stock_team_1, 2, 3</span></div>'+
+      '<div class="v102-cycle-card"><div><label>รหัสรอบการนับ</label><input id="v102CycleCode" type="text" value="'+escV102(cycle)+'"></div><label class="v102-cycle-toggle"><input id="v102CycleActive" type="checkbox" '+(stateV102.control.is_active!==false?'checked':'')+'> เปิดรอบนับ</label><button class="v102-settings-save" type="button" onclick="saveTeamCycleV102()">บันทึกรอบงาน</button></div>'+
+      '<div class="v102-team-settings-grid">'+[1,2,3].map(function(team){
+        var setting=teamSettingV102(team),m1=memberForSlotV102(team,1),m2=memberForSlotV102(team,2);
+        return '<div class="v102-team-setting">'+
+          '<div class="v102-team-setting-head"><b>TEAM '+team+'</b><span id="v102RoundChip_'+team+'" class="v102-round-chip">รอบ '+Number(setting.active_round||1)+'</span></div>'+
+          '<div class="v102-setting-grid">'+
+            '<div><label>รอบที่ทีมกำลังนับ</label><select id="v102Round_'+team+'" onchange="changeTeamRoundSettingV102('+team+')"><option value="1" '+(Number(setting.active_round)===1?'selected':'')+'>รอบ 1</option><option value="2" '+(Number(setting.active_round)===2?'selected':'')+'>รอบ 2</option><option value="3" '+(Number(setting.active_round)===3?'selected':'')+'>รอบ 3</option></select></div>'+
+            '<div><label>สถานะทีม</label><select id="v102Enabled_'+team+'"><option value="true" '+(setting.enabled!==false?'selected':'')+'>เปิดใช้งาน</option><option value="false" '+(setting.enabled===false?'selected':'')+'>ปิดใช้งาน</option></select></div>'+
+            '<div><label>สมาชิกคนที่ 1</label><select id="v102Member1_'+team+'">'+employeeOptionsV102(m1&&(m1.user_key||m1.user_name))+'</select></div>'+
+            '<div><label>สมาชิกคนที่ 2</label><select id="v102Member2_'+team+'">'+employeeOptionsV102(m2&&(m2.user_key||m2.user_name))+'</select></div>'+
+            '<div class="full"><label>เพิ่ม Location สำหรับรอบที่เลือก</label><div class="v102-location-add"><select id="v102LocPicker_'+team+'"></select><button type="button" onclick="addTeamLocationV102('+team+')">＋</button></div><div id="v102LocChips_'+team+'" class="v102-location-chips"></div></div>'+
+          '</div><button class="v102-team-save" type="button" onclick="saveTeamSettingV102('+team+')">บันทึก TEAM '+team+'</button></div>';
+      }).join('')+'</div><div class="v102-settings-note">รอบ 1 และรอบ 2 ต้องใช้คนละทีมใน Location เดิม ส่วนรอบ 3 ระบบจะแสดงเฉพาะ Location และ Item Key ที่ผลรอบ 1 กับรอบ 2 ไม่ตรงกัน และอนุญาตให้เฉพาะทีมที่สามซึ่งยังไม่เคยนับรายการนั้นเป็นผู้ตรวจนับ รอบ 3 จะแสดงยอดรอบ 1 ยอดรอบ 2 และผลต่างบนการ์ด</div>';
+    [1,2,3].forEach(renderLocationChipsV102);
+  }
+
+  window.changeTeamRoundSettingV102=function(team){renderLocationChipsV102(Number(team));};
+  window.addTeamLocationV102=function(team){
+    team=Number(team);var round=Number(byIdV102('v102Round_'+team).value),picker=byIdV102('v102LocPicker_'+team),loc=txtV102(picker&&picker.value);if(!loc)return;
+    var used=locationsUsedBySameTeamOtherRoundsV102(team,round).get(normV102(loc));
+    if(used)return alert('TEAM '+team+' เคยนับ Location '+loc+' ในรอบ '+used.round+' แล้ว รอบนี้ต้องใช้ทีมอื่น');
+    if(round===3&&!isRound3LocationEligibleV102(team,loc))return alert('Location '+loc+' ไม่มีรายการที่ผลรอบ 1 และรอบ 2 ไม่ตรงกัน หรือ TEAM '+team+' เคยนับรายการนี้แล้ว');
+    var rows=editLocationsV102(team,round);if(!rows.some(function(x){return normV102(x)===normV102(loc);}))rows.push(loc);
+    rows.sort(function(a,b){return a.localeCompare(b,'th',{numeric:true});});renderLocationChipsV102(team);
+  };
+  window.removeTeamLocationV102=function(team,loc){
+    team=Number(team);var round=Number(byIdV102('v102Round_'+team).value),key=editLocationKeyV102(team,round);
+    stateV102.editLocations[key]=editLocationsV102(team,round).filter(function(x){return normV102(x)!==normV102(loc);});renderLocationChipsV102(team);
+  };
+
+  window.saveTeamCycleV102=async function(){
+    if(!adminV102())return;
+    var code=txtV102(byIdV102('v102CycleCode')&&byIdV102('v102CycleCode').value)||defaultCycleV102(),active=!!(byIdV102('v102CycleActive')&&byIdV102('v102CycleActive').checked);
+    try{
+      var payload={id:1,cycle_code:code,is_active:active,updated_at:new Date().toISOString(),updated_by:currentUserV102()||null};
+      var res=await getSupabase().from(CONTROL_TABLE_V102).upsert(payload,{onConflict:'id'});if(res.error)throw res.error;
+      stateV102.control=payload;
+      try{if(typeof window.showToast==='function')window.showToast('บันทึกรอบงาน '+code+' แล้ว');}catch(e){}
+    }catch(err){alert('บันทึกรอบงานไม่สำเร็จ: '+txtV102(err&&(err.message||err)));}
+  };
+
+  function selectedMemberV102(id){
+    var select=byIdV102(id),key=userKeyV102(select&&select.value);if(!key)return null;
+    var opt=select.options[select.selectedIndex],name=txtV102(opt&&opt.dataset&&opt.dataset.name||opt&&opt.textContent||key);
+    return {key:key,name:name};
+  }
+
+  window.saveTeamSettingV102=async function(team){
+    if(!adminV102())return;team=Number(team);
+    var round=Number(byIdV102('v102Round_'+team).value||1),enabled=byIdV102('v102Enabled_'+team).value!=='false';
+    var choices=[selectedMemberV102('v102Member1_'+team),selectedMemberV102('v102Member2_'+team)].filter(Boolean);
+    var unique=[];choices.forEach(function(c){if(!unique.some(function(x){return x.key===c.key;}))unique.push(c);});
+    var locations=editLocationsV102(team,round).slice();
+    var duplicates=duplicateRoundLocationsV102(team,round,locations);
+    if(duplicates.length)return alert('บันทึกไม่ได้: TEAM '+team+' เคยนับ Location นี้แล้ว ได้แก่ '+duplicates.map(function(x){return x.location+' (รอบ '+x.round+')';}).join(', ')+' กรุณาใช้ทีมที่สาม');
+    if(round===3){
+      var invalidRound3=locations.filter(function(loc){return !isRound3LocationEligibleV102(team,loc);});
+      if(invalidRound3.length)return alert('บันทึกไม่ได้: รอบ 3 เลือกได้เฉพาะ Location ที่รอบ 1 และรอบ 2 ไม่ตรงกัน และต้องเป็นทีมที่สาม ได้แก่ '+invalidRound3.join(', '));
+    }
+    if(!locations.length)return alert(round===3?'ยังไม่มี Location ที่ต้องนับรอบ 3 สำหรับ TEAM '+team:'กรุณาเลือกอย่างน้อย 1 Location สำหรับ TEAM '+team+' รอบ '+round);
+    if(!unique.length)return alert('กรุณาเลือกสมาชิกอย่างน้อย 1 คนสำหรับ TEAM '+team);
+    try{
+      if(typeof window.setLoading==='function')window.setLoading(true,'กำลังบันทึก TEAM '+team+'...');
+      var settingPayload={team_no:team,team_name:'TEAM '+team,active_round:round,enabled:enabled,updated_at:new Date().toISOString(),updated_by:currentUserV102()||null};
+      var s=await getSupabase().from(SETTINGS_TABLE_V102).upsert(settingPayload,{onConflict:'team_no'});if(s.error)throw s.error;
+
+      var keys=unique.map(function(x){return x.key;});
+      if(keys.length){var move=await getSupabase().from(MEMBER_TABLE_V102).delete().in('user_key',keys);if(move.error)throw move.error;}
+      var del=await getSupabase().from(MEMBER_TABLE_V102).delete().eq('team_no',team);if(del.error)throw del.error;
+      var memberPayload=unique.map(function(x,index){return {team_no:team,slot_no:index+1,user_key:x.key,user_name:x.name,is_active:true,updated_at:new Date().toISOString(),updated_by:currentUserV102()||null};});
+      var ins=await getSupabase().from(MEMBER_TABLE_V102).insert(memberPayload);if(ins.error)throw ins.error;
+
+      var delLoc=await getSupabase().from(LOCATION_TABLE_V102).delete().eq('team_no',team).eq('round_no',round);if(delLoc.error)throw delLoc.error;
+      var locPayload=locations.map(function(loc){return {team_no:team,round_no:round,location:loc,is_active:true,updated_at:new Date().toISOString(),updated_by:currentUserV102()||null};});
+      var insLoc=await getSupabase().from(LOCATION_TABLE_V102).insert(locPayload);if(insLoc.error)throw insLoc.error;
+      await loadSettingsDataV102();
+      try{if(typeof window.showToast==='function')window.showToast('บันทึก TEAM '+team+' รอบ '+round+' แล้ว');}catch(e){}
+    }catch(err){alert('บันทึก TEAM '+team+' ไม่สำเร็จ: '+txtV102(err&&(err.message||err))+'\nกรุณาตรวจสอบ SQL V102');}
+    finally{try{if(typeof window.setLoading==='function')window.setLoading(false);}catch(e){}}
+  };
+
+  function patchSettingsOpenV102(){
+    var old=window.openCountSettingsV89;if(typeof old!=='function'||old.__v102Wrapped)return;
+    var wrapped=async function(){var out=old.apply(this,arguments);if(out&&typeof out.then==='function')await out;ensureSettingsSectionV102();await loadSettingsDataV102();return out;};
+    wrapped.__v102Wrapped=true;window.openCountSettingsV89=wrapped;
+  }
+
+  async function initV102(){
+    ensureCountUiV102();patchHomeButtonsV102();patchSettingsOpenV102();
+    await registerCurrentUserV102();
+    await loadConfigV102(true);
+    renderTeamButtonsV102();updateTeamTitleV102();updateTeamBannerV102();
+    console.log('THREE TEAM STOCK COUNT '+VERSION_V102+' ACTIVE');
+  }
+
+  var originalAll=window.showAllItemKeyCountPageV101;
+  if(typeof originalAll==='function')window.__showAllItemKeyCountPageV101Original=originalAll;
+
+  var oldRenderHomeV102=window.renderHomeByRole;
+  if(typeof oldRenderHomeV102==='function')window.renderHomeByRole=function(){var r=oldRenderHomeV102.apply(this,arguments);setTimeout(patchHomeButtonsV102,0);return r;};
+  var oldRenderSideV102=window.renderSideMenuByRole;
+  if(typeof oldRenderSideV102==='function')window.renderSideMenuByRole=function(){var r=oldRenderSideV102.apply(this,arguments);setTimeout(patchHomeButtonsV102,0);return r;};
+  var oldLoginV102=window.login;
+  if(typeof oldLoginV102==='function')window.login=async function(){var r=oldLoginV102.apply(this,arguments);if(r&&typeof r.then==='function')await r;stateV102.loaded=false;await initV102();return r;};
+
+  document.addEventListener('visibilitychange',function(){if(!document.hidden&&byIdV102('countPage')&&byIdV102('countPage').style.display!=='none')window.refreshSelectedTeamV102();});
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(initV102,1100);setTimeout(patchHomeButtonsV102,1900);});
+  else setTimeout(initV102,650);
+})();
+</script>
+<!-- ===== END PATCH V102 ===== -->
+<!-- END V121 TEAM SYSTEM -->
+
 <!-- RESPONSIVE UI CORE START -->
 <style id="responsiveUiCore">
 /*
-  Canonical responsive layout for the warehouse application.
+  Canonical responsive layout for the warehouse application (V123).
   This is the only responsive authority for the main header, count workspace,
   home cards and loose-stock customer controls.
 */
@@ -22374,56 +23743,148 @@ main{padding-inline:clamp(10px,2vw,22px)!important}
 .role-menu-grid button b,
 .role-menu-grid button span{overflow-wrap:anywhere;word-break:break-word}
 
-/* Loose Stock main card stays in the grid and its customer buttons stay inside it. */
-#homePage #looseHomeCard{
+/* งานเศษ: ใช้การ์ดหลักเพียงใบเดียว และเลือก LOTUS / BIG C ภายในการ์ด */
+#homePage #looseHomeCard,
+#homePage .role-menu-grid > .loose-count-btn,
+#homePage .role-menu-grid > .work-loose-btn,
+#homePage .role-menu-grid > [class*="loose-home-card"]{display:none!important}
+
+#homePage #v122LooseHomeCard{
+  grid-column:1 / -1!important;
   position:relative!important;
-  inset:auto!important;
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:stretch!important;
-  justify-content:flex-start!important;
-  gap:12px!important;
   width:100%!important;
   max-width:100%!important;
   min-width:0!important;
-  height:auto!important;
-  min-height:260px!important;
-  padding:18px!important;
+  min-height:250px!important;
+  padding:24px!important;
   margin:0!important;
-  transform:none!important;
+  border:2px solid #f2c38f!important;
+  border-radius:28px!important;
+  background:linear-gradient(145deg,#fffaf4 0%,#ffffff 64%,#fff7ed 100%)!important;
+  box-shadow:0 12px 28px rgba(180,72,0,.10)!important;
   overflow:hidden!important;
 }
-#homePage #looseHomeCard>*{min-width:0!important;max-width:100%!important}
-#homePage #looseHomeCard .v110-loose-buttons,
-#homePage #looseHomeCard .v109-loose-buttons,
-#homePage #looseHomeCard .v106-loose-buttons,
-#homePage #looseHomeCard .v104-loose-store-grid{
+#homePage #v122LooseHomeCard::before{
+  content:'';
+  position:absolute;
+  left:-70px;
+  top:-85px;
+  width:260px;
+  height:260px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,160,55,.15),rgba(255,160,55,0) 72%);
+  pointer-events:none;
+}
+#homePage #v122LooseHomeCard .v122-loose-head{
+  position:relative!important;
+  z-index:1!important;
+  display:grid!important;
+  grid-template-columns:100px minmax(0,1fr) 100px!important;
+  align-items:center!important;
+  gap:18px!important;
+  margin-bottom:20px!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-icon{
+  width:92px!important;
+  height:92px!important;
+  min-width:92px!important;
+  min-height:92px!important;
+  border-radius:24px!important;
+  display:grid!important;
+  place-items:center!important;
+  background:#ff7622!important;
+  color:#fff!important;
+  font-size:48px!important;
+  line-height:1!important;
+  box-shadow:0 12px 24px rgba(255,118,34,.22)!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-copy{
+  min-width:0!important;
+  text-align:center!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-copy b{
+  display:block!important;
+  margin:0!important;
+  color:#9a3412!important;
+  font-size:clamp(30px,4vw,48px)!important;
+  line-height:1.12!important;
+  font-weight:1000!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  writing-mode:horizontal-tb!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-copy span{
+  display:block!important;
+  margin-top:8px!important;
+  color:#7c6f68!important;
+  font-size:clamp(18px,2.4vw,28px)!important;
+  line-height:1.3!important;
+  font-weight:500!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  writing-mode:horizontal-tb!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-store-grid{
+  position:relative!important;
+  z-index:1!important;
   display:grid!important;
   grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:10px!important;
+  gap:18px!important;
   width:100%!important;
-  margin-top:auto!important;
 }
-#homePage #looseHomeCard .v110-loose-store,
-#homePage #looseHomeCard .v109-loose-store,
-#homePage #looseHomeCard .v106-loose-btn,
-#homePage #looseHomeCard .v104-loose-store-btn,
-#homePage #looseHomeCard [data-v110-loose-store],
-#homePage #looseHomeCard [data-v109-loose-store],
-#homePage #looseHomeCard [data-loose-store]{
-  position:relative!important;
-  inset:auto!important;
+#homePage #v122LooseHomeCard .v122-loose-store-btn{
+  appearance:none!important;
+  -webkit-appearance:none!important;
   width:100%!important;
   min-width:0!important;
-  min-height:64px!important;
-  height:auto!important;
-  padding:12px 10px!important;
+  min-height:150px!important;
+  padding:18px 14px!important;
   margin:0!important;
-  font-size:clamp(17px,2vw,22px)!important;
-  line-height:1.2!important;
-  white-space:normal!important;
-  overflow-wrap:anywhere!important;
+  border:2px solid #f6cf9f!important;
+  border-radius:24px!important;
+  background:#fff!important;
+  color:#6b7280!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:12px!important;
+  text-align:center!important;
+  box-shadow:0 8px 18px rgba(15,23,42,.05)!important;
+  overflow:hidden!important;
+  cursor:pointer!important;
   transform:none!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-store-btn:active{transform:scale(.985)!important}
+#homePage #v122LooseHomeCard .v122-loose-code{
+  width:72px!important;
+  height:72px!important;
+  min-width:72px!important;
+  min-height:72px!important;
+  border-radius:20px!important;
+  display:grid!important;
+  place-items:center!important;
+  background:#fff1e6!important;
+  color:#c2410c!important;
+  font-size:30px!important;
+  line-height:1!important;
+  font-weight:1000!important;
+}
+#homePage #v122LooseHomeCard .v122-loose-store-btn b{
+  display:block!important;
+  width:100%!important;
+  margin:0!important;
+  padding:0!important;
+  color:#6b7280!important;
+  font-size:clamp(24px,3vw,38px)!important;
+  line-height:1.1!important;
+  font-weight:1000!important;
+  white-space:normal!important;
+  word-break:normal!important;
+  overflow-wrap:normal!important;
+  writing-mode:horizontal-tb!important;
 }
 
 /* Count page: every section participates in normal flow. */
@@ -22543,22 +24004,292 @@ main{padding-inline:clamp(10px,2vw,22px)!important}
 .table-wrap,.latest-table-mini,.responsive-table{max-width:100%!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse}
 
-@media (max-width:767px){
-  main{padding-inline:8px!important}
-  .role-sheet{margin:0!important;border-radius:22px!important;padding:10px!important}
+/* TEAM visibility: ผู้ใช้ทั่วไปไม่เห็นตัวเลือกหรือรายละเอียดทีมอื่น; Admin เห็นครบ */
+#v102TeamToolbar.user-view{display:none!important}
+#v102TeamToolbar.admin-view{display:grid!important}
+#v102TeamBanner:not(.show),#v102TeamBanner:empty{display:none!important}
+#v102TeamSummary{
+  width:100%!important;
+  margin:10px 0 14px!important;
+  padding:14px 18px!important;
+  border:1.5px solid #d9e5f5!important;
+  border-radius:16px!important;
+  background:#f8fbff!important;
+  color:#4b5563!important;
+  font-size:clamp(16px,1.5vw,22px)!important;
+  line-height:1.45!important;
+  font-weight:700!important;
+  overflow-wrap:normal!important;
+  word-break:normal!important;
+}
+#v102TeamSummary b{color:#111827!important;font-weight:1000!important}
+
+/* Desktop layout: แยกจาก Mobile เพื่อไม่ให้การ์ดถูกย่อไปกองด้านซ้าย */
+@media (min-width:768px){
+  main{max-width:1480px!important;margin:0 auto!important;padding:24px 26px 44px!important}
+  #homePage .role-sheet{
+    width:100%!important;
+    max-width:1400px!important;
+    margin:0 auto!important;
+    padding:26px!important;
+    border-radius:30px!important;
+  }
   #homePage .role-menu-grid,
   #homePage .admin-menu-grid,
   #homePage .user-menu-grid{
-    grid-template-columns:minmax(0,1fr)!important;
+    display:grid!important;
+    grid-template-columns:repeat(3,minmax(0,1fr))!important;
+    gap:18px!important;
+    align-items:stretch!important;
+  }
+  #homePage #v101GlobalStockCountBtn{
+    grid-column:1 / -1!important;
+    min-height:180px!important;
+    padding:28px 34px!important;
+    display:grid!important;
+    grid-template-columns:96px minmax(0,1fr)!important;
+    grid-template-rows:auto auto!important;
+    column-gap:24px!important;
+    row-gap:4px!important;
+    align-items:center!important;
+    justify-items:start!important;
+    text-align:left!important;
+    border-radius:26px!important;
+  }
+  #homePage #v101GlobalStockCountBtn>i{
+    grid-column:1!important;
+    grid-row:1 / 3!important;
+    width:82px!important;
+    height:82px!important;
+    min-width:82px!important;
+    min-height:82px!important;
+    max-width:82px!important;
+    max-height:82px!important;
+    margin:0!important;
+    border-radius:22px!important;
+    font-size:38px!important;
+  }
+  #homePage #v101GlobalStockCountBtn>b{
+    grid-column:2!important;
+    grid-row:1!important;
+    align-self:end!important;
+    width:100%!important;
+    margin:0!important;
+    text-align:left!important;
+    font-size:38px!important;
+    line-height:1.05!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+  }
+  #homePage #v101GlobalStockCountBtn>span{
+    grid-column:2!important;
+    grid-row:2!important;
+    align-self:start!important;
+    width:100%!important;
+    margin:0!important;
+    text-align:left!important;
+    font-size:18px!important;
+    line-height:1.35!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+  }
+  #homePage #v122LooseHomeCard{grid-column:1 / -1!important;min-height:300px!important;padding:26px!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-btn{min-height:160px!important}
+  #homePage .role-menu-grid>button:not(#v101GlobalStockCountBtn),
+  #homePage .admin-menu-grid>button:not(#v101GlobalStockCountBtn),
+  #homePage .user-menu-grid>button:not(#v101GlobalStockCountBtn){
+    grid-column:auto!important;
+    min-height:210px!important;
+    padding:24px 18px!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
     gap:10px!important;
+    border-radius:24px!important;
+    text-align:center!important;
+  }
+  #homePage .role-menu-grid>button:not(#v101GlobalStockCountBtn)>i,
+  #homePage .admin-menu-grid>button:not(#v101GlobalStockCountBtn)>i,
+  #homePage .user-menu-grid>button:not(#v101GlobalStockCountBtn)>i{
+    width:66px!important;
+    height:66px!important;
+    min-width:66px!important;
+    min-height:66px!important;
+    max-width:66px!important;
+    max-height:66px!important;
+    margin:0 auto 4px!important;
+    border-radius:19px!important;
+    font-size:32px!important;
+  }
+  #homePage .role-menu-grid>button:not(#v101GlobalStockCountBtn)>b,
+  #homePage .admin-menu-grid>button:not(#v101GlobalStockCountBtn)>b,
+  #homePage .user-menu-grid>button:not(#v101GlobalStockCountBtn)>b{
+    width:100%!important;
+    margin:0!important;
+    font-size:28px!important;
+    line-height:1.08!important;
+    text-align:center!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+  }
+  #homePage .role-menu-grid>button:not(#v101GlobalStockCountBtn)>span,
+  #homePage .admin-menu-grid>button:not(#v101GlobalStockCountBtn)>span,
+  #homePage .user-menu-grid>button:not(#v101GlobalStockCountBtn)>span{
+    width:100%!important;
+    margin:0!important;
+    font-size:15px!important;
+    line-height:1.3!important;
+    text-align:center!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+  }
+  #countPage{max-width:1480px!important;margin:0 auto!important;padding:20px 24px 40px!important}
+  #countTitleBar>#countTitle,#countTitle{font-size:clamp(30px,3vw,44px)!important}
+}
+
+@media (max-width:767px){
+  main{padding-inline:8px!important}
+  .role-sheet{margin:0!important;border-radius:22px!important;padding:10px!important}
+
+  /* มือถือ: สองปุ่มต่อแถว */
+  #homePage .role-menu-grid,
+  #homePage .admin-menu-grid,
+  #homePage .user-menu-grid{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+    align-items:stretch!important;
   }
   #homePage .role-menu-grid>button,
   #homePage .admin-menu-grid>button,
   #homePage .user-menu-grid>button{
-    grid-column:1 / -1!important;
+    grid-column:auto!important;
+    position:relative!important;
+    inset:auto!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:center!important;
+    justify-content:center!important;
+    gap:8px!important;
     width:100%!important;
-    min-height:116px!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:166px!important;
+    height:auto!important;
+    padding:14px 8px!important;
+    margin:0!important;
+    text-align:center!important;
+    overflow:hidden!important;
+    transform:none!important;
+    border-radius:20px!important;
   }
+  #homePage .role-menu-grid>button>i,
+  #homePage .admin-menu-grid>button>i,
+  #homePage .user-menu-grid>button>i,
+  #homePage .role-menu-grid>button>.customer-menu-logo,
+  #homePage .admin-menu-grid>button>.customer-menu-logo,
+  #homePage .user-menu-grid>button>.customer-menu-logo{
+    position:relative!important;
+    inset:auto!important;
+    display:grid!important;
+    place-items:center!important;
+    flex:0 0 auto!important;
+    width:52px!important;
+    height:52px!important;
+    min-width:52px!important;
+    min-height:52px!important;
+    max-width:52px!important;
+    max-height:52px!important;
+    margin:0 auto 2px!important;
+    transform:none!important;
+  }
+  #homePage .role-menu-grid>button>b,
+  #homePage .admin-menu-grid>button>b,
+  #homePage .user-menu-grid>button>b{
+    position:relative!important;
+    inset:auto!important;
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    font-size:clamp(14px,4.2vw,19px)!important;
+    line-height:1.12!important;
+    text-align:center!important;
+    white-space:normal!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+    writing-mode:horizontal-tb!important;
+    transform:none!important;
+  }
+  #homePage .role-menu-grid>button>span,
+  #homePage .admin-menu-grid>button>span,
+  #homePage .user-menu-grid>button>span{
+    position:relative!important;
+    inset:auto!important;
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    margin:0!important;
+    padding:0!important;
+    font-size:clamp(10px,3vw,13px)!important;
+    line-height:1.25!important;
+    text-align:center!important;
+    white-space:normal!important;
+    word-break:normal!important;
+    overflow-wrap:normal!important;
+    writing-mode:horizontal-tb!important;
+    transform:none!important;
+  }
+  #homePage .role-menu-grid>button br{display:block!important}
+  #homePage .role-menu-grid>button *{max-width:100%!important}
+
+  #homePage #v122LooseHomeCard{
+    min-height:0!important;
+    padding:14px!important;
+    border-radius:22px!important;
+  }
+  #homePage #v122LooseHomeCard .v122-loose-head{
+    grid-template-columns:56px minmax(0,1fr)!important;
+    gap:10px!important;
+    margin-bottom:12px!important;
+  }
+  #homePage #v122LooseHomeCard .v122-loose-head::after{display:none!important}
+  #homePage #v122LooseHomeCard .v122-loose-icon{
+    width:54px!important;
+    height:54px!important;
+    min-width:54px!important;
+    min-height:54px!important;
+    border-radius:16px!important;
+    font-size:28px!important;
+  }
+  #homePage #v122LooseHomeCard .v122-loose-copy{text-align:left!important}
+  #homePage #v122LooseHomeCard .v122-loose-copy b{font-size:22px!important;line-height:1.12!important}
+  #homePage #v122LooseHomeCard .v122-loose-copy span{font-size:13px!important;line-height:1.25!important;margin-top:3px!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+  }
+  #homePage #v122LooseHomeCard .v122-loose-store-btn{
+    min-height:112px!important;
+    padding:12px 8px!important;
+    border-radius:18px!important;
+    gap:8px!important;
+  }
+  #homePage #v122LooseHomeCard .v122-loose-code{
+    width:46px!important;
+    height:46px!important;
+    min-width:46px!important;
+    min-height:46px!important;
+    border-radius:14px!important;
+    font-size:20px!important;
+  }
+  #homePage #v122LooseHomeCard .v122-loose-store-btn b{font-size:18px!important;line-height:1.1!important}
 
   #countTitleBar{grid-template-columns:1fr!important;align-items:stretch!important;gap:8px!important}
   #countTitleBar>.count-filter-wrap,#countTitleBar>#v107CountFilterWrap,#v107CountFilterWrap{max-width:none!important}
@@ -22569,23 +24300,31 @@ table{width:100%;border-collapse:collapse}
   #countPage .count-search-row{grid-template-columns:minmax(0,1fr) auto!important}
   #countPage .count-search-row .scan-btn,
   #countPage .count-search-row button.scan{grid-column:1 / -1!important;width:100%!important}
-
-  #homePage #looseHomeCard{min-height:230px!important;padding:14px!important}
-  #homePage #looseHomeCard .v110-loose-buttons,
-  #homePage #looseHomeCard .v109-loose-buttons,
-  #homePage #looseHomeCard .v106-loose-buttons,
-  #homePage #looseHomeCard .v104-loose-store-grid{grid-template-columns:minmax(0,1fr)!important}
 }
 
 @media (max-width:359px){
+  #homePage .role-menu-grid,
+  #homePage .admin-menu-grid,
+  #homePage .user-menu-grid{gap:8px!important}
+  #homePage .role-menu-grid>button,
+  #homePage .admin-menu-grid>button,
+  #homePage .user-menu-grid>button{min-height:148px!important;padding:12px 6px!important}
+  #homePage .role-menu-grid>button>i,
+  #homePage .admin-menu-grid>button>i,
+  #homePage .user-menu-grid>button>i{width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;max-width:46px!important;max-height:46px!important}
+  #homePage #v122LooseHomeCard{padding:12px!important}
+  #homePage #v122LooseHomeCard .v122-loose-head{grid-template-columns:48px minmax(0,1fr)!important;gap:8px!important}
+  #homePage #v122LooseHomeCard .v122-loose-icon{width:46px!important;height:46px!important;min-width:46px!important;min-height:46px!important;font-size:24px!important;border-radius:14px!important}
+  #homePage #v122LooseHomeCard .v122-loose-copy b{font-size:19px!important}
+  #homePage #v122LooseHomeCard .v122-loose-copy span{font-size:11px!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-grid{gap:8px!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-btn{min-height:100px!important;padding:10px 6px!important}
+  #homePage #v122LooseHomeCard .v122-loose-code{width:40px!important;height:40px!important;min-width:40px!important;min-height:40px!important;font-size:18px!important}
+  #homePage #v122LooseHomeCard .v122-loose-store-btn b{font-size:16px!important}
   #countPage{padding:8px!important}
   #countTitle{font-size:22px!important}
   #countPage .count-search-row{grid-template-columns:1fr!important}
   #countPage .count-search-row>button{width:100%!important}
-  #homePage #looseHomeCard .v110-loose-buttons,
-  #homePage #looseHomeCard .v109-loose-buttons,
-  #homePage #looseHomeCard .v106-loose-buttons,
-  #homePage #looseHomeCard .v104-loose-store-grid{grid-template-columns:1fr!important}
 }
 </style>
 <script id="responsiveUiController">
@@ -22593,10 +24332,56 @@ table{width:100%;border-collapse:collapse}
   'use strict';
   if(window.__RESPONSIVE_UI_CONTROLLER__) return;
   window.__RESPONSIVE_UI_CONTROLLER__=true;
+  window.__STOCK_APP_UI_VERSION__='V123';
 
   var scheduled=false;
+
+  function ensureLooseHomeCard(){
+    var home=document.getElementById('homePage');
+    if(!home)return;
+    var grid=home.querySelector('.role-menu-grid');
+    if(!grid)return;
+
+    /* ลบเฉพาะการ์ดงานเศษรุ่นเก่าที่เป็นลูกโดยตรง เพื่อป้องกันปุ่มซ้ำ */
+    grid.querySelectorAll(':scope > #looseHomeCard,:scope > .loose-count-btn,:scope > .work-loose-btn,:scope > [class*="loose-home-card"]').forEach(function(el){
+      if(el&&el.id!=='v122LooseHomeCard')el.remove();
+    });
+    grid.querySelectorAll(':scope > button').forEach(function(btn){
+      var text=String(btn.textContent||'').replace(/\s+/g,' ').trim().toUpperCase();
+      if(text.indexOf('งานเศษ')!==-1 || text.indexOf('LOOSE STOCK')!==-1 || text.indexOf('ไม่เต็มกล่อง')!==-1 || text.indexOf('หน่วยคู่')!==-1){
+        btn.remove();
+      }
+    });
+
+    var card=document.getElementById('v122LooseHomeCard');
+    if(!card){
+      card=document.createElement('section');
+      card.id='v122LooseHomeCard';
+      card.className='v122-loose-card';
+      card.setAttribute('aria-label','งานเศษ');
+      card.innerHTML=''+
+        '<div class="v122-loose-head">'+
+          '<div class="v122-loose-icon" aria-hidden="true">👟</div>'+
+          '<div class="v122-loose-copy"><b>งานเศษ</b><span>เลือก LOTUS หรือ BIG C</span></div>'+
+          '<div aria-hidden="true"></div>'+
+        '</div>'+
+        '<div class="v122-loose-store-grid">'+
+          '<button type="button" class="v122-loose-store-btn" onclick="showLooseCountPage(\'LOTUS\')"><span class="v122-loose-code">LT</span><b>LOTUS</b></button>'+
+          '<button type="button" class="v122-loose-store-btn" onclick="showLooseCountPage(\'BIG C\')"><span class="v122-loose-code">BC</span><b>BIG C</b></button>'+
+        '</div>';
+    }
+
+    var countBtn=document.getElementById('v101GlobalStockCountBtn');
+    if(countBtn&&countBtn.parentElement===grid){
+      if(card.parentElement!==grid || card.previousElementSibling!==countBtn) countBtn.insertAdjacentElement('afterend',card);
+    }else if(card.parentElement!==grid){
+      grid.insertBefore(card,grid.firstElementChild||null);
+    }
+  }
+
   function normalizeLayout(){
     scheduled=false;
+    ensureLooseHomeCard();
     var page=document.getElementById('countPage');
     var title=document.getElementById('countTitle');
     var bar=document.getElementById('countTitleBar');
@@ -22624,6 +24409,7 @@ table{width:100%;border-collapse:collapse}
 
     document.documentElement.style.maxWidth='100%';
     document.body.style.maxWidth='100%';
+    ensureLooseHomeCard();
   }
   function schedule(){
     if(scheduled)return;
@@ -22639,4 +24425,3 @@ table{width:100%;border-collapse:collapse}
 })();
 </script>
 <!-- RESPONSIVE UI CORE END -->
-
