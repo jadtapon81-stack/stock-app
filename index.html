@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Stock App V140 | MT Warehouse</title>
+  <title>Stock App V148 | MT Warehouse</title>
   
 
   <link rel="manifest" href="/manifest.json">
@@ -24768,3 +24768,1863 @@ table{width:100%;border-collapse:collapse}
 </style>
 
 <!-- RESPONSIVE UI CORE END -->
+
+
+<!-- ===== V146: LOOSE MASTER DATA SEPARATED BY LOTUS / BIG C BUTTON ===== -->
+<script id="v146LooseMasterByStore">
+(function(){
+  'use strict';
+  if(window.__V146_LOOSE_MASTER_BY_STORE__) return;
+  window.__V146_LOOSE_MASTER_BY_STORE__ = true;
+
+  const LOOSE_MASTER_TABLE_V146 = 'loose_master_data';
+  const LOOSE_COUNT_TABLE_V146 = 'stock_count_loose';
+  const PAGE_SIZE_V146 = 1000;
+
+  function byId(id){
+    return document.getElementById(id);
+  }
+
+  function text(v){
+    return String(v == null ? '' : v).trim();
+  }
+
+  function norm(v){
+    return text(v)
+      .toUpperCase()
+      .replace(/[\s\-_'".\/’`]+/g,'');
+  }
+
+  function numberValue(v){
+    const value = Number(String(v == null ? 0 : v).replace(/,/g,''));
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  function html(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(ch){
+      return ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      })[ch];
+    });
+  }
+
+  function canonicalStore(value){
+    const n = norm(value);
+
+    if(n === 'LOTUS' || n === 'LT' || n.includes('LOTUS')){
+      return 'LOTUS';
+    }
+
+    if(
+      n === 'BIGC' ||
+      n === 'BC' ||
+      n === 'BIG' ||
+      n.includes('BIGC')
+    ){
+      return 'BIG C';
+    }
+
+    return '';
+  }
+
+  function rowCustomer(row){
+    const direct = canonicalStore(
+      row?.customer ??
+      row?.Customer ??
+      row?.channel ??
+      row?.Channel ??
+      ''
+    );
+
+    if(direct) return direct;
+
+    const key = norm(
+      row?.item_key ??
+      row?.Item_Key ??
+      row?.ITEM_KEY ??
+      ''
+    );
+
+    if(key.endsWith('LOTUS')) return 'LOTUS';
+    if(key.endsWith('BIGC')) return 'BIG C';
+
+    return '';
+  }
+
+  function itemOf(row){
+    return text(row?.Item ?? row?.item ?? '');
+  }
+
+  function codeOf(row){
+    return text(row?.CODE ?? row?.code ?? '');
+  }
+
+  function assortOf(row){
+    return text(row?.Assort ?? row?.assort ?? '');
+  }
+
+  function qtyOf(row){
+    return numberValue(
+      row?.Quantity ??
+      row?.quantity ??
+      row?.balance_pairs ??
+      row?.balance ??
+      0
+    );
+  }
+
+  function itemKeyOf(row){
+    return text(
+      row?.item_key ??
+      row?.Item_Key ??
+      row?.ITEM_KEY ??
+      (
+        itemOf(row) +
+        codeOf(row) +
+        assortOf(row) +
+        rowCustomer(row)
+      )
+    );
+  }
+
+  function savedKey(row){
+    if(typeof window.makeSavedKey === 'function'){
+      try{
+        return window.makeSavedKey(row);
+      }catch(e){}
+    }
+
+    return norm(
+      itemKeyOf(row) ||
+      (
+        itemOf(row) +
+        codeOf(row) +
+        assortOf(row) +
+        rowCustomer(row)
+      )
+    );
+  }
+
+  async function fetchAllRows(tableName){
+    let all = [];
+    let from = 0;
+
+    while(true){
+      const result = await getSupabase()
+        .from(tableName)
+        .select('*')
+        .range(from,from + PAGE_SIZE_V146 - 1);
+
+      if(result.error) throw result.error;
+
+      const rows = result.data || [];
+      if(!rows.length) break;
+
+      all = all.concat(rows);
+
+      if(rows.length < PAGE_SIZE_V146) break;
+      from += PAGE_SIZE_V146;
+    }
+
+    return all;
+  }
+
+  function setCurrentStore(store){
+    try{
+      currentCountCustomer = store;
+    }catch(e){}
+
+    window.currentCountCustomer = store;
+    window.currentCountWorkType = 'LOOSE';
+  }
+
+  async function loadLooseMasterByStore(store){
+    const allRows = await fetchAllRows(LOOSE_MASTER_TABLE_V146);
+
+    const rows = allRows.filter(function(row){
+      return rowCustomer(row) === store;
+    });
+
+    /*
+      แหล่งข้อมูลของงานเศษใช้ loose_master_data เท่านั้น
+      ไม่ผสม master_data, available_stock หรือ loose_balance
+    */
+    window.looseMasterRows = rows;
+
+    return rows;
+  }
+
+  async function loadLooseCountHistoryByStore(store){
+    let rows = [];
+
+    try{
+      rows = await fetchAllRows(LOOSE_COUNT_TABLE_V146);
+      rows = rows.filter(function(row){
+        return rowCustomer(row) === store;
+      });
+    }catch(err){
+      console.warn('V146 โหลดประวัตินับงานเศษไม่สำเร็จ',err);
+      rows = [];
+    }
+
+    try{
+      countRows = rows;
+      savedKeys = new Set(rows.map(savedKey));
+    }catch(e){
+      window.countRows = rows;
+      window.savedKeys = new Set(rows.map(savedKey));
+    }
+
+    return rows;
+  }
+
+  function hideFullBoxLocation(){
+    [
+      'countLocationRowV83',
+      'countLocationRowV84'
+    ].forEach(function(id){
+      const el = byId(id);
+      if(el) el.style.display = 'none';
+    });
+  }
+
+  function renderLooseTitle(store,rows){
+    const title = byId('countTitle');
+
+    if(title){
+      title.innerHTML =
+        'Stock Count งานเศษ ' + html(store) +
+        ' <span class="count-mode-chip">งานเศษ · หน่วย คู่</span>';
+    }
+
+    const summary = byId('countFilterSummary');
+
+    if(summary){
+      const counted = rows.filter(function(row){
+        try{
+          return typeof window.isSaved === 'function'
+            ? window.isSaved(row)
+            : false;
+        }catch(e){
+          return false;
+        }
+      }).length;
+
+      summary.innerHTML =
+        'แหล่งข้อมูล: <b>loose_master_data</b>' +
+        ' | ร้านค้า: <b>' + html(store) + '</b>' +
+        ' | ทั้งหมด ' + rows.length.toLocaleString('th-TH') + ' รายการ' +
+        ' | นับแล้ว ' + counted.toLocaleString('th-TH') +
+        ' | ยังไม่นับ ' + Math.max(rows.length-counted,0).toLocaleString('th-TH');
+    }
+  }
+
+  function renderStartMessage(store,rows){
+    const box = byId('countResult');
+    if(!box) return;
+
+    box.className = 'empty';
+
+    if(rows.length){
+      box.innerHTML =
+        '<div class="empty">' +
+          'โหลดงานเศษ ' + html(store) + ' จาก loose_master_data แล้ว<br>' +
+          '<small>ทั้งหมด ' + rows.length.toLocaleString('th-TH') +
+          ' รายการ · ค้นหา Item / CODE / Assort หรือสแกน Barcode</small>' +
+        '</div>';
+    }else{
+      box.innerHTML =
+        '<div class="empty">' +
+          'ไม่พบข้อมูล ' + html(store) + ' ใน loose_master_data<br>' +
+          '<small>ตรวจสอบค่า customer หรือท้าย item_key ของรายการ</small>' +
+        '</div>';
+    }
+  }
+
+  const previousSearchOfflineRowsV146 = window.searchOfflineRows;
+
+  window.searchOfflineRows = function(keyword,customer){
+    const isLoose =
+      String(window.currentCountWorkType || '')
+        .toUpperCase() === 'LOOSE';
+
+    if(!isLoose){
+      return typeof previousSearchOfflineRowsV146 === 'function'
+        ? previousSearchOfflineRowsV146.apply(this,arguments)
+        : [];
+    }
+
+    const store = canonicalStore(
+      customer ||
+      window.currentCountCustomer ||
+      ''
+    );
+
+    const q = norm(keyword);
+
+    const rows = (window.looseMasterRows || []).filter(function(row){
+      return rowCustomer(row) === store;
+    });
+
+    if(!q) return [];
+
+    const exact = rows.filter(function(row){
+      const item = norm(itemOf(row));
+      const code = norm(codeOf(row));
+      const assort = norm(assortOf(row));
+      const key = norm(itemKeyOf(row));
+
+      return (
+        q === item + code + assort ||
+        q === key
+      );
+    });
+
+    if(exact.length) return exact;
+
+    return rows.filter(function(row){
+      return [
+        itemKeyOf(row),
+        itemOf(row),
+        codeOf(row),
+        assortOf(row),
+        rowCustomer(row),
+        qtyOf(row)
+      ].map(norm).some(function(value){
+        return value && value.includes(q);
+      });
+    });
+  };
+
+  try{
+    searchOfflineRows = window.searchOfflineRows;
+  }catch(e){}
+
+  window.showLooseCountPage = async function(customer){
+    const store = canonicalStore(customer);
+
+    if(!store){
+      alert('งานเศษรองรับปุ่ม LOTUS และ BIG C');
+      return;
+    }
+
+    setCurrentStore(store);
+
+    if(typeof window.setLoading === 'function'){
+      window.setLoading(
+        true,
+        'กำลังโหลด loose_master_data ของ ' + store + '...'
+      );
+    }else if(typeof setLoading === 'function'){
+      setLoading(
+        true,
+        'กำลังโหลด loose_master_data ของ ' + store + '...'
+      );
+    }
+
+    try{
+      const rows = await loadLooseMasterByStore(store);
+      await loadLooseCountHistoryByStore(store);
+
+      const search = byId('countSearch');
+      if(search) search.value = '';
+
+      const suggest = byId('countSuggest');
+      if(suggest){
+        suggest.innerHTML = '';
+        suggest.classList.remove('show');
+      }
+
+      if(typeof window.showPage === 'function'){
+        window.showPage('count');
+      }else if(typeof showPage === 'function'){
+        showPage('count');
+      }
+
+      hideFullBoxLocation();
+      renderLooseTitle(store,rows);
+      renderStartMessage(store,rows);
+
+      /*
+        ปุ่มหน้า Home ทั้งสองปุ่มเรียกฟังก์ชันนี้:
+        LOTUS = เฉพาะ customer LOTUS
+        BIG C = เฉพาะ customer BIG C
+      */
+      setTimeout(function(){
+        hideFullBoxLocation();
+        renderLooseTitle(store,rows);
+      },80);
+
+    }catch(err){
+      alert(
+        'โหลดงานเศษ ' + store + ' ไม่สำเร็จ: ' +
+        (err?.message || err)
+      );
+    }finally{
+      if(typeof window.setLoading === 'function'){
+        window.setLoading(false);
+      }else if(typeof setLoading === 'function'){
+        setLoading(false);
+      }
+    }
+  };
+
+  function bindHomeStoreButtons(){
+    document
+      .querySelectorAll(
+        '#v122LooseHomeCard .v122-loose-store-btn'
+      )
+      .forEach(function(button){
+        const label = canonicalStore(button.textContent || '');
+
+        if(!label) return;
+
+        button.onclick = function(event){
+          event.preventDefault();
+          event.stopPropagation();
+          window.showLooseCountPage(label);
+        };
+
+        button.setAttribute(
+          'data-loose-master-customer',
+          label
+        );
+
+        button.setAttribute(
+          'aria-label',
+          'เปิดงานเศษ ' + label +
+          ' จาก loose_master_data'
+        );
+      });
+  }
+
+  const observer = new MutationObserver(function(){
+    clearTimeout(observer.__v146Timer);
+
+    observer.__v146Timer = setTimeout(function(){
+      bindHomeStoreButtons();
+    },50);
+  });
+
+  function start(){
+    bindHomeStoreButtons();
+
+    observer.observe(document.body,{
+      childList:true,
+      subtree:true
+    });
+
+    setTimeout(bindHomeStoreButtons,300);
+    setTimeout(bindHomeStoreButtons,1000);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      start,
+      {once:true}
+    );
+  }else{
+    start();
+  }
+})();
+</script>
+<!-- ===== END V146 ===== -->
+
+
+<!-- ===== V147: LOOSE COUNT HAS NO LOCATION / SAVE TO stock_count_loose ===== -->
+<style id="v147LooseNoLocationStyle">
+  body.v147-loose-count-mode #v102TeamToolbar,
+  body.v147-loose-count-mode #v102TeamBanner,
+  body.v147-loose-count-mode #countLocationRowV83,
+  body.v147-loose-count-mode #countLocationRowV84,
+  body.v147-loose-count-mode .v102-location-box,
+  body.v147-loose-count-mode .v102-customer-box{
+    display:none!important;
+  }
+
+  body.v147-loose-count-mode #v102TeamSummary{
+    display:block!important;
+  }
+
+  .v147-loose-card{
+    border:1px solid #e5e7eb;
+    border-radius:20px;
+    background:#fff;
+    padding:16px;
+    margin-bottom:12px;
+    box-shadow:0 8px 22px rgba(15,23,42,.06);
+  }
+
+  .v147-loose-card.saved{
+    border-color:#86efac;
+    background:#f0fdf4;
+  }
+
+  .v147-loose-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:12px;
+  }
+
+  .v147-loose-head h3{
+    margin:0;
+    color:#111827;
+    font-size:18px;
+    font-weight:950;
+  }
+
+  .v147-loose-head small{
+    display:block;
+    margin-top:3px;
+    color:#6b7280;
+    font-size:11px;
+    overflow-wrap:anywhere;
+  }
+
+  .v147-loose-saved{
+    flex:0 0 auto;
+    padding:6px 9px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+    font-size:11px;
+    font-weight:950;
+  }
+
+  .v147-loose-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:8px;
+    margin-bottom:12px;
+  }
+
+  .v147-loose-info{
+    min-width:0;
+    padding:10px;
+    border:1px solid #eef0f3;
+    border-radius:13px;
+    background:#fafafa;
+  }
+
+  .v147-loose-info span{
+    display:block;
+    color:#6b7280;
+    font-size:10px;
+    font-weight:800;
+  }
+
+  .v147-loose-info b{
+    display:block;
+    margin-top:3px;
+    color:#111827;
+    font-size:14px;
+    overflow-wrap:anywhere;
+  }
+
+  .v147-loose-info.system{
+    background:#fff7ed;
+    border-color:#fed7aa;
+  }
+
+  .v147-loose-actions{
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 140px;
+    gap:10px;
+    align-items:end;
+  }
+
+  .v147-loose-field label{
+    display:block;
+    margin:0 0 5px;
+    color:#374151;
+    font-size:11px;
+    font-weight:900;
+  }
+
+  .v147-loose-field input{
+    min-height:48px;
+    width:100%;
+    border:1.5px solid #d1d5db;
+    border-radius:13px;
+    padding:0 13px;
+    font:inherit;
+    font-weight:850;
+    background:#fff;
+  }
+
+  .v147-loose-save{
+    min-height:48px;
+    border:0;
+    border-radius:13px;
+    background:#dc2626;
+    color:#fff;
+    font:inherit;
+    font-weight:950;
+  }
+
+  .v147-loose-meta{
+    margin-top:10px;
+    color:#166534;
+    font-size:11px;
+    font-weight:800;
+  }
+
+  @media(max-width:760px){
+    .v147-loose-grid{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+
+    .v147-loose-actions{
+      grid-template-columns:1fr;
+    }
+  }
+</style>
+
+<script id="v147LooseNoLocationScript">
+(function(){
+  'use strict';
+  if(window.__V147_LOOSE_NO_LOCATION__) return;
+  window.__V147_LOOSE_NO_LOCATION__ = true;
+
+  const MASTER_TABLE = 'loose_master_data';
+  const COUNT_TABLE_LOOSE = 'stock_count_loose';
+  const PAGE_SIZE = 1000;
+
+  let activeStore = '';
+  let looseRows = [];
+  let looseCountRows = [];
+  let currentFilter = 'all';
+  let saving = false;
+
+  function byId(id){
+    return document.getElementById(id);
+  }
+
+  function txt(v){
+    return String(v == null ? '' : v).trim();
+  }
+
+  function norm(v){
+    return txt(v)
+      .toUpperCase()
+      .replace(/[\s\-_'".\/’`]+/g,'');
+  }
+
+  function num(v){
+    const n = Number(String(v == null ? 0 : v).replace(/,/g,''));
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g,function(ch){
+      return ({
+        '&':'&amp;',
+        '<':'&lt;',
+        '>':'&gt;',
+        '"':'&quot;',
+        "'":'&#39;'
+      })[ch];
+    });
+  }
+
+  function js(v){
+    return String(v == null ? '' : v)
+      .replace(/\\/g,'\\\\')
+      .replace(/'/g,"\\'")
+      .replace(/\r?\n/g,' ');
+  }
+
+  function canonicalStore(value){
+    const n = norm(value);
+
+    if(n === 'LOTUS' || n === 'LT' || n.includes('LOTUS')){
+      return 'LOTUS';
+    }
+
+    if(
+      n === 'BIGC' ||
+      n === 'BC' ||
+      n === 'BIG' ||
+      n.includes('BIGC')
+    ){
+      return 'BIG C';
+    }
+
+    return '';
+  }
+
+  function rowStore(row){
+    const direct = canonicalStore(
+      row?.customer ??
+      row?.Customer ??
+      row?.channel ??
+      row?.Channel ??
+      ''
+    );
+
+    if(direct) return direct;
+
+    const key = norm(
+      row?.item_key ??
+      row?.Item_Key ??
+      row?.ITEM_KEY ??
+      ''
+    );
+
+    if(key.endsWith('LOTUS')) return 'LOTUS';
+    if(key.endsWith('BIGC')) return 'BIG C';
+
+    return '';
+  }
+
+  function itemOf(row){
+    return txt(row?.Item ?? row?.item ?? '');
+  }
+
+  function codeOf(row){
+    return txt(row?.CODE ?? row?.code ?? '');
+  }
+
+  function assortOf(row){
+    return txt(row?.Assort ?? row?.assort ?? '');
+  }
+
+  function qtyOf(row){
+    return num(
+      row?.Quantity ??
+      row?.quantity ??
+      row?.balance_pairs ??
+      row?.balance ??
+      row?.system_qty ??
+      0
+    );
+  }
+
+  function itemKeyOf(row){
+    const direct = txt(
+      row?.item_key ??
+      row?.Item_Key ??
+      row?.ITEM_KEY ??
+      ''
+    );
+
+    if(direct) return direct;
+
+    return (
+      itemOf(row) +
+      codeOf(row).toUpperCase() +
+      assortOf(row) +
+      (rowStore(row) || activeStore)
+    );
+  }
+
+  function rowKey(row){
+    return norm(itemKeyOf(row));
+  }
+
+  function currentUserName(){
+    try{
+      return txt(
+        window.currentUser ||
+        (typeof currentUser !== 'undefined' ? currentUser : '') ||
+        localStorage.getItem('stock_user') ||
+        ''
+      );
+    }catch(e){
+      return txt(localStorage.getItem('stock_user') || '');
+    }
+  }
+
+  async function fetchAll(tableName){
+    let all = [];
+    let from = 0;
+
+    while(true){
+      const result = await getSupabase()
+        .from(tableName)
+        .select('*')
+        .range(from,from + PAGE_SIZE - 1);
+
+      if(result.error) throw result.error;
+
+      const rows = result.data || [];
+      if(!rows.length) break;
+
+      all = all.concat(rows);
+
+      if(rows.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+
+    return all;
+  }
+
+  function savedRow(row){
+    const key = rowKey(row);
+
+    return looseCountRows.find(function(countRow){
+      return (
+        rowKey(countRow) === key &&
+        rowStore(countRow) === activeStore
+      );
+    }) || null;
+  }
+
+  function counted(row){
+    return !!savedRow(row);
+  }
+
+  function setLooseMode(store){
+    activeStore = canonicalStore(store);
+
+    try{
+      currentCountCustomer = activeStore;
+    }catch(e){}
+
+    window.currentCountCustomer = activeStore;
+    window.currentCountWorkType = 'LOOSE';
+
+    document.body.classList.add('v147-loose-count-mode');
+  }
+
+  function leaveLooseMode(){
+    document.body.classList.remove('v147-loose-count-mode');
+  }
+
+  function hideTeamAndLocationControls(){
+    [
+      'v102TeamToolbar',
+      'v102TeamBanner',
+      'countLocationRowV83',
+      'countLocationRowV84'
+    ].forEach(function(id){
+      const element = byId(id);
+      if(element) element.style.display = 'none';
+    });
+
+    const toolbar = byId('v102TeamToolbar');
+
+    if(toolbar){
+      toolbar
+        .querySelectorAll(
+          '.v102-team-btn,.v102-location-box,.v102-customer-box'
+        )
+        .forEach(function(element){
+          element.style.display = 'none';
+        });
+    }
+  }
+
+  function updateHeader(){
+    const title = byId('countTitle');
+
+    if(title){
+      title.innerHTML =
+        'Stock Count ' + esc(activeStore) +
+        ' <span class="count-mode-chip">งานเศษ · หน่วย คู่</span>';
+    }
+
+    const input = byId('countSearch');
+
+    if(input){
+      input.placeholder =
+        'ค้นหา Item Key / Item / CODE / Assort';
+    }
+
+    hideTeamAndLocationControls();
+  }
+
+  function filteredRows(keyword){
+    const q = norm(keyword);
+
+    let rows = looseRows.filter(function(row){
+      return rowStore(row) === activeStore;
+    });
+
+    if(currentFilter === 'counted'){
+      rows = rows.filter(counted);
+    }else if(currentFilter === 'uncounted'){
+      rows = rows.filter(function(row){
+        return !counted(row);
+      });
+    }
+
+    if(!q) return rows;
+
+    const exact = rows.filter(function(row){
+      return (
+        q === rowKey(row) ||
+        q === norm(itemOf(row) + codeOf(row) + assortOf(row))
+      );
+    });
+
+    if(exact.length) return exact;
+
+    return rows.filter(function(row){
+      return [
+        itemKeyOf(row),
+        itemOf(row),
+        codeOf(row),
+        assortOf(row),
+        rowStore(row)
+      ].map(norm).some(function(value){
+        return value && value.includes(q);
+      });
+    });
+  }
+
+  function updateSummary(displayRows){
+    const summary =
+      byId('v102TeamSummary') ||
+      byId('countFilterSummary');
+
+    if(!summary) return;
+
+    const total = looseRows.length;
+    const countedTotal = looseRows.filter(counted).length;
+    const uncountedTotal = Math.max(total-countedTotal,0);
+
+    summary.innerHTML =
+      '<b>งานเศษ ' + esc(activeStore) + '</b>' +
+      ' · แสดง <b>' +
+      Number(displayRows.length).toLocaleString('th-TH') +
+      '</b> รายการ' +
+      ' · นับแล้ว <b>' +
+      countedTotal.toLocaleString('th-TH') +
+      '</b>' +
+      ' · ยังไม่นับ <b>' +
+      uncountedTotal.toLocaleString('th-TH') +
+      '</b>' +
+      ' · บันทึกที่ <b>stock_count_loose</b>';
+  }
+
+  function renderRows(rows){
+    const box = byId('countResult');
+    if(!box) return;
+
+    updateHeader();
+    updateSummary(rows);
+
+    if(!rows.length){
+      box.className = 'empty';
+      box.innerHTML =
+        '<div class="empty">' +
+          'ไม่พบรายการงานเศษ ' + esc(activeStore) +
+          ' ตามตัวกรองหรือคำค้นหา' +
+        '</div>';
+      return;
+    }
+
+    box.className = '';
+
+    box.innerHTML = rows.map(function(row,index){
+      const old = savedRow(row);
+      const key = itemKeyOf(row);
+      const rowId = 'V147_' + index;
+      const savedQty = old?.count_qty ?? '';
+
+      window.__V147_LOOSE_ROW_MAP__ =
+        window.__V147_LOOSE_ROW_MAP__ || {};
+
+      window.__V147_LOOSE_ROW_MAP__[rowId] = row;
+
+      return (
+        '<article id="card_' + rowId + '" class="v147-loose-card ' +
+          (old ? 'saved' : '') + '">' +
+
+          '<div class="v147-loose-head">' +
+            '<div>' +
+              '<h3>' + esc(itemOf(row) || key) + '</h3>' +
+              '<small>' + esc(key) + '</small>' +
+            '</div>' +
+            (old
+              ? '<span class="v147-loose-saved">✓ นับแล้ว</span>'
+              : '') +
+          '</div>' +
+
+          '<div class="v147-loose-grid">' +
+            '<div class="v147-loose-info">' +
+              '<span>CODE</span><b>' +
+              esc(codeOf(row) || '-') +
+              '</b>' +
+            '</div>' +
+
+            '<div class="v147-loose-info">' +
+              '<span>Assort</span><b>' +
+              esc(assortOf(row) || '-') +
+              '</b>' +
+            '</div>' +
+
+            '<div class="v147-loose-info">' +
+              '<span>Customer</span><b>' +
+              esc(activeStore) +
+              '</b>' +
+            '</div>' +
+
+            '<div class="v147-loose-info system">' +
+              '<span>System Qty</span><b>' +
+              qtyOf(row).toLocaleString('th-TH') +
+              ' คู่</b>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="v147-loose-actions">' +
+            '<div class="v147-loose-field">' +
+              '<label>จำนวนที่นับได้ (คู่)</label>' +
+              '<input id="count_' + rowId +
+              '" type="number" inputmode="decimal" min="0" value="' +
+              esc(savedQty) + '" placeholder="0">' +
+            '</div>' +
+
+            '<button id="save_' + rowId +
+            '" class="v147-loose-save" type="button" onclick="' +
+            "saveLooseCountV147('" + js(rowId) + "')" +
+            '">' +
+              (old ? 'อัปเดต' : 'บันทึก') +
+            '</button>' +
+          '</div>' +
+
+          (old
+            ? '<div class="v147-loose-meta">' +
+                'นับโดย ' + esc(old.counted_by || '-') +
+                ' · จำนวน ' + esc(old.count_qty) + ' คู่' +
+              '</div>'
+            : '') +
+        '</article>'
+      );
+    }).join('');
+  }
+
+  function renderCurrent(){
+    const input = byId('countSearch');
+    const keyword = txt(input?.value || '');
+    renderRows(filteredRows(keyword));
+  }
+
+  async function loadData(){
+    const masterAll = await fetchAll(MASTER_TABLE);
+
+    looseRows = masterAll.filter(function(row){
+      return rowStore(row) === activeStore;
+    });
+
+    let countAll = [];
+
+    try{
+      countAll = await fetchAll(COUNT_TABLE_LOOSE);
+    }catch(err){
+      console.warn(
+        'V147 โหลด stock_count_loose ไม่สำเร็จ',
+        err
+      );
+      countAll = [];
+    }
+
+    looseCountRows = countAll.filter(function(row){
+      return rowStore(row) === activeStore;
+    });
+
+    window.looseMasterRows = looseRows;
+
+    try{
+      countRows = looseCountRows;
+      savedKeys = new Set(looseCountRows.map(rowKey));
+    }catch(e){
+      window.countRows = looseCountRows;
+      window.savedKeys = new Set(looseCountRows.map(rowKey));
+    }
+  }
+
+  async function runWrite(oldRow,payload){
+    const variants = [];
+
+    function addVariant(value){
+      const signature = Object.keys(value)
+        .sort()
+        .map(function(key){
+          return key + ':' + String(value[key]);
+        })
+        .join('|');
+
+      if(!variants.some(function(entry){
+        return entry.signature === signature;
+      })){
+        variants.push({
+          signature:signature,
+          payload:value
+        });
+      }
+    }
+
+    addVariant({...payload});
+
+    const noSource = {...payload};
+    delete noSource.source_file_name;
+    addVariant(noSource);
+
+    const noType = {...noSource};
+    delete noType.count_type;
+    addVariant(noType);
+
+    const noMaster = {...noType};
+    delete noMaster.master_id;
+    addVariant(noMaster);
+
+    let lastError = null;
+
+    for(const entry of variants){
+      let query;
+
+      if(oldRow){
+        query = getSupabase()
+          .from(COUNT_TABLE_LOOSE)
+          .update(entry.payload);
+
+        if(oldRow.id != null){
+          query = query.eq('id',oldRow.id);
+        }else{
+          query = query
+            .eq('item_key',payload.item_key)
+            .eq('customer',payload.customer);
+        }
+
+        const result = await query
+          .select('*')
+          .maybeSingle();
+
+        if(!result.error) return result;
+        lastError = result.error;
+      }else{
+        const result = await getSupabase()
+          .from(COUNT_TABLE_LOOSE)
+          .insert(entry.payload)
+          .select('*')
+          .single();
+
+        if(!result.error) return result;
+        lastError = result.error;
+      }
+    }
+
+    throw lastError || new Error('บันทึกไม่สำเร็จ');
+  }
+
+  window.saveLooseCountV147 = async function(rowId){
+    if(saving) return;
+
+    const row =
+      window.__V147_LOOSE_ROW_MAP__?.[rowId];
+
+    if(!row){
+      alert('ไม่พบรายการงานเศษ กรุณาค้นหาใหม่');
+      return;
+    }
+
+    const input = byId('count_' + rowId);
+
+    if(!input || txt(input.value) === ''){
+      alert('กรุณาใส่จำนวนที่นับได้');
+      return;
+    }
+
+    const countQty = num(input.value);
+
+    if(countQty < 0){
+      alert('จำนวนต้องไม่ติดลบ');
+      return;
+    }
+
+    const oldRow = savedRow(row);
+    const button = byId('save_' + rowId);
+
+    const payload = {
+      master_id:row.id ?? null,
+      item_key:itemKeyOf(row),
+      item:itemOf(row) || null,
+      code:codeOf(row) || null,
+      assort:assortOf(row) || null,
+
+      /*
+        งานเศษไม่มี Location:
+        ไม่ส่ง location เข้า stock_count_loose
+      */
+      system_qty:qtyOf(row),
+      count_qty:countQty,
+      counted_by:currentUserName() || null,
+      customer:activeStore,
+      count_type:'LOOSE',
+      source_file_name:
+        row.source_file_name ??
+        row.file_name ??
+        null
+    };
+
+    saving = true;
+    if(button) button.disabled = true;
+
+    try{
+      const result = await runWrite(oldRow,payload);
+      const data = result.data || payload;
+
+      if(oldRow){
+        looseCountRows = looseCountRows.map(function(countRow){
+          return countRow === oldRow
+            ? {...countRow,...data,...payload}
+            : countRow;
+        });
+      }else{
+        looseCountRows.push({...data,...payload});
+      }
+
+      try{
+        countRows = looseCountRows;
+        savedKeys = new Set(looseCountRows.map(rowKey));
+      }catch(e){
+        window.countRows = looseCountRows;
+        window.savedKeys = new Set(looseCountRows.map(rowKey));
+      }
+
+      renderCurrent();
+
+      if(typeof window.showToast === 'function'){
+        window.showToast(
+          oldRow
+            ? 'อัปเดตงานเศษสำเร็จ'
+            : 'บันทึกงานเศษสำเร็จ'
+        );
+      }
+    }catch(err){
+      alert(
+        'บันทึกลง stock_count_loose ไม่สำเร็จ: ' +
+        (err?.message || err)
+      );
+    }finally{
+      saving = false;
+      const currentButton = byId('save_' + rowId);
+      if(currentButton) currentButton.disabled = false;
+    }
+  };
+
+  window.showLooseCountPage = async function(customer){
+    const store = canonicalStore(customer);
+
+    if(!store){
+      alert('งานเศษรองรับ LOTUS และ BIG C');
+      return;
+    }
+
+    setLooseMode(store);
+    currentFilter = 'all';
+
+    if(typeof window.setLoading === 'function'){
+      window.setLoading(
+        true,
+        'กำลังโหลดงานเศษ ' + store + '...'
+      );
+    }else if(typeof setLoading === 'function'){
+      setLoading(
+        true,
+        'กำลังโหลดงานเศษ ' + store + '...'
+      );
+    }
+
+    try{
+      await loadData();
+
+      const input = byId('countSearch');
+      if(input) input.value = '';
+
+      const suggest = byId('countSuggest');
+      if(suggest){
+        suggest.innerHTML = '';
+        suggest.classList.remove('show');
+      }
+
+      if(typeof window.showPage === 'function'){
+        window.showPage('count');
+      }else if(typeof showPage === 'function'){
+        showPage('count');
+      }
+
+      hideTeamAndLocationControls();
+      updateHeader();
+      renderRows(looseRows);
+
+      setTimeout(function(){
+        hideTeamAndLocationControls();
+        updateHeader();
+      },100);
+
+      setTimeout(function(){
+        hideTeamAndLocationControls();
+      },500);
+
+    }catch(err){
+      alert(
+        'โหลดงานเศษ ' + store + ' ไม่สำเร็จ: ' +
+        (err?.message || err)
+      );
+    }finally{
+      if(typeof window.setLoading === 'function'){
+        window.setLoading(false);
+      }else if(typeof setLoading === 'function'){
+        setLoading(false);
+      }
+    }
+  };
+
+  const previousSearchForCount =
+    window.searchForCount;
+
+  window.searchForCount = function(){
+    if(
+      String(window.currentCountWorkType || '')
+        .toUpperCase() !== 'LOOSE'
+    ){
+      return typeof previousSearchForCount === 'function'
+        ? previousSearchForCount.apply(this,arguments)
+        : undefined;
+    }
+
+    const suggest = byId('countSuggest');
+
+    if(suggest){
+      suggest.innerHTML = '';
+      suggest.classList.remove('show');
+    }
+
+    renderCurrent();
+  };
+
+  try{
+    searchForCount = window.searchForCount;
+  }catch(e){}
+
+  const previousClearCountSearch =
+    window.clearCountSearch;
+
+  window.clearCountSearch = function(){
+    if(
+      String(window.currentCountWorkType || '')
+        .toUpperCase() !== 'LOOSE'
+    ){
+      return typeof previousClearCountSearch === 'function'
+        ? previousClearCountSearch.apply(this,arguments)
+        : undefined;
+    }
+
+    const input = byId('countSearch');
+    if(input) input.value = '';
+
+    renderRows(
+      filteredRows('')
+    );
+
+    if(input) input.focus();
+  };
+
+  try{
+    clearCountSearch = window.clearCountSearch;
+  }catch(e){}
+
+  const previousShowCountSuggest =
+    window.showCountSuggest;
+
+  window.showCountSuggest = function(){
+    if(
+      String(window.currentCountWorkType || '')
+        .toUpperCase() !== 'LOOSE'
+    ){
+      return typeof previousShowCountSuggest === 'function'
+        ? previousShowCountSuggest.apply(this,arguments)
+        : undefined;
+    }
+
+    const input = byId('countSearch');
+    const box = byId('countSuggest');
+
+    if(!input || !box) return;
+
+    const q = txt(input.value);
+
+    if(q.length < 2){
+      box.innerHTML = '';
+      box.classList.remove('show');
+      return;
+    }
+
+    const rows = filteredRows(q).slice(0,50);
+
+    if(!rows.length){
+      box.innerHTML =
+        '<div class="count-suggest-empty">ไม่พบข้อมูล</div>';
+      box.classList.add('show');
+      return;
+    }
+
+    box.innerHTML = rows.map(function(row){
+      return (
+        '<button type="button" data-v147-key="' +
+        esc(itemKeyOf(row)) +
+        '" onclick="' +
+        "selectLooseSuggestV147(this.getAttribute('data-v147-key'))" +
+        '">' +
+        esc(
+          itemKeyOf(row) +
+          ' | ' +
+          qtyOf(row) +
+          ' คู่'
+        ) +
+        '</button>'
+      );
+    }).join('');
+
+    box.classList.add('show');
+  };
+
+  try{
+    showCountSuggest = window.showCountSuggest;
+  }catch(e){}
+
+  window.selectLooseSuggestV147 = function(value){
+    const input = byId('countSearch');
+    if(input) input.value = value;
+
+    const box = byId('countSuggest');
+
+    if(box){
+      box.innerHTML = '';
+      box.classList.remove('show');
+    }
+
+    renderCurrent();
+  };
+
+  const previousSetCountFilter =
+    window.setCountFilter;
+
+  window.setCountFilter = function(filter){
+    if(
+      String(window.currentCountWorkType || '')
+        .toUpperCase() !== 'LOOSE'
+    ){
+      return typeof previousSetCountFilter === 'function'
+        ? previousSetCountFilter.apply(this,arguments)
+        : undefined;
+    }
+
+    currentFilter =
+      filter === 'counted'
+        ? 'counted'
+        : (
+            filter === 'uncounted'
+              ? 'uncounted'
+              : 'all'
+          );
+
+    const label =
+      currentFilter === 'counted'
+        ? 'นับแล้ว'
+        : (
+            currentFilter === 'uncounted'
+              ? 'ยังไม่นับ'
+              : 'ทั้งหมด'
+          );
+
+    const filterText = byId('countFilterText');
+    if(filterText) filterText.textContent = label;
+
+    const menu = byId('countFilterMenu');
+    if(menu) menu.classList.remove('show');
+
+    renderCurrent();
+  };
+
+  const previousApplyCountFilter =
+    window.applyCountFilter;
+
+  window.applyCountFilter = function(){
+    if(
+      String(window.currentCountWorkType || '')
+        .toUpperCase() === 'LOOSE'
+    ){
+      renderCurrent();
+      return;
+    }
+
+    if(typeof previousApplyCountFilter === 'function'){
+      return previousApplyCountFilter.apply(this,arguments);
+    }
+  };
+
+  /*
+    ป้องกัน V102 Team UI กลับมาแสดงจาก Mutation/Refresh
+  */
+  const observer = new MutationObserver(function(){
+    if(
+      String(window.currentCountWorkType || '')
+        .toUpperCase() === 'LOOSE'
+    ){
+      clearTimeout(observer.__v147Timer);
+
+      observer.__v147Timer = setTimeout(function(){
+        hideTeamAndLocationControls();
+        updateHeader();
+      },50);
+    }
+  });
+
+  function bindHomeButtons(){
+    document
+      .querySelectorAll(
+        '#v122LooseHomeCard .v122-loose-store-btn,' +
+        '.loose-count-btn'
+      )
+      .forEach(function(button){
+        const store = canonicalStore(
+          button.textContent || ''
+        );
+
+        if(!store) return;
+
+        button.onclick = function(event){
+          event.preventDefault();
+          event.stopPropagation();
+          window.showLooseCountPage(store);
+        };
+      });
+  }
+
+  const previousShowCountPage =
+    window.showCountPage;
+
+  window.showCountPage = async function(){
+    leaveLooseMode();
+
+    if(typeof previousShowCountPage === 'function'){
+      return previousShowCountPage.apply(this,arguments);
+    }
+  };
+
+  try{
+    showCountPage = window.showCountPage;
+  }catch(e){}
+
+  function start(){
+    bindHomeButtons();
+
+    observer.observe(document.body,{
+      childList:true,
+      subtree:true
+    });
+
+    setTimeout(bindHomeButtons,300);
+    setTimeout(bindHomeButtons,1000);
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      start,
+      {once:true}
+    );
+  }else{
+    start();
+  }
+})();
+</script>
+<!-- ===== END V147 ===== -->
+
+
+<!-- ===== V148: RESTORE LOCATION / CUSTOMER FILTERS FOR FULL COUNT ===== -->
+<script id="v148RestoreFullCountFilters">
+(function(){
+  'use strict';
+  if(window.__V148_RESTORE_FULL_FILTERS__) return;
+  window.__V148_RESTORE_FULL_FILTERS__ = true;
+
+  function byId(id){
+    return document.getElementById(id);
+  }
+
+  function isLooseMode(){
+    return String(window.currentCountWorkType || '')
+      .toUpperCase() === 'LOOSE';
+  }
+
+  function restoreFullCountFilters(){
+    /*
+      งานเศษยังคงไม่มี Location ตามเดิม
+      แต่เมื่อออกจากงานเศษเข้าสู่งานเต็มกล่อง / ALL WAREHOUSE
+      ต้องล้าง class และ inline style ที่ใช้ซ่อนตัวกรองออกทั้งหมด
+    */
+    document.body.classList.remove('v147-loose-count-mode');
+
+    const toolbar = byId('v102TeamToolbar');
+    if(toolbar){
+      toolbar.style.display = '';
+      toolbar.removeAttribute('aria-hidden');
+
+      const locationBox =
+        toolbar.querySelector('.v102-location-box');
+      const customerBox =
+        toolbar.querySelector('.v102-customer-box');
+
+      if(locationBox){
+        locationBox.style.display = 'block';
+        locationBox.removeAttribute('aria-hidden');
+      }
+
+      if(customerBox){
+        customerBox.style.display = 'block';
+        customerBox.removeAttribute('aria-hidden');
+      }
+    }
+
+    const banner = byId('v102TeamBanner');
+    if(banner){
+      banner.style.display = '';
+      banner.removeAttribute('aria-hidden');
+    }
+
+    /*
+      ตัวกรองรุ่นเก่าบางส่วนอาจยังอยู่ใน DOM
+      ล้างเฉพาะ inline style ที่ V147 เคยตั้งเป็น none
+    */
+    [
+      'countLocationRowV83',
+      'countLocationRowV84'
+    ].forEach(function(id){
+      const element = byId(id);
+      if(element){
+        element.style.display = '';
+        element.removeAttribute('aria-hidden');
+      }
+    });
+
+    const input = byId('countSearch');
+    if(input){
+      input.placeholder =
+        'ค้นหา Item Key / Item / CODE / Assort / Location / Customer';
+    }
+  }
+
+  function keepLooseFiltersHidden(){
+    if(!isLooseMode()) return;
+
+    document.body.classList.add('v147-loose-count-mode');
+
+    const toolbar = byId('v102TeamToolbar');
+    if(toolbar) toolbar.style.display = 'none';
+
+    [
+      'countLocationRowV83',
+      'countLocationRowV84'
+    ].forEach(function(id){
+      const element = byId(id);
+      if(element) element.style.display = 'none';
+    });
+  }
+
+  /*
+    ALL WAREHOUSE:
+    ต้องคืน Location และ Customer ก่อนเรียกฟังก์ชันหลัก
+    เพื่อไม่ให้ class จากหน้า "งานเศษ" ค้างอยู่
+  */
+  const previousShowAllWarehouseV131 =
+    window.showAllWarehouseV131;
+
+  if(typeof previousShowAllWarehouseV131 === 'function'){
+    window.showAllWarehouseV131 = async function(){
+      window.currentCountWorkType = 'FULL_BOX';
+      restoreFullCountFilters();
+
+      const result =
+        previousShowAllWarehouseV131.apply(this,arguments);
+
+      if(result && typeof result.then === 'function'){
+        await result;
+      }
+
+      restoreFullCountFilters();
+
+      /*
+        renderTeamButtonsV102 จะซ่อนเฉพาะปุ่ม TEAM
+        แต่คงกล่อง Location และ Customer ไว้
+      */
+      setTimeout(restoreFullCountFilters,0);
+      setTimeout(restoreFullCountFilters,150);
+      setTimeout(restoreFullCountFilters,500);
+
+      return result;
+    };
+
+    try{
+      showAllWarehouseV131 =
+        window.showAllWarehouseV131;
+    }catch(e){}
+  }
+
+  /*
+    TEAM 1–3:
+    เป็นงานเต็มกล่อง จึงต้องมี Location และ Customer เช่นกัน
+  */
+  const previousSelectCountTeamV102 =
+    window.selectCountTeamV102;
+
+  if(typeof previousSelectCountTeamV102 === 'function'){
+    window.selectCountTeamV102 = async function(){
+      window.currentCountWorkType = 'FULL_BOX';
+      restoreFullCountFilters();
+
+      const result =
+        previousSelectCountTeamV102.apply(this,arguments);
+
+      if(result && typeof result.then === 'function'){
+        await result;
+      }
+
+      restoreFullCountFilters();
+      setTimeout(restoreFullCountFilters,150);
+
+      return result;
+    };
+
+    try{
+      selectCountTeamV102 =
+        window.selectCountTeamV102;
+    }catch(e){}
+  }
+
+  /*
+    หน้า Stock Count แบบเต็มกล่องแยกร้านค้า
+  */
+  const previousShowCountPageV148 =
+    window.showCountPage;
+
+  if(typeof previousShowCountPageV148 === 'function'){
+    window.showCountPage = async function(){
+      window.currentCountWorkType = 'FULL_BOX';
+      restoreFullCountFilters();
+
+      const result =
+        previousShowCountPageV148.apply(this,arguments);
+
+      if(result && typeof result.then === 'function'){
+        await result;
+      }
+
+      restoreFullCountFilters();
+      setTimeout(restoreFullCountFilters,150);
+
+      return result;
+    };
+
+    try{
+      showCountPage = window.showCountPage;
+    }catch(e){}
+  }
+
+  /*
+    งานเศษยังคงซ่อน Location และ Team ตาม V147
+  */
+  const previousShowLooseCountPageV148 =
+    window.showLooseCountPage;
+
+  if(typeof previousShowLooseCountPageV148 === 'function'){
+    window.showLooseCountPage = async function(){
+      const result =
+        previousShowLooseCountPageV148.apply(this,arguments);
+
+      if(result && typeof result.then === 'function'){
+        await result;
+      }
+
+      keepLooseFiltersHidden();
+      setTimeout(keepLooseFiltersHidden,100);
+      setTimeout(keepLooseFiltersHidden,500);
+
+      return result;
+    };
+
+    try{
+      showLooseCountPage =
+        window.showLooseCountPage;
+    }catch(e){}
+  }
+
+  /*
+    ป้องกันกรณีผู้ใช้กลับ Home แล้วเข้า ALL WAREHOUSE ใหม่
+  */
+  const previousShowPageV148 =
+    window.showPage;
+
+  if(typeof previousShowPageV148 === 'function'){
+    window.showPage = function(page){
+      if(page !== 'count'){
+        document.body.classList.remove(
+          'v147-loose-count-mode'
+        );
+      }else if(!isLooseMode()){
+        restoreFullCountFilters();
+      }
+
+      const result =
+        previousShowPageV148.apply(this,arguments);
+
+      if(page === 'count' && !isLooseMode()){
+        setTimeout(restoreFullCountFilters,0);
+      }
+
+      return result;
+    };
+
+    try{
+      showPage = window.showPage;
+    }catch(e){}
+  }
+
+  /*
+    MutationObserver ของ V147 อาจทำงานช้ากว่า
+    จึงตรวจซ้ำว่าหน้าปัจจุบันเป็นงานเต็มกล่องหรือไม่
+  */
+  const observer = new MutationObserver(function(){
+    clearTimeout(observer.__v148Timer);
+
+    observer.__v148Timer = setTimeout(function(){
+      if(!isLooseMode()){
+        restoreFullCountFilters();
+      }
+    },60);
+  });
+
+  function start(){
+    observer.observe(document.body,{
+      childList:true,
+      subtree:true
+    });
+
+    if(!isLooseMode()){
+      restoreFullCountFilters();
+    }
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener(
+      'DOMContentLoaded',
+      start,
+      {once:true}
+    );
+  }else{
+    start();
+  }
+})();
+</script>
+<!-- ===== END V148 ===== -->
