@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <title>Stock App V139 | MT Warehouse</title>
+  <title>Stock App V140 | MT Warehouse</title>
   
 
   <link rel="manifest" href="/manifest.json">
@@ -23360,6 +23360,12 @@ V8 PRODUCTION CLEANUP PATCH
     if(stateV102.allWarehouse)await loadAllWarehouseDataV131();else if(stateV102.selectedTeam)await loadSelectedTeamDataV102();
   };
 
+  // V140: แถว Snapshot ที่ count_qty / counted_by / counted_at เป็น NULL
+  // ต้องแสดงเป็น "ยังไม่นับ" แม้มีแถวอยู่ใน stock_count_team_results แล้ว
+  function isCompletedCountV102(row){
+    return !!row && txtV102(row.counted_at) !== '';
+  }
+
   function savedMapV102(){
     var map=new Map();
     var team=stateV102.allWarehouse?0:Number(stateV102.selectedTeam||0),round=activeRoundV102(),cycle=txtV102(stateV102.control.cycle_code||defaultCycleV102());
@@ -23367,6 +23373,10 @@ V8 PRODUCTION CLEANUP PATCH
       if(Number(r.team_no||0)!==team)return;
       if(Number(r.round_no||0)!==round)return;
       if(txtV102(r.cycle_code)!==cycle)return;
+
+      // มีแถวเตรียมรอบนับ แต่ยังไม่มี counted_at = ยังไม่นับ
+      if(!isCompletedCountV102(r))return;
+
       var key=txtV102(r.item_key);
       if(key&&!map.has(key))map.set(key,r);
     });
